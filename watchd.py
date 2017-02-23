@@ -10,23 +10,27 @@ LOGFILE = '/tmp/yourdaemon.log'
 # Configure logging
 logging.basicConfig(filename=LOGFILE,level=logging.DEBUG)
 
-class YourDaemon(Daemon):
+class sonaWatchD(Daemon):
 
     def run(self):
         # Loggigng errors and exceptions
         try:
             pass
         except Exception, e:
-            logging.exception('Human friendly error message, the exception will be captured and added to the log file automaticaly')
+            logging.exception('Human friendly error message, '
+                              'the exception will be captured '
+                              'and added to the log file automaticaly')
 
         while True:
             # The daemon will repeat your tasks according to this variable
             # it's in second so 60 is 1 minute, 3600 is 1 hour, etc.
+            # system check (ping, service) implement
+            # how to run http daemon?
             time.sleep(60)
 
 if __name__ == "__main__":
 
-    daemon = YourDaemon(PIDFILE)
+    daemon = sonaWatchD(PIDFILE)
 
     if len(sys.argv) == 2:
 
