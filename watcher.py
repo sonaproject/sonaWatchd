@@ -1,5 +1,5 @@
 #!/usr/bin/python
-d# Copyright (c) 2017 by Telcoware
+# Copyright (c) 2017 by Telcoware
 # SONA Monitoring Solutions.
 # All Rights Reserved.
 
