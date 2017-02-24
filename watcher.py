@@ -1,4 +1,9 @@
 #!/usr/bin/python
+d# Copyright (c) 2017 by Telcoware
+# SONA Monitoring Solutions.
+# All Rights Reserved.
+
+
 from daemon import Daemon
 import sys
 import time
@@ -7,10 +12,11 @@ import logging
 PIDFILE = '/tmp/yourdaemon.pid'
 LOGFILE = '/tmp/yourdaemon.log'
 
-# Configure logging
+# Configure logging; delelete soon
 logging.basicConfig(filename=LOGFILE,level=logging.DEBUG)
 
-class sonaWatchD(Daemon):
+
+class SonaWatchD(Daemon):
 
     def run(self):
         # Loggigng errors and exceptions
@@ -22,15 +28,16 @@ class sonaWatchD(Daemon):
                               'and added to the log file automaticaly')
 
         while True:
-            # The daemon will repeat your tasks according to this variable
-            # it's in second so 60 is 1 minute, 3600 is 1 hour, etc.
-            # system check (ping, service) implement
+            # TODO
             # how to run http daemon?
-            time.sleep(60)
+            # implement periodic system check method
+            logging.info('kjt ---- aaaa')
+            time.sleep(5)
 
 if __name__ == "__main__":
+    # implement config read ?
 
-    daemon = sonaWatchD(PIDFILE)
+    daemon = SonaWatchD(PIDFILE)
 
     if len(sys.argv) == 2:
 
@@ -66,7 +73,7 @@ if __name__ == "__main__":
         else:
             print "Unknown command"
             sys.exit(2)
-            sys.exit(0)
+
     else:
         print "usage: %s start|stop|restart|status" % sys.argv[0]
         sys.exit(2)

@@ -1,4 +1,7 @@
-#!/usr/bin/env python
+# Copyright (c) 2017 by Telcoware
+# SONA Monitoring Solutions.
+# All Rights Reserved.
+
 import sys
 import os
 import time
@@ -8,10 +11,6 @@ from signal import SIGTERM
 
 
 class Daemon(object):
-    """
-        A generic daemon class.
-        Usage: subclass the Daemon class and override the run() method
-    """
 
     startmsg = "started with pid %s"
 
@@ -22,11 +21,6 @@ class Daemon(object):
         self.pidfile = pidfile
 
     def daemonize(self):
-        """
-        do the UNIX double-fork magic, see Stevens' "Advanced
-        Programming in the UNIX Environment" for details (ISBN 0201563177)
-        http://www.erlenstar.demon.co.uk/unix/faq_2.html#SEC16
-        """
         try:
             pid = os.fork()
 
@@ -78,10 +72,6 @@ class Daemon(object):
             pass
 
     def start(self):
-        """
-        Start the daemon
-        """
-        # Check for a pidfile to see if the daemon already runs
         try:
             pf = file(self.pidfile,'r')
             pid = int(pf.read().strip())
@@ -95,7 +85,6 @@ class Daemon(object):
             message = "pidfile %s already exist. Daemon already running?\n"
             sys.stderr.write(message % self.pidfile)
             sys.exit(1)
-
 
         # Start the daemon
         self.daemonize()
@@ -113,10 +102,6 @@ class Daemon(object):
         return pid
 
     def stop(self):
-        """
-        Stop the daemon
-        """
-        # Get the pid from the pidfile
         try:
             pf = file(self.pidfile,'r')
             pid = int(pf.read().strip())
@@ -144,14 +129,12 @@ class Daemon(object):
                     sys.exit(1)
 
     def restart(self):
-        """
-        Restart the daemon
-        """
         self.stop()
         self.start()
 
     def run(self):
         """
-        You should override this method when you subclass Daemon. It will be called after the process has been
+        You should override this method when you subclass Daemon.
+        It will be called after the process has been
         daemonized by start() or restart().
         """
