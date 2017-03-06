@@ -13,8 +13,6 @@ from signal import SIGTERM
 
 class Daemon(object):
 
-    startmsg = "started with pid %s"
-
     def __init__(self, pidfile, stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
         self.stdin = stdin
         self.stdout = stdout
@@ -54,7 +52,7 @@ class Daemon(object):
 
         pid = str(os.getpid())
 
-        sys.stderr.write("\n%s\n" % self.startmsg % pid)
+        sys.stderr.write("\nstarted with pid %s\n" % pid)
         sys.stderr.flush()
 
         if self.pidfile:

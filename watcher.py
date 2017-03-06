@@ -4,7 +4,6 @@
 # SONA Monitoring Solutions.
 
 
-from daemon import Daemon
 import sys
 import os
 import time
@@ -12,6 +11,9 @@ import logging
 import multiprocessing as MultiProcess
 
 import api.rest_server as RestServer
+
+from daemon import Daemon
+from api.config import MyConf
 
 PIDFILE = '/tmp/sonawatcher.pid'
 LOGFILE = '/tmp/sonawatcher.log'
@@ -54,6 +56,7 @@ if __name__ == "__main__":
                 pass
 
         elif 'stop' == sys.argv[1]:
+            # print MyConf.obj.ConfMap['KJT_pidfile']
             print "Stopping ..."
             daemon.stop()
 
