@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # Copyright (c) 2017 by Telcoware
-# SONA Monitoring Solutions.
 # All Rights Reserved.
+# SONA Monitoring Solutions.
 
 
 from daemon import Daemon
@@ -16,16 +16,14 @@ import api.rest_server as RestServer
 PIDFILE = '/tmp/sonawatcher.pid'
 LOGFILE = '/tmp/sonawatcher.log'
 
-# Configure logging; delelete soon
+# Configure logging; delete soon
 logging.basicConfig(filename=LOGFILE,level=logging.DEBUG)
 
 
 class SonaWatchD(Daemon):
-    rs_t = MultiProcess
 
     def run(self):
         try:
-            # pass
             self.rest_server_start()
         except Exception, e:
             logging.exception("%s", e.message)
@@ -38,9 +36,9 @@ class SonaWatchD(Daemon):
 
     # REST server start
     def rest_server_start(self):
-        self.rs_t = MultiProcess.Process(name='rest_server', target=RestServer.run)
-        self.rs_t.daemon = True
-        self.rs_t.start()
+        rs_t = MultiProcess.Process(name='rest_server', target=RestServer.run)
+        rs_t.daemon = True
+        rs_t.start()
 
 if __name__ == "__main__":
     # implement config read ?

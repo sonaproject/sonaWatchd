@@ -1,3 +1,7 @@
+# Copyright (c) 2017 by Telcoware kimjt
+# All Rights Reserved.
+# SONA Monitoring Solutions.
+
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 import base64
 

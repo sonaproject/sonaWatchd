@@ -1,6 +1,6 @@
 # Copyright (c) 2017 by Telcoware
-# SONA Monitoring Solutions.
 # All Rights Reserved.
+# SONA Monitoring Solutions.
 
 import sys
 import os
