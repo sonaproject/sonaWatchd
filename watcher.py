@@ -6,33 +6,41 @@
 
 from daemon import Daemon
 import sys
+import os
 import time
 import logging
+import multiprocessing as MultiProcess
 
-PIDFILE = '/tmp/yourdaemon.pid'
-LOGFILE = '/tmp/yourdaemon.log'
+import api.rest_server as RestServer
+
+PIDFILE = '/tmp/sonawatcher.pid'
+LOGFILE = '/tmp/sonawatcher.log'
 
 # Configure logging; delelete soon
 logging.basicConfig(filename=LOGFILE,level=logging.DEBUG)
 
 
 class SonaWatchD(Daemon):
+    rs_t = MultiProcess
 
     def run(self):
-        # Loggigng errors and exceptions
         try:
-            pass
+            # pass
+            self.rest_server_start()
         except Exception, e:
-            logging.exception('Human friendly error message, '
-                              'the exception will be captured '
-                              'and added to the log file automaticaly')
+            logging.exception("%s", e.message)
 
         while True:
             # TODO
             # how to run http daemon?
             # implement periodic system check method
-            logging.info('kjt ---- aaaa')
             time.sleep(5)
+
+    # REST server start
+    def rest_server_start(self):
+        self.rs_t = MultiProcess.Process(name='rest_server', target=RestServer.run)
+        self.rs_t.daemon = True
+        self.rs_t.start()
 
 if __name__ == "__main__":
     # implement config read ?

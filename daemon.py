@@ -6,6 +6,7 @@ import sys
 import os
 import time
 import atexit
+import subprocess
 
 from signal import SIGTERM 
 
@@ -64,6 +65,7 @@ class Daemon(object):
         os.dup2(so.fileno(), sys.stdout.fileno())
         os.dup2(se.fileno(), sys.stderr.fileno())
 
+    # delete pid file when parent process kill
     def delpid(self):
         try:
             os.remove(self.pidfile)
@@ -71,7 +73,9 @@ class Daemon(object):
         except OSError:
             pass
 
+    # start processes
     def start(self):
+        # check process before start
         try:
             pf = file(self.pidfile,'r')
             pid = int(pf.read().strip())
@@ -90,6 +94,7 @@ class Daemon(object):
         self.daemonize()
         self.run()
 
+    # get parents process ID from pid file
     def get_pid(self):
         try:
             pf = file(self.pidfile, 'r')
@@ -101,11 +106,10 @@ class Daemon(object):
             pid = None
         return pid
 
+    # stop all daemon porcess
     def stop(self):
         try:
-            pf = file(self.pidfile,'r')
-            pid = int(pf.read().strip())
-            pf.close()
+            pid = self.get_pid()
         except IOError:
             pid = None
 
@@ -117,6 +121,8 @@ class Daemon(object):
         # Try killing the daemon process
         try:
             while 1:
+                for cpid in self.get_child_pid(pid):
+                    os.kill(cpid,SIGTERM)
                 os.kill(pid, SIGTERM)
                 time.sleep(0.1)
         except OSError, err:
@@ -128,6 +134,11 @@ class Daemon(object):
                     print str(err)
                     sys.exit(1)
 
+    # get id's child process
+    def get_child_pid(self, ppid):
+        ps_command = subprocess.Popen("pgrep -P %d" % ppid, shell=True, stdout=subprocess.PIPE)
+        return [int(p) for p in ps_command.stdout.read().split("\n") if p]
+
     def restart(self):
         self.stop()
         self.start()
@@ -135,6 +146,5 @@ class Daemon(object):
     def run(self):
         """
         You should override this method when you subclass Daemon.
-        It will be called after the process has been
-        daemonized by start() or restart().
         """
+
