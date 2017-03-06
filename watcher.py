@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # Copyright (c) 2017 by Telcoware
-# All Rights Reserved.
+# All Rights Reserved. kimjt 3/2
 # SONA Monitoring Solutions.
 
 
