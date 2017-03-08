@@ -4,6 +4,7 @@
 
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 import base64
+import multiprocessing as multiprocess
 
 key = base64.b64encode("admin:admin")
 
@@ -45,3 +46,8 @@ def run(handlerclass=HTTPServer, handler_class=RestHandler, port=8000):
     httpd = handlerclass(server_address, handler_class)
     httpd.serve_forever()
 
+
+# def rest_server_start(self):
+#     rest_server_daemon = multiprocess.Process(name='rest_server', target=run)
+#     rest_server_daemon.daemon = True
+#     rest_server_daemon.start()
