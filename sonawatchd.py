@@ -5,45 +5,46 @@
 
 
 import sys
-import os
 import time
-import logging
-import multiprocessing as MultiProcess
+import multiprocessing as multiprocess
 
-import api.rest_server as RestServer
+import api.rest_server as rest_svr
+import api.watchdog as watchdog
 
 from daemon import Daemon
-from api.config import MyConf
+from api.config import ConfReader
 
-PIDFILE = '/tmp/sonawatcher.pid'
-LOGFILE = '/tmp/sonawatcher.log'
-
-# Configure logging; delete soon
-logging.basicConfig(filename=LOGFILE,level=logging.DEBUG)
+PIDFILE = ConfReader().pid_file()
 
 
 class SonaWatchD(Daemon):
 
     def run(self):
         try:
-            self.rest_server_start()
+            # TODO
+            # develop REST API SERVER
+            # self.rest_server_start()
+            pass
+
         except Exception, e:
-            logging.exception("%s", e.message)
+            sys.stderr.write("%s" % e)
+            exit(1)
 
         while True:
             # TODO
             # how to run http daemon?
             # implement periodic system check method
+            watchdog.temp()
             time.sleep(5)
 
     # REST server start
     def rest_server_start(self):
-        rs_t = MultiProcess.Process(name='rest_server', target=RestServer.run)
+        rs_t = multiprocess.Process(name='rest_server', target=rest_svr.run)
         rs_t.daemon = True
         rs_t.start()
 
 if __name__ == "__main__":
-    # implement config read ?
+    # implement config file path read ?
 
     daemon = SonaWatchD(PIDFILE)
 
