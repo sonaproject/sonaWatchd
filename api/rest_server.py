@@ -47,7 +47,7 @@ def run(handlerclass=HTTPServer, handler_class=RestHandler, port=8000):
     httpd.serve_forever()
 
 
-# def rest_server_start(self):
-#     rest_server_daemon = multiprocess.Process(name='rest_server', target=run)
-#     rest_server_daemon.daemon = True
-#     rest_server_daemon.start()
+def rest_server_start():
+    rest_server_daemon = multiprocess.Process(name='rest_server', target=run)
+    rest_server_daemon.daemon = True
+    rest_server_daemon.start()

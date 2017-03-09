@@ -1,0 +1,312 @@
+2017-03-09 14:15:10,276  ------ Daemon START ------
+2017-03-09 14:15:10,280 kjt ----- 1 sonawatcher.log
+2017-03-09 14:15:12,467  ------ Daemon STOP ------
+2017-03-09 14:15:42,563  ------ Daemon START ------
+2017-03-09 14:15:42,568 kjt ----- 1 sonawatcher.log
+2017-03-09 14:15:44,770  ------ Daemon STOP ------
+2017-03-09 14:21:42,638 /Users/jtsomnium/SONA/Test_tool/sonaWatchd/log/
+2017-03-09 14:21:42,638  ------ Daemon START ------
+2017-03-09 14:21:42,642 /Users/jtsomnium/SONA/Test_tool/sonaWatchd/log/
+2017-03-09 14:21:42,643 kjt ----- 1 sonawatcher.log
+2017-03-09 14:21:47,644 /Users/jtsomnium/SONA/Test_tool/sonaWatchd/log/
+2017-03-09 14:21:47,645 kjt ----- 1 sonawatcher.log
+2017-03-09 14:21:51,308 /Users/jtsomnium/SONA/Test_tool/sonaWatchd/log/
+2017-03-09 14:21:51,308  ------ Daemon STOP ------
+2017-03-09 14:24:35,780  ------ Daemon START ------
+2017-03-09 14:24:35,784 kjt ----- 1 sonawatcher.log
+2017-03-09 14:24:40,333  ------ Daemon STOP ------
+2017-03-09 14:29:00,564  ------ Daemon STOP ------
+2017-03-09 14:29:12,512  ------ Daemon START ------
+2017-03-09 14:29:12,518 kjt ----- 1 sonawatcher.log
+2017-03-09 14:29:17,519 kjt ----- 1 sonawatcher.log
+2017-03-09 14:29:19,245  ------ Daemon STOP ------
+2017-03-09 14:33:24,362  ------ Daemon START ------
+2017-03-09 14:33:33,498  ------ Daemon STOP ------
+2017-03-09 14:33:49,516  ------ Daemon START ------
+2017-03-09 14:33:49,518 rest start
+2017-03-09 14:33:49,521 kjt ----- 1 sonawatcher.log
+2017-03-09 14:33:52,583  ------ Daemon STOP ------
+2017-03-09 14:36:27,675  ------ Daemon START ------
+2017-03-09 14:36:27,677 ----- REST Server START -----
+2017-03-09 14:36:27,678 'SonaWatchD' object has no attribute 'rest_server_starta'
+2017-03-09 14:36:27,679    | Traceback (most recent call last):
+   |   File "./sonawatchd.py", line 27, in run
+    self.rest_server_starta()
+   | AttributeError: 'SonaWatchD' object has no attribute 'rest_server_starta'
+
+2017-03-09 14:36:33,499  ------ Daemon STOP ------
+2017-03-09 14:36:36,940  ------ Daemon STOP ------
+2017-03-09 14:55:10,450  ------ Daemon START ------
+2017-03-09 14:55:10,452 ----- REST Server START -----
+2017-03-09 14:55:10,455 kjt ----- 1 sonawatcher.log
+2017-03-09 14:55:15,457 kjt ----- 1 sonawatcher.log
+2017-03-09 14:55:20,458 kjt ----- 1 sonawatcher.log
+2017-03-09 14:55:25,459 kjt ----- 1 sonawatcher.log
+2017-03-09 14:55:29,077  ------ Daemon STOP ------
+2017-03-09 14:56:19,274  ------ Daemon START ------
+2017-03-09 14:56:19,277 ----- REST Server START -----
+2017-03-09 14:56:19,279 kjt ----- 1 sonawatcher.log
+2017-03-09 14:56:24,281 kjt ----- 1 sonawatcher.log
+2017-03-09 14:56:26,409  ------ Daemon STOP ------
+2017-03-09 14:57:26,040 ------ Daemon START ------
+2017-03-09 14:57:26,043 ----- REST Server START -----
+2017-03-09 14:57:26,045 kjt ----- 1 sonawatcher.log
+2017-03-09 14:57:31,047 kjt ----- 1 sonawatcher.log
+2017-03-09 14:57:36,049 kjt ----- 1 sonawatcher.log
+2017-03-09 14:57:40,143 ------ Daemon STOP ------
+2017-03-09 15:09:04,476 ------ Daemon START ------
+2017-03-09 15:09:04,479 ----- REST Server START -----
+2017-03-09 15:09:04,482 kjt ----- 1 sonawatcher.log
+2017-03-09 15:09:14,483 kjt ----- 1 sonawatcher.log
+2017-03-09 15:09:20,692 ------ Daemon STOP ------
+2017-03-09 15:09:51,838 ------ Daemon START ------
+2017-03-09 15:09:51,841 ----- REST Server START -----
+2017-03-09 15:09:51,843 kjt ----- 1 sonawatcher.log
+2017-03-09 15:09:58,023 ------ Daemon STOP ------
+2017-03-09 15:10:32,134 ------ Daemon START ------
+2017-03-09 15:10:32,136 ----- REST Server START -----
+2017-03-09 15:10:35,011 ------ Daemon STOP ------
+2017-03-09 15:12:25,921 ------ Daemon START ------
+2017-03-09 15:12:25,924 ----- REST Server START -----
+2017-03-09 15:12:25,926 kjt ----- 1 sonawatcher.log
+2017-03-09 15:12:25,927 kjt ----- 2 10
+2017-03-09 15:12:30,014 ------ Daemon STOP ------
+2017-03-09 15:13:09,865 ------ Daemon START ------
+2017-03-09 15:13:09,867 ----- REST Server START -----
+2017-03-09 15:13:09,868 test
+2017-03-09 15:13:09,868 kjt ----- 1 sonawatcher.log
+2017-03-09 15:13:09,868 kjt ----- 2 10
+2017-03-09 15:13:14,869 test
+2017-03-09 15:13:14,870 kjt ----- 1 sonawatcher.log
+2017-03-09 15:13:14,870 kjt ----- 2 10
+2017-03-09 15:13:15,530 ------ Daemon STOP ------
+2017-03-09 15:14:04,809 ------ Daemon START ------
+2017-03-09 15:14:04,812 ----- REST Server START -----
+2017-03-09 15:14:37,071 ------ Daemon STOP ------
+2017-03-09 15:15:57,872 ------ Daemon START ------
+2017-03-09 15:15:57,875 ----- REST Server START -----
+2017-03-09 15:16:05,546 ------ Daemon STOP ------
+2017-03-09 15:16:09,260 ------ Daemon STOP ------
+2017-03-09 15:16:50,322 ------ Daemon START ------
+2017-03-09 15:16:50,324 ----- REST Server START -----
+2017-03-09 15:16:53,944 ------ Daemon STOP ------
+2017-03-09 15:17:06,046 ------ Daemon START ------
+2017-03-09 15:17:06,049 ----- REST Server START -----
+2017-03-09 15:17:06,050 kjt ----- 1 sonawatcher.log
+2017-03-09 15:17:16,874 ------ Daemon STOP ------
+2017-03-09 15:17:51,208 ------ Daemon START ------
+2017-03-09 15:17:51,211 ----- REST Server START -----
+2017-03-09 15:17:51,211 kjt ----- 1 sonawatcher.log
+2017-03-09 15:17:53,276 ------ Daemon STOP ------
+2017-03-09 15:18:34,274 ------ Daemon START ------
+2017-03-09 15:18:34,276 ----- REST Server START -----
+2017-03-09 15:18:34,277 kjt ----- 1 sonawatcher.log
+2017-03-09 15:18:41,969 ------ Daemon STOP ------
+2017-03-09 15:19:05,235 ------ Daemon START ------
+2017-03-09 15:19:05,237 ----- REST Server START -----
+2017-03-09 15:19:05,238 kjt ----- 1 sonawatcher.log
+2017-03-09 15:19:06,607 ------ Daemon STOP ------
+2017-03-09 15:19:16,241 ------ Daemon START ------
+2017-03-09 15:19:16,243 ----- REST Server START -----
+2017-03-09 15:19:16,244 kjt ----- 1 sonawatcher.log
+2017-03-09 15:19:20,040 ------ Daemon STOP ------
+2017-03-09 15:19:21,816 ------ Daemon START ------
+2017-03-09 15:19:21,819 ----- REST Server START -----
+2017-03-09 15:19:21,820 kjt ----- 1 sonawatcher.log
+2017-03-09 15:19:26,821 kjt ----- 1 sonawatcher.log
+2017-03-09 15:19:31,821 kjt ----- 1 sonawatcher.log
+2017-03-09 15:19:36,823 kjt ----- 1 sonawatcher.log
+2017-03-09 15:19:41,824 kjt ----- 1 sonawatcher.log
+2017-03-09 15:19:46,826 kjt ----- 1 sonawatcher.log
+2017-03-09 15:19:51,827 kjt ----- 1 sonawatcher.log
+2017-03-09 15:19:56,828 kjt ----- 1 sonawatcher.log
+2017-03-09 15:20:01,830 kjt ----- 1 sonawatcher.log
+2017-03-09 15:20:06,831 kjt ----- 1 sonawatcher.log
+2017-03-09 15:20:11,832 kjt ----- 1 sonawatcher.log
+2017-03-09 15:20:16,833 kjt ----- 1 sonawatcher.log
+2017-03-09 15:20:21,835 kjt ----- 1 sonawatcher.log
+2017-03-09 15:20:26,836 kjt ----- 1 sonawatcher.log
+2017-03-09 15:20:31,837 kjt ----- 1 sonawatcher.log
+2017-03-09 15:20:36,838 kjt ----- 1 sonawatcher.log
+2017-03-09 15:20:39,512 ------ Daemon STOP ------
+2017-03-09 15:20:41,378 ------ Daemon START ------
+2017-03-09 15:20:41,381 ----- REST Server START -----
+2017-03-09 15:20:41,381 kjt ----- 1 sonawatcher.log
+2017-03-09 15:20:43,921 ------ Daemon STOP ------
+2017-03-09 15:21:41,277 ------ Daemon START ------
+2017-03-09 15:21:41,280 ----- REST Server START -----
+2017-03-09 15:21:41,280 kjt ----- 1 sonawatcher.log
+2017-03-09 15:21:43,008 ------ Daemon STOP ------
+2017-03-09 15:23:42,936 ------ Daemon START ------
+2017-03-09 15:23:42,938 ----- REST Server START -----
+2017-03-09 15:23:42,939 kjt ----- 1 sonawatcher.log
+2017-03-09 15:23:42,939 kjt ----- 2 {'system_check_interval': 10}
+2017-03-09 15:23:45,679 ------ Daemon STOP ------
+2017-03-09 15:24:13,130 ------ Daemon START ------
+2017-03-09 15:24:13,133 ----- REST Server START -----
+2017-03-09 15:24:13,133 kjt ----- 1 sonawatcher.log
+2017-03-09 15:24:13,133 kjt ----- 2 10
+2017-03-09 15:24:15,022 ------ Daemon STOP ------
+2017-03-09 15:25:39,581 ------ Daemon START ------
+2017-03-09 15:25:39,583 ----- REST Server START -----
+2017-03-09 15:25:39,584 kjt ----- 1 sonawatcher.log
+2017-03-09 15:25:39,584 10
+2017-03-09 15:25:42,253 ------ Daemon STOP ------
+2017-03-09 15:26:04,356 ------ Daemon START ------
+2017-03-09 15:26:04,359 ----- REST Server START -----
+2017-03-09 15:26:04,360 kjt ----- 1 sonawatcher.log
+2017-03-09 15:26:14,361 kjt ----- 1 sonawatcher.log
+2017-03-09 15:26:24,362 kjt ----- 1 sonawatcher.log
+2017-03-09 15:26:34,362 kjt ----- 1 sonawatcher.log
+2017-03-09 15:26:44,363 kjt ----- 1 sonawatcher.log
+2017-03-09 15:26:54,364 kjt ----- 1 sonawatcher.log
+2017-03-09 15:27:04,365 kjt ----- 1 sonawatcher.log
+2017-03-09 15:27:14,367 kjt ----- 1 sonawatcher.log
+2017-03-09 15:27:24,368 kjt ----- 1 sonawatcher.log
+2017-03-09 15:27:34,369 kjt ----- 1 sonawatcher.log
+2017-03-09 15:27:44,370 kjt ----- 1 sonawatcher.log
+2017-03-09 15:27:54,371 kjt ----- 1 sonawatcher.log
+2017-03-09 15:28:04,372 kjt ----- 1 sonawatcher.log
+2017-03-09 15:28:14,374 kjt ----- 1 sonawatcher.log
+2017-03-09 15:28:24,375 kjt ----- 1 sonawatcher.log
+2017-03-09 15:28:34,376 kjt ----- 1 sonawatcher.log
+2017-03-09 15:28:44,377 kjt ----- 1 sonawatcher.log
+2017-03-09 15:28:54,379 kjt ----- 1 sonawatcher.log
+2017-03-09 15:28:55,376 --- Daemon STOP ---
+2017-03-09 15:28:56,705 --- Daemon START ---
+2017-03-09 15:28:56,708 --- REST Server START ---
+2017-03-09 15:28:56,708 kjt ----- 1 sonawatcher.log
+2017-03-09 15:29:06,709 kjt ----- 1 sonawatcher.log
+2017-03-09 15:29:16,710 kjt ----- 1 sonawatcher.log
+2017-03-09 15:29:26,711 kjt ----- 1 sonawatcher.log
+2017-03-09 15:29:36,712 kjt ----- 1 sonawatcher.log
+2017-03-09 15:29:46,714 kjt ----- 1 sonawatcher.log
+2017-03-09 15:29:56,715 kjt ----- 1 sonawatcher.log
+2017-03-09 15:30:06,716 kjt ----- 1 sonawatcher.log
+2017-03-09 15:30:16,718 kjt ----- 1 sonawatcher.log
+2017-03-09 15:30:26,719 kjt ----- 1 sonawatcher.log
+2017-03-09 15:30:36,720 kjt ----- 1 sonawatcher.log
+2017-03-09 15:30:46,722 kjt ----- 1 sonawatcher.log
+2017-03-09 15:30:56,723 kjt ----- 1 sonawatcher.log
+2017-03-09 15:31:06,724 kjt ----- 1 sonawatcher.log
+2017-03-09 15:31:16,725 kjt ----- 1 sonawatcher.log
+2017-03-09 15:31:26,727 kjt ----- 1 sonawatcher.log
+2017-03-09 15:31:36,727 kjt ----- 1 sonawatcher.log
+2017-03-09 15:31:46,729 kjt ----- 1 sonawatcher.log
+2017-03-09 15:31:56,730 kjt ----- 1 sonawatcher.log
+2017-03-09 15:32:06,731 kjt ----- 1 sonawatcher.log
+2017-03-09 15:32:16,732 kjt ----- 1 sonawatcher.log
+2017-03-09 15:32:26,733 kjt ----- 1 sonawatcher.log
+2017-03-09 15:32:36,735 kjt ----- 1 sonawatcher.log
+2017-03-09 15:32:46,736 kjt ----- 1 sonawatcher.log
+2017-03-09 15:32:56,737 kjt ----- 1 sonawatcher.log
+2017-03-09 15:33:06,739 kjt ----- 1 sonawatcher.log
+2017-03-09 15:33:16,740 kjt ----- 1 sonawatcher.log
+2017-03-09 15:33:26,741 kjt ----- 1 sonawatcher.log
+2017-03-09 15:33:36,742 kjt ----- 1 sonawatcher.log
+2017-03-09 15:33:46,743 kjt ----- 1 sonawatcher.log
+2017-03-09 15:33:56,744 kjt ----- 1 sonawatcher.log
+2017-03-09 15:34:06,745 kjt ----- 1 sonawatcher.log
+2017-03-09 15:34:16,746 kjt ----- 1 sonawatcher.log
+2017-03-09 15:34:26,748 kjt ----- 1 sonawatcher.log
+2017-03-09 15:34:36,749 kjt ----- 1 sonawatcher.log
+2017-03-09 15:34:46,750 kjt ----- 1 sonawatcher.log
+2017-03-09 15:34:56,751 kjt ----- 1 sonawatcher.log
+2017-03-09 15:35:06,752 kjt ----- 1 sonawatcher.log
+2017-03-09 15:35:16,753 kjt ----- 1 sonawatcher.log
+2017-03-09 15:35:26,754 kjt ----- 1 sonawatcher.log
+2017-03-09 15:35:36,755 kjt ----- 1 sonawatcher.log
+2017-03-09 15:35:46,756 kjt ----- 1 sonawatcher.log
+2017-03-09 15:35:56,757 kjt ----- 1 sonawatcher.log
+2017-03-09 15:36:06,758 kjt ----- 1 sonawatcher.log
+2017-03-09 15:36:16,759 kjt ----- 1 sonawatcher.log
+2017-03-09 15:36:26,760 kjt ----- 1 sonawatcher.log
+2017-03-09 15:36:36,760 kjt ----- 1 sonawatcher.log
+2017-03-09 15:36:46,761 kjt ----- 1 sonawatcher.log
+2017-03-09 15:36:56,762 kjt ----- 1 sonawatcher.log
+2017-03-09 15:37:06,763 kjt ----- 1 sonawatcher.log
+2017-03-09 15:37:16,764 kjt ----- 1 sonawatcher.log
+2017-03-09 15:37:26,765 kjt ----- 1 sonawatcher.log
+2017-03-09 15:37:36,766 kjt ----- 1 sonawatcher.log
+2017-03-09 15:37:46,767 kjt ----- 1 sonawatcher.log
+2017-03-09 15:37:56,768 kjt ----- 1 sonawatcher.log
+2017-03-09 15:38:06,769 kjt ----- 1 sonawatcher.log
+2017-03-09 15:38:16,770 kjt ----- 1 sonawatcher.log
+2017-03-09 15:38:26,770 kjt ----- 1 sonawatcher.log
+2017-03-09 15:38:36,771 kjt ----- 1 sonawatcher.log
+2017-03-09 15:38:46,772 kjt ----- 1 sonawatcher.log
+2017-03-09 15:38:56,773 kjt ----- 1 sonawatcher.log
+2017-03-09 15:39:06,774 kjt ----- 1 sonawatcher.log
+2017-03-09 15:39:16,775 kjt ----- 1 sonawatcher.log
+2017-03-09 15:39:26,776 kjt ----- 1 sonawatcher.log
+2017-03-09 15:39:36,777 kjt ----- 1 sonawatcher.log
+2017-03-09 15:39:46,777 kjt ----- 1 sonawatcher.log
+2017-03-09 15:39:56,779 kjt ----- 1 sonawatcher.log
+2017-03-09 15:40:06,780 kjt ----- 1 sonawatcher.log
+2017-03-09 15:40:16,781 kjt ----- 1 sonawatcher.log
+2017-03-09 15:40:26,781 kjt ----- 1 sonawatcher.log
+2017-03-09 15:40:36,782 kjt ----- 1 sonawatcher.log
+2017-03-09 15:40:46,783 kjt ----- 1 sonawatcher.log
+2017-03-09 15:40:56,784 kjt ----- 1 sonawatcher.log
+2017-03-09 15:41:06,785 kjt ----- 1 sonawatcher.log
+2017-03-09 15:41:16,786 kjt ----- 1 sonawatcher.log
+2017-03-09 15:41:26,787 kjt ----- 1 sonawatcher.log
+2017-03-09 15:41:36,788 kjt ----- 1 sonawatcher.log
+2017-03-09 15:41:46,789 kjt ----- 1 sonawatcher.log
+2017-03-09 15:41:56,790 kjt ----- 1 sonawatcher.log
+2017-03-09 15:42:06,791 kjt ----- 1 sonawatcher.log
+2017-03-09 15:42:16,792 kjt ----- 1 sonawatcher.log
+2017-03-09 15:42:26,793 kjt ----- 1 sonawatcher.log
+2017-03-09 15:42:36,793 kjt ----- 1 sonawatcher.log
+2017-03-09 15:42:46,794 kjt ----- 1 sonawatcher.log
+2017-03-09 15:42:56,795 kjt ----- 1 sonawatcher.log
+2017-03-09 15:43:06,796 kjt ----- 1 sonawatcher.log
+2017-03-09 15:43:16,797 kjt ----- 1 sonawatcher.log
+2017-03-09 15:43:26,798 kjt ----- 1 sonawatcher.log
+2017-03-09 15:43:36,799 kjt ----- 1 sonawatcher.log
+2017-03-09 15:43:46,800 kjt ----- 1 sonawatcher.log
+2017-03-09 15:43:56,801 kjt ----- 1 sonawatcher.log
+2017-03-09 15:44:06,802 kjt ----- 1 sonawatcher.log
+2017-03-09 15:44:16,803 kjt ----- 1 sonawatcher.log
+2017-03-09 15:44:26,804 kjt ----- 1 sonawatcher.log
+2017-03-09 15:44:36,805 kjt ----- 1 sonawatcher.log
+2017-03-09 15:44:46,806 kjt ----- 1 sonawatcher.log
+2017-03-09 15:44:56,806 kjt ----- 1 sonawatcher.log
+2017-03-09 15:45:06,807 kjt ----- 1 sonawatcher.log
+2017-03-09 15:45:16,808 kjt ----- 1 sonawatcher.log
+2017-03-09 15:45:26,809 kjt ----- 1 sonawatcher.log
+2017-03-09 15:45:36,810 kjt ----- 1 sonawatcher.log
+2017-03-09 15:45:46,811 kjt ----- 1 sonawatcher.log
+2017-03-09 15:45:56,812 kjt ----- 1 sonawatcher.log
+2017-03-09 15:46:06,814 kjt ----- 1 sonawatcher.log
+2017-03-09 15:46:16,816 kjt ----- 1 sonawatcher.log
+2017-03-09 15:46:26,817 kjt ----- 1 sonawatcher.log
+2017-03-09 15:46:36,817 kjt ----- 1 sonawatcher.log
+2017-03-09 15:46:46,817 kjt ----- 1 sonawatcher.log
+2017-03-09 15:46:56,818 kjt ----- 1 sonawatcher.log
+2017-03-09 15:47:06,819 kjt ----- 1 sonawatcher.log
+2017-03-09 15:47:16,820 kjt ----- 1 sonawatcher.log
+2017-03-09 15:47:26,820 kjt ----- 1 sonawatcher.log
+2017-03-09 15:47:36,821 kjt ----- 1 sonawatcher.log
+2017-03-09 15:47:46,822 kjt ----- 1 sonawatcher.log
+2017-03-09 15:47:56,823 kjt ----- 1 sonawatcher.log
+2017-03-09 15:48:06,824 kjt ----- 1 sonawatcher.log
+2017-03-09 15:48:16,825 kjt ----- 1 sonawatcher.log
+2017-03-09 15:48:26,826 kjt ----- 1 sonawatcher.log
+2017-03-09 15:48:36,827 kjt ----- 1 sonawatcher.log
+2017-03-09 15:48:46,828 kjt ----- 1 sonawatcher.log
+2017-03-09 15:48:56,829 kjt ----- 1 sonawatcher.log
+2017-03-09 15:49:06,830 kjt ----- 1 sonawatcher.log
+2017-03-09 15:49:16,831 kjt ----- 1 sonawatcher.log
+2017-03-09 15:49:26,832 kjt ----- 1 sonawatcher.log
+2017-03-09 15:49:36,833 kjt ----- 1 sonawatcher.log
+2017-03-09 15:49:46,833 kjt ----- 1 sonawatcher.log
+2017-03-09 15:49:56,834 kjt ----- 1 sonawatcher.log
+2017-03-09 15:50:06,835 kjt ----- 1 sonawatcher.log
+2017-03-09 15:50:16,836 kjt ----- 1 sonawatcher.log
+2017-03-09 15:50:26,837 kjt ----- 1 sonawatcher.log
+2017-03-09 15:50:36,838 kjt ----- 1 sonawatcher.log
+2017-03-09 15:50:46,839 kjt ----- 1 sonawatcher.log
+2017-03-09 15:50:56,840 kjt ----- 1 sonawatcher.log
+2017-03-09 15:51:06,841 kjt ----- 1 sonawatcher.log
+2017-03-09 15:51:16,842 kjt ----- 1 sonawatcher.log

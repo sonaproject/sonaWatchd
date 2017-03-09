@@ -4,17 +4,18 @@
 # SONA Monitoring Solutions.
 
 
+import multiprocessing as multiprocess
 import sys
 import time
-import multiprocessing as multiprocess
 
 import api.rest_server as rest_svr
-import api.watchdog as watchdog
-
+import monitor.watchdog as watchdog
+from api.config import CONF
+from api.sona_log import LOG
 from daemon import Daemon
-from api.config import ConfReader
 
-PIDFILE = ConfReader().pid_file()
+# INTERVAL = CONF.watchdog()['system_check_interval']
+PIDFILE = CONF.get_pid_file()
 
 
 class SonaWatchD(Daemon):
@@ -23,25 +24,18 @@ class SonaWatchD(Daemon):
         try:
             # TODO
             # develop REST API SERVER
-            # self.rest_server_start()
+            LOG.info("--- REST Server START ---")
+            # rest_svr.rest_server_start()
             pass
-
         except Exception, e:
-            sys.stderr.write("%s" % e)
+            LOG.exception()
             exit(1)
 
         while True:
             # TODO
-            # how to run http daemon?
             # implement periodic system check method
             watchdog.temp()
-            time.sleep(5)
-
-    # REST server start
-    def rest_server_start(self):
-        rs_t = multiprocess.Process(name='rest_server', target=rest_svr.run)
-        rs_t.daemon = True
-        rs_t.start()
+            time.sleep(CONF.watchdog()['system_check_interval'])
 
 if __name__ == "__main__":
     # implement config file path read ?
@@ -52,12 +46,13 @@ if __name__ == "__main__":
 
         if 'start' == sys.argv[1]:
             try:
+                LOG.info("--- Daemon START ---")
                 daemon.start()
             except:
                 pass
 
         elif 'stop' == sys.argv[1]:
-            # print MyConf.obj.ConfMap['KJT_pidfile']
+            LOG.info("--- Daemon STOP ---")
             print "Stopping ..."
             daemon.stop()
 
