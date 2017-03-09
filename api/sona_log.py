@@ -2,6 +2,15 @@
 # All Rights Reserved.
 # SONA Monitoring Solutions.
 
+# generate example messages
+#     logger.debug('debug message')
+#     logger.info('informational message')
+#     logger.warn('warning')
+#     logger.error('error message')
+#     logger.critical('critical failure')
+# example log line) 2017-03-08 15:20:43,802 __main__ CRITICAL critical failure
+
+
 import sys
 import os
 import logging
@@ -10,15 +19,17 @@ from logging.handlers import TimedRotatingFileHandler
 from config import CONF
 
 
-LOG_PATH = os.getcwd() + "/log/"
-
-
 class Log:
     LOG = logging.getLogger(__name__)
 
     def __init__(self):
+        log_path = os.getcwd() + "/log/"
+        if not os.path.exists(log_path):
+            os.makedirs(log_path)
+        file_name = log_path + CONF.base()['log_file_name']
+
+        # formatter = logging.Formatter('%(asctime)s %(name)s %(levelname)s %(message)s')
         formatter = logging.Formatter('%(asctime)s %(message)s')
-        file_name = LOG_PATH + CONF.base()['log_file_name']
         handler = TimedRotatingFileHandler(file_name,
                                            when=CONF.base()['log_rotate_time'],
                                            backupCount=CONF.base()['log_backup_count'])
@@ -38,15 +49,3 @@ class Log:
 
 
 LOG = Log()
-
-# generate example messages
-# for i in range(10000):
-#     time.sleep(10)
-#     logger.debug('debug message')
-#     logger.info('informational message')
-#     logger.warn('warning')
-#     logger.error('error message')
-#     logger.critical('critical failure')
-
-
-# 2017-03-08 15:20:43,802 __main__ CRITICAL critical failure
