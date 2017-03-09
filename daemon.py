@@ -8,7 +8,8 @@ import time
 import atexit
 import subprocess
 
-from signal import SIGTERM 
+from signal import SIGTERM
+from api.sona_log import LOG
 
 
 class Daemon(object):
