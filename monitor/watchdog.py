@@ -7,4 +7,7 @@ from api.sona_log import LOG
 
 
 def temp():
-    LOG.info("kjt ----- 1 %s", CONF.base()['log_file_name'])
+    try:
+        LOG.info("kjt --1-- test")
+    except:
+        LOG.exception()

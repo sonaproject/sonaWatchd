@@ -38,7 +38,6 @@ class SonaWatchD(Daemon):
             time.sleep(CONF.watchdog()['system_check_interval'])
 
 if __name__ == "__main__":
-    # implement config file path read ?
 
     daemon = SonaWatchD(PIDFILE)
 
