@@ -40,7 +40,7 @@ class ConfReader:
             value['log_backup_count'] = int(self.conf_map['BASE']['log_backup_count'])
             return value
         except KeyError as KE:
-            return "aaaa"
+            return dict({'fail': KE})
 
     def watchdog(self):
         value = dict()
@@ -51,7 +51,7 @@ class ConfReader:
             value['check_retry'] = int(self.conf_map['WATCHDOG']['check_retry'])
             return value
         except KeyError as KE:
-            return "fail"
+            return dict({'fail': KE})
 
     def ssh_conn(self):
         value = dict()
@@ -59,7 +59,7 @@ class ConfReader:
             value['ssh_req_timeout'] = int(self.conf_map['SSH_CONN']['ssh_req_timeout'])
             return value
         except KeyError as KE:
-            return
+            return dict({'fail': KE})
 
     def rest(self):
         value = dict()
@@ -68,7 +68,7 @@ class ConfReader:
             value['rest_server_port'] = int(self.conf_map['REST']['rest_server_port'])
             return value
         except KeyError as KE:
-            return
+            return dict({'fail': KE})
 
     def onos(self):
         value = dict()
@@ -77,7 +77,7 @@ class ConfReader:
             value['app_list'] = self.__list_opt(self.conf_map['ONOS']['app_list'])
             return value
         except KeyError as KE:
-            return
+            return dict({'fail': KE})
 
     def xos(self):
         value = dict()
@@ -85,7 +85,7 @@ class ConfReader:
             value['list'] = self.__list_opt(self.conf_map['XOS']['list'])
             return value
         except KeyError as KE:
-            return
+            return dict({'fail': KE})
 
     def k8s(self):
         value = dict()
@@ -93,7 +93,7 @@ class ConfReader:
             value['list'] = self.__list_opt(self.conf_map['Kubernetes']['list'])
             return value
         except KeyError as KE:
-            return
+            return dict({'fail': KE})
 
     def openstack_node(self):
         value = dict()
@@ -102,13 +102,12 @@ class ConfReader:
             value['username'] = str(self.conf_map['OPENSTACK_NODE']['username'])
             return value
         except KeyError as KE:
-            return
+            return dict({'fail': KE})
 
     def get_pid_file(self):
         try:
             return str(self.conf_map['BASE']['pidfile'])
         except KeyError as KE:
-            return
-
+            return dict({'fail': KE})
 
 CONF = ConfReader()

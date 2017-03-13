@@ -8,8 +8,8 @@ import multiprocessing as multiprocess
 import sys
 import time
 
-import api.rest_server as rest_svr
 import monitor.watchdog as watchdog
+import api.rest_server as REST_SVR
 from api.config import CONF
 from api.sona_log import LOG
 from daemon import Daemon
@@ -25,7 +25,7 @@ class SonaWatchD(Daemon):
             # TODO
             # develop REST API SERVER
             LOG.info("--- REST Server START ---")
-            # rest_svr.rest_server_start()
+            REST_SVR.rest_server_start()
             pass
         except Exception, e:
             LOG.exception()

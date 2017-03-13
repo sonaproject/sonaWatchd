@@ -8,6 +8,6 @@ from api.sona_log import LOG
 
 def temp():
     try:
-        LOG.info("kjt --1-- test")
+        LOG.info("kjt --1-- %s", CONF.watchdog())
     except:
         LOG.exception()
