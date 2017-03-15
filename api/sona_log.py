@@ -2,13 +2,12 @@
 # All Rights Reserved.
 # SONA Monitoring Solutions.
 
-# generate example messages
+# Ref) generate example messages
 #     logger.debug('debug message')
 #     logger.info('informational message')
 #     logger.warn('warning')
 #     logger.error('error message')
 #     logger.critical('critical failure')
-# example log line) 2017-03-08 15:20:43,802 __main__ CRITICAL critical failure
 
 
 import sys
@@ -30,7 +29,7 @@ class Log:
             os.makedirs(DEFAULT_LOG_PATH)
         log_file_name = DEFAULT_LOG_PATH + file_name
 
-        # formatter = logging.Formatter('%(asctime)s %(name)s %(levelname)s %(message)s')
+        # Ref) formatter = logging.Formatter('%(asctime)s %(name)s %(levelname)s %(message)s')
         formatter = logging.Formatter('%(asctime)s.%(msecs)03d %(message)s',
                                       datefmt='(%m/%d) %H:%M:%S')
         handler = TimedRotatingFileHandler(log_file_name,
@@ -56,3 +55,6 @@ class Log:
 
 
 LOG = Log(CONF.base()['log_file_name'])
+
+# TODO
+# multiple create Logger point
