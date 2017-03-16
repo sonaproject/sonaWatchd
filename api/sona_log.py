@@ -9,7 +9,6 @@
 #     logger.error('error message')
 #     logger.critical('critical failure')
 
-
 import sys
 import os
 import logging
@@ -58,3 +57,4 @@ LOG = Log(CONF.base()['log_file_name'])
 
 # TODO
 # multiple create Logger point
+

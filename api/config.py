@@ -76,6 +76,7 @@ class ConfReader:
             value['list'] = self.__list_opt(self.conf_map['ONOS']['list'])
             value['app_list'] = self.__list_opt(self.conf_map['ONOS']['app_list'])
             value['system_account'] = self.__list_opt(self.conf_map['ONOS']['system_account'])
+
             return value
         except KeyError as KE:
             return dict({'fail': KE})
@@ -84,7 +85,7 @@ class ConfReader:
         value = dict()
         try:
             value['list'] = self.__list_opt(self.conf_map['XOS']['list'])
-            value['system_account'] = self.__list_opt(self.conf_map['XOS']['system_account'])
+
             return value
         except KeyError as KE:
             return dict({'fail': KE})
@@ -94,6 +95,7 @@ class ConfReader:
         try:
             value['list'] = self.__list_opt(self.conf_map['Kubernetes']['list'])
             value['system_account'] = self.__list_opt(self.conf_map['Kubernetes']['system_account'])
+
             return value
         except KeyError as KE:
             return dict({'fail': KE})
@@ -103,6 +105,7 @@ class ConfReader:
         try:
             value['gateway_list'] = self.__list_opt(self.conf_map['OPENSTACK_NODE']['gateway_list'])
             value['system_account'] = self.__list_opt(self.conf_map['OPENSTACK_NODE']['system_account'])
+
             return value
         except KeyError as KE:
             return dict({'fail': KE})
