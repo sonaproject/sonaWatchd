@@ -6,6 +6,9 @@ from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 import base64
 import multiprocessing as multiprocess
 
+from monitor.cmd_proc import CMD_PROC
+import urlparse
+
 key = base64.b64encode("admin:admin")
 
 func_map = {'dis-resource': CMD_PROC.proc_dis_resource,
