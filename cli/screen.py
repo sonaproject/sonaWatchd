@@ -126,19 +126,9 @@ class SCREEN():
             try:
                 width = 60
                 print BG_WHITE + "|%s|" % ('-' * width).ljust(width) + ENDC
-                print BG_WHITE + '|' + BG_BLUEW + \
-                        ("{0:^" + str(width) + "}").format("CONTROL PLAN") + BG_WHITE + '|' + ENDC
+                print BG_WHITE + '|' + BG_BLUEW + BOLD + \
+                        ("{0:^" + str(width) + "}").format("CLI") + BG_WHITE + '|' + ENDC
                 print BG_WHITE + "|%s|" % ('-' * width).ljust(width) + ENDC
-                for onos in ONOS.onos_list.keys():
-                    status = (dict)(ONOS.onos_list[onos])['ping_status']
-                    color = GREEN
-                    # must check status using app state
-                    if status is not 'OK':
-                        color = RED
-
-                    print '| ' + onos + ' status [' + color + status + BG_WHITE + ']' + \
-                            ("{0:>" + str(width - len(onos) - len(status) - len('status') - 4) + "}").format('|') + ENDC
-                    print BG_WHITE + "|%s|" % ('-' * width).ljust(width) + ENDC
             except:
                 LOG.exception_err_write()
 
@@ -155,7 +145,7 @@ class SCREEN():
 
                 i = 1
                 for onos in ONOS.onos_list.keys():
-                    str_info = onos + ' status ['
+                    str_info = onos + ' ['
                     box_onos.addstr(i, 2, str_info)
                     str_status = (dict)(ONOS.onos_list[onos])['ping_status']
 

@@ -7,6 +7,7 @@
 import multiprocessing as multiprocess
 import sys
 import time
+import os
 
 import monitor.watchdog as watchdog
 import api.rest_server as REST_SVR
@@ -30,6 +31,8 @@ class SonaWatchD(Daemon):
         except Exception, e:
             LOG.exception()
             exit(1)
+
+        watchdog.make_file()
 
         while True:
             # TODO

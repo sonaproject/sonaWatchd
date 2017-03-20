@@ -12,11 +12,13 @@ from trace import TRACE
 from screen import SCREEN
 
 def main():
+    # read config
+    if not CONFIG.init_config(LOG):
+        print 'read config fail...'
+        exit()
+
     # set log
     LOG.set_log()
-
-    # read config
-    CONFIG.init_config(LOG)
 
     # read log option
     LOG.set_log_config()

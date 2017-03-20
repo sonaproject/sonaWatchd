@@ -8,8 +8,6 @@ from config import CONFIG
 from onos_info import ONOS
 from log_lib import LOG
 
-url = "http://localhost:8000"
-
 class CLI():
     command_list = []
     cli_validate_list = []
@@ -53,8 +51,8 @@ class CLI():
 
             cls.set_cli_ret_flag(False)
 
-            id = CONFIG.get_rest_id()
-            pw = CONFIG.get_rest_pw()
+            id = CONFIG.get_rest_id().strip()
+            pw = CONFIG.get_rest_pw().strip()
             auth = id + ':' + pw
 
             tmp = cmd.split(' ')
@@ -64,13 +62,23 @@ class CLI():
             if len(tmp) == 2:
                 param = tmp[1]
 
-            header = {'Content-Type': 'application/json', 'Authorization': base64.b64encode(auth)}
             req_body = {'command' : cmd, 'system' : cls.selected_sys, 'param' : param}
+            req_body_json = json.dumps(req_body)
+
+            header = {'Content-Type': 'application/json', 'Authorization': base64.b64encode(auth),
+                      'Content-Length': len(req_body_json)}
 
             try:
                 tmr = threading.Timer(3, cls.check_timeout)
                 tmr.start()
-                myResponse = requests.get(url, headers=header, params=req_body, timeout=2)
+
+                url = CONFIG.get_rest_addr()
+                LOG.cli_log('url check' + url)
+
+                #myResponse = requests.get(url, headers=header, params=req_body, timeout=2)
+
+                #post version
+                myResponse = requests.post(url, headers=header, data=req_body_json, timeout=2)
 
                 LOG.cli_log('SEND REQ | cmd = ' + cmd + ', system = ' + cls.selected_sys + ' [' + id + ':' + pw + ']')
             except:
@@ -78,8 +86,9 @@ class CLI():
                 LOG.exception_err_write()
                 return
 
+            cls.set_cli_ret_flag(True)
+
             if (myResponse.status_code == 200):
-                cls.set_cli_ret_flag(True)
                 print 'response-code = ' + str(myResponse.status_code)
                 print 'content = ' + myResponse.content
             else:
@@ -113,7 +122,7 @@ class CLI():
                 cls.cli_validate_list.append(cmd)
 
                 if (CONFIG.get_config_instance().has_section(cmd)):
-                    opt_list = CONFIG.get_value(cmd, CONFIG.get_cmd_opt_key_name())
+                    opt_list = CONFIG.cli_get_value(cmd, CONFIG.get_cmd_opt_key_name())
                     tmp = []
                     for opt in opt_list.split(','):
                         tmp.append(opt.strip())

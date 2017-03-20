@@ -7,8 +7,13 @@ LOG_SECTION_NAME = 'log'
 
 REST_ID_KEY_NAME = 'id'
 REST_PW_KEY_NAME = 'pw'
-COMMAND_OPT_KEY_NAME = 'option_list'
+REST_URI_KEY_NAME = 'rest-server-uri'
+
+COMMAND_OPT_KEY_NAME = 'option-list'
+
 CLI_LOG_KEY_NAME = 'cli_log'
+CLI_LOG_ROTATE_KEY_NAME = 'log_rotate_time'
+CLI_LOG_BACKUP_KEY_NAME = 'log_backup_count'
 TRACE_LOG_KEY_NAME = 'trace_log'
 
 CLI_CONFIG_FILE = 'config/cli_config.ini'
@@ -27,9 +32,10 @@ class CONFIG():
             # read config
             cls.config_cli.read(CLI_CONFIG_FILE)
             cls.config_trace.read(TRACE_CONFIG_FILE)
+
+            return True
         except:
-            cls.LOG.exception_err_write()
-            pass
+            return False
 
     @classmethod
     def get_cmd_list(cls):
@@ -48,7 +54,7 @@ class CONFIG():
             return []
 
     @classmethod
-    def get_value(cls, section_name, key):
+    def cli_get_value(cls, section_name, key):
         try:
             return cls.config_cli.get(section_name, key)
         except:
@@ -65,15 +71,27 @@ class CONFIG():
 
     @classmethod
     def get_rest_id(cls):
-        return cls.get_value(REST_SECTION_NAME, REST_ID_KEY_NAME)
+        return cls.cli_get_value(REST_SECTION_NAME, REST_ID_KEY_NAME)
 
     @classmethod
     def get_rest_pw(cls):
-        return cls.get_value(REST_SECTION_NAME, REST_PW_KEY_NAME)
+        return cls.cli_get_value(REST_SECTION_NAME, REST_PW_KEY_NAME)
+
+    @classmethod
+    def get_rest_addr(cls):
+        return cls.cli_get_value(REST_SECTION_NAME, REST_URI_KEY_NAME)
 
     @classmethod
     def get_cli_log(cls):
-        return cls.get_value(LOG_SECTION_NAME, CLI_LOG_KEY_NAME)
+        return cls.cli_get_value(LOG_SECTION_NAME, CLI_LOG_KEY_NAME)
+
+    @classmethod
+    def get_cli_log_rotate(cls):
+        return cls.cli_get_value(LOG_SECTION_NAME, CLI_LOG_ROTATE_KEY_NAME)
+
+    @classmethod
+    def get_cli_log_backup(cls):
+        return cls.cli_get_value(LOG_SECTION_NAME, CLI_LOG_BACKUP_KEY_NAME)
 
     @classmethod
     def get_trace_log(cls):
