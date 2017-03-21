@@ -98,11 +98,6 @@ class CLI():
                 print 'content = ' + myResponse.content
 
             cls.CLI_LOG.cli_log('RECV RES | response-code = ' + str(myResponse.status_code) + ', content = ' + myResponse.content)
-
-            jData = json.loads(myResponse.content.replace("\'", '"'))
-
-            # debugging code
-            print json.dumps(jData, sort_keys=True, indent=4)
         except:
             LOG.exception_err_write()
 
