@@ -78,9 +78,6 @@ class CLI():
                 tmr = threading.Timer(3, cls.check_timeout)
                 tmr.start()
 
-                #post version
-                myResponse = requests.post(url, headers=header, data=req_body_json, timeout=2)
-
                 url = CONFIG.get_rest_addr()
                 cls.CLI_LOG.cli_log('url check' + url)
 
