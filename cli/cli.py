@@ -71,8 +71,7 @@ class CLI():
             req_body = {'command' : cmd, 'system' : cls.selected_sys, 'param' : param}
             req_body_json = json.dumps(req_body)
 
-            header = {'Content-Type': 'application/json', 'Authorization': base64.b64encode(auth),
-                      'Content-Length': len(req_body_json)}
+            header = {'Content-Type': 'application/json', 'Authorization': base64.b64encode(auth)}
 
             try:
                 tmr = threading.Timer(3, cls.check_timeout)
@@ -81,10 +80,9 @@ class CLI():
                 url = CONFIG.get_rest_addr()
                 cls.CLI_LOG.cli_log('url check' + url)
 
-                #post version
-                myResponse = requests.post(url, headers=header, data=req_body_json, timeout=2)
+                myResponse = requests.get(url, headers=header, data=req_body_json, timeout=2)
 
-                cls.CLI_LOG.cli_log('SEND REQ | cmd = ' + cmd + ', system = ' + cls.selected_sys + ' [' + id + ':' + pw + ']')
+                cls.CLI_LOG.cli_log('send req | cmd = ' + cmd + ', system = ' + cls.selected_sys + ' [' + id + ':' + pw + ']')
             except:
                 # req timeout
                 LOG.exception_err_write()
@@ -164,7 +162,6 @@ class CLI():
     def pre_complete_cli(cls, text, state):
         try:
             BUFFER = readline.get_line_buffer()
-            args = [None, None, None, None, None, None, None, None, None, None]
             argtemp = []
             if BUFFER != "":
                 i = -1

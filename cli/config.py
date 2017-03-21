@@ -103,7 +103,6 @@ class CONFIG():
     def get_cli_log_backup(cls):
         return cls.cli_get_value(LOG_SECTION_NAME, LOG_BACKUP_KEY_NAME)
 
-
     @classmethod
     def get_trace_log(cls):
         return cls.trace_get_value(LOG_SECTION_NAME, TRACE_LOG_KEY_NAME)

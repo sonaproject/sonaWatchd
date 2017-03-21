@@ -14,7 +14,6 @@ import urlparse
 import json
 
 class RestHandler(BaseHTTPRequestHandler):
-    ''' Main class to present webpages and authentication. '''
     def do_HEAD(self, res_code):
         self.send_response(res_code)
         self.send_header('Content-type', 'application/json')
@@ -22,12 +21,12 @@ class RestHandler(BaseHTTPRequestHandler):
 
         LOG.info('[CLI] res_code = ' + str(res_code))
 
-    def do_POST(self):
+    def do_GET(self):
         request_sz = int(self.headers["Content-length"])
         request_str = self.rfile.read(request_sz)
         request_obj = json.loads(request_str)
 
-        LOG.info('[CLI] starting do_POST() ' + 'client-info = ' + str(self.client_address) + ' msg = ' + json.dumps(request_obj))
+        LOG.info('[CLI] starting do_GET() ' + 'client-info = ' + str(self.client_address) + ' msg = ' + json.dumps(request_obj))
 
         ''' Present frontpage with user authentication. '''
         if self.headers.getheader('Authorization') == None:
