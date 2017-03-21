@@ -12,8 +12,10 @@ REST_URI_KEY_NAME = 'rest-server-uri'
 COMMAND_OPT_KEY_NAME = 'option-list'
 
 CLI_LOG_KEY_NAME = 'cli_log'
-CLI_LOG_ROTATE_KEY_NAME = 'log_rotate_time'
-CLI_LOG_BACKUP_KEY_NAME = 'log_backup_count'
+
+LOG_ROTATE_KEY_NAME = 'log_rotate_time'
+LOG_BACKUP_KEY_NAME = 'log_backup_count'
+
 TRACE_LOG_KEY_NAME = 'trace_log'
 
 CLI_CONFIG_FILE = 'config/cli_config.ini'
@@ -62,6 +64,14 @@ class CONFIG():
             return ''
 
     @classmethod
+    def trace_get_value(cls, section_name, key):
+        try:
+            return cls.config_trace.get(section_name, key)
+        except:
+            cls.LOG.exception_err_write()
+            return ''
+
+    @classmethod
     def get_config_instance(cls):
         return cls.config_cli
 
@@ -87,16 +97,23 @@ class CONFIG():
 
     @classmethod
     def get_cli_log_rotate(cls):
-        return cls.cli_get_value(LOG_SECTION_NAME, CLI_LOG_ROTATE_KEY_NAME)
+        return cls.cli_get_value(LOG_SECTION_NAME, LOG_ROTATE_KEY_NAME)
 
     @classmethod
     def get_cli_log_backup(cls):
-        return cls.cli_get_value(LOG_SECTION_NAME, CLI_LOG_BACKUP_KEY_NAME)
+        return cls.cli_get_value(LOG_SECTION_NAME, LOG_BACKUP_KEY_NAME)
+
 
     @classmethod
     def get_trace_log(cls):
-        try:
-            return cls.config_trace.get(LOG_SECTION_NAME, TRACE_LOG_KEY_NAME)
-        except:
-            cls.LOG.exception_err_write()
-            return ''
+        return cls.trace_get_value(LOG_SECTION_NAME, TRACE_LOG_KEY_NAME)
+
+    @classmethod
+    def get_trace_log_rotate(cls):
+        return cls.trace_get_value(LOG_SECTION_NAME, LOG_ROTATE_KEY_NAME)
+
+    @classmethod
+    def get_trace_log_backup(cls):
+        return cls.trace_get_value(LOG_SECTION_NAME, LOG_BACKUP_KEY_NAME)
+
+

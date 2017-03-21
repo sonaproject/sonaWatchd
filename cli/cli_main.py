@@ -9,6 +9,7 @@ from onos_info import ONOS
 from config import CONFIG
 from cli import CLI
 from trace import TRACE
+from log_lib import USER_LOG
 from screen import SCREEN
 
 def main():
@@ -18,7 +19,17 @@ def main():
         exit()
 
     # set log
-    LOG.set_log()
+    LOG.set_default_log('sonawatched_err.log')
+
+    # set cli log
+    cli_log = USER_LOG()
+    cli_log.set_log('sonawatched_cli.log', CONFIG.get_cli_log_rotate(), int(CONFIG.get_cli_log_backup()))
+    CLI.set_cli_log(cli_log)
+
+    # set trace log
+    trace_log = USER_LOG()
+    trace_log.set_log('sonawatched_trace.log', CONFIG.get_trace_log_rotate(), int(CONFIG.get_trace_log_backup()))
+    TRACE.set_trace_log(trace_log)
 
     # read log option
     LOG.set_log_config()

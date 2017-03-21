@@ -14,6 +14,8 @@ def temp():
         LOG.exception()
 
 def make_file():
+    pass
+"""
     try:
         with open("/home/hs/Projects/sonaWatchd/monitor/hello.txt", "wb") as f:
             f.write("Hello SONA1!\n")
@@ -27,3 +29,4 @@ def make_file():
             f.close()
     except:
         LOG.exception()
+"""

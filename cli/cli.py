@@ -17,6 +17,12 @@ class CLI():
     cli_ret_flag = False
     selected_sys = 'all'
 
+    CLI_LOG = None
+
+    @classmethod
+    def set_cli_log(cls, cli_log):
+        cls.CLI_LOG = cli_log
+
     @classmethod
     def input_cmd(cls):
         try:
@@ -80,7 +86,13 @@ class CLI():
                 #post version
                 myResponse = requests.post(url, headers=header, data=req_body_json, timeout=2)
 
-                LOG.cli_log('SEND REQ | cmd = ' + cmd + ', system = ' + cls.selected_sys + ' [' + id + ':' + pw + ']')
+                url = CONFIG.get_rest_addr()
+                cls.CLI_LOG.cli_log('url check' + url)
+
+                #post version
+                myResponse = requests.post(url, headers=header, data=req_body_json, timeout=2)
+
+                cls.CLI_LOG.cli_log('SEND REQ | cmd = ' + cmd + ', system = ' + cls.selected_sys + ' [' + id + ':' + pw + ']')
             except:
                 # req timeout
                 LOG.exception_err_write()
@@ -95,7 +107,7 @@ class CLI():
                 print 'response-code = ' + str(myResponse.status_code)
                 print 'content = ' + myResponse.content
 
-            LOG.cli_log('RECV RES | response-code = ' + str(myResponse.status_code) + ', content = ' + myResponse.content)
+            cls.CLI_LOG.cli_log('RECV RES | response-code = ' + str(myResponse.status_code) + ', content = ' + myResponse.content)
 
             jData = json.loads(myResponse.content.replace("\'", '"'))
 

@@ -4,7 +4,12 @@ from config import CONFIG
 from log_lib import LOG
 
 class TRACE():
+    TRACE_LOG = None
     trace_search_list = []
+
+    @classmethod
+    def set_trace_log(cls, trace_log):
+        cls.TRACE_LOG = trace_log
 
     @classmethod
     def set_search_list(cls):
@@ -36,7 +41,7 @@ class TRACE():
     def send_trace(cls, ip, condition):
         try:
             # req trace
-            LOG.trace_log('START TRACE | ip = ' + ip + ', condition = ' + condition)
+            cls.TRACE_LOG.trace_log('START TRACE | ip = ' + ip + ', condition = ' + condition)
         except:
             LOG.exception_err_write()
 
