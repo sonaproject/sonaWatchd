@@ -11,11 +11,14 @@ import os
 CONFIG_FILE = 'setup_config.ini'
 REQUIREMENT_PKG = 'pexpect'
 SSH_TIMEOUT = 3
-ID_RAS_FILE = os.getenv('HOME') + '/.ssh/id_rsa.pub'
+HOME_DIR = os.getenv('HOME')
+SSH_DIR = HOME_DIR + '/.ssh/'
+ID_RAS_FILE = SSH_DIR + 'id_rsa.pub'
 
 ONOS_INSTALL_DIR = '/opt/onos'
 
 
+# check 'pexpect' module
 def installed_package(package):
     try:
         imp.find_module(package)
@@ -24,6 +27,7 @@ def installed_package(package):
         return False
 
 
+# install 'pexpect' module
 def install_package(package):
     try:
         import pip
@@ -32,6 +36,7 @@ def install_package(package):
         print "Must install \"%s\" Package" % package
         exit(1)
 
+# import 'pexpect' module
 if installed_package(REQUIREMENT_PKG):
     import pexpect
 else:
@@ -42,6 +47,7 @@ else:
         exit(1)
 
 
+# read ssh setup config file
 class CONF:
     def __init__(self):
         self.conf = ConfigParser.ConfigParser()
@@ -58,6 +64,7 @@ class CONF:
             return conf_map[session]
 
 
+# create ssh public key
 def ssh_keygen():
     print "[Setup] No ssh id_rsa and id_rsa.pub file ......"
     print "[Setup] Make ssh id_rsa and id_rsa.pub file ......"
@@ -65,9 +72,10 @@ def ssh_keygen():
     subprocess.call('ssh-keygen -t rsa -f ~/.ssh/id_rsa -P \'\' -q', shell=True)
 
 
+# ssh key copy to account of target system
 def key_copy(node, conf):
     cmd = 'ssh-copy-id -oStrictHostKeyChecking=no -i %s/.ssh/id_rsa.pub %s@%s' \
-          % (os.getenv('HOME'), conf['username'], node)
+          % (HOME_DIR, conf['username'], node)
     ssh_conn = pexpect.spawn(cmd)
 
     while True:
@@ -87,9 +95,10 @@ def key_copy(node, conf):
             print "[Error] I either got key or connection timeout"
 
 
+# ssh key copy to ONOS instance
 def key_copy_2onos(node, conf):
     print "[Setup] ONOS(%s) Prune the node entry from the known hosts file ......" % node
-    prune_ssh_key_cmd = 'ssh-keygen -f "%s/.ssh/known_hosts" -R %s:8101' % (os.getenv('HOME'), node)
+    prune_ssh_key_cmd = 'ssh-keygen -f "%s/.ssh/known_hosts" -R %s:8101' % (HOME_DIR, node)
     subprocess.call(prune_ssh_key_cmd, shell=True)
 
     print "[Setup] ONOS(%s) Setup passwordless login for the local user ......" % node
@@ -140,11 +149,11 @@ def openstack():
 def main():
     print "[Setup] ssh-key copy to start ......"
 
-    print "[Setup] checking ssh id_pub key ......"
-    if "id_rsa" not in os.listdir(os.getenv('HOME') + '/.ssh'):
+    print "[Setup] checking ssh \'id_rsa\' and \'id_rsa.pub\' key files ......"
+    if not set(['id_rsa','id_rsa.pub']).issubset(os.listdir(SSH_DIR)):
         ssh_keygen()
     else:
-        print "[Setup] ssh id_pub key exist ......"
+        print "[Setup] ssh \'id_rsa\' and \'id_rsa.pub\' key files exist ......"
 
     for node in str(CONF().get('BASE')['key_share_node']).replace(" ", "").split(","):
         if node.__eq__('ONOS'):
