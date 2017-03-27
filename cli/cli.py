@@ -19,6 +19,8 @@ class CLI():
 
     CLI_LOG = None
 
+    tab_flag = False
+
     @classmethod
     def set_cli_log(cls, cli_log):
         cls.CLI_LOG = cli_log
@@ -123,7 +125,7 @@ class CLI():
                 cls.CLI_LOG.cli_log('BODY = ' + json.dumps(json.loads(myResponse.content.replace("\'", '"')), sort_keys=True, indent=4))
             except:
                 cls.CLI_LOG.cli_log('BODY = ' + myResponse.content)
-                
+
         except:
             LOG.exception_err_write()
 
@@ -185,7 +187,9 @@ class CLI():
         try:
             BUFFER = readline.get_line_buffer()
             argtemp = []
-            if BUFFER != "":
+            if BUFFER == "" or cls.tab_flag:
+                return cls.complete_cli(text, state, cls.get_cli_search_list())
+            else:
                 i = -1
                 while i != BUFFER.count(" "):
                     if BUFFER.count(" ") >= 0:
@@ -215,8 +219,6 @@ class CLI():
                             if len(argtemp) == 1:
                                 argtemp == argtemp[0]
                     i = i + 1
-            else:
-                return cls.complete_cli(text, state, cls.get_cli_search_list())
         except:
             LOG.exception_err_write()
 

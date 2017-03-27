@@ -83,14 +83,10 @@ def set_readline_opt():
     # special processing
     delims = readline.get_completer_delims().replace("-", "^")
     readline.set_completer_delims(delims)
+    #delims = readline.get_completer_delims().replace(" ", "^")
+    #readline.set_completer_delims(delims)
 
-    # mac OS
-    if 'libedit' in readline.__doc__:
-        readline.parse_and_bind("bind -e")
-        readline.parse_and_bind("bind '\t' rl_complete")
-    else:
-        readline.parse_and_bind("tab:complete")
-
+    readline.parse_and_bind("tab:complete")
     readline.parse_and_bind('set editing-mode vi')
 
 def is_menu(cmd):
@@ -143,6 +139,9 @@ def select_menu():
                     readline.set_completer(CLI.pre_complete_cli)
 
                     while True:
+                        if 'libedit' in readline.__doc__:
+                            CLI.tab_flag = True
+
                         # select_command (handling tab event)
                         cmd = CLI.input_cmd()
 

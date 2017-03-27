@@ -12,10 +12,8 @@ REST_URI_KEY_NAME = 'rest-server-uri'
 COMMAND_OPT_KEY_NAME = 'option-list'
 
 CLI_LOG_KEY_NAME = 'cli_log'
-
 LOG_ROTATE_KEY_NAME = 'log_rotate_time'
 LOG_BACKUP_KEY_NAME = 'log_backup_count'
-
 TRACE_LOG_KEY_NAME = 'trace_log'
 
 CLI_CONFIG_FILE = 'config/cli_config.ini'
