@@ -19,8 +19,6 @@ class CLI():
 
     CLI_LOG = None
 
-    tab_flag = False
-
     @classmethod
     def set_cli_log(cls, cli_log):
         cls.CLI_LOG = cli_log
@@ -187,16 +185,13 @@ class CLI():
         try:
             BUFFER = readline.get_line_buffer()
             argtemp = []
-            if BUFFER == "" or cls.tab_flag:
-                return cls.complete_cli(text, state, cls.get_cli_search_list())
-            else:
+            if BUFFER != "":
                 i = -1
                 while i != BUFFER.count(" "):
                     if BUFFER.count(" ") >= 0:
-                        if BUFFER.count(" ") == 0:  # 1 because len() starts couting at 1
+                        if BUFFER.count(" ") == 0:
                             return cls.complete_cli(text, state, cls.get_cli_search_list())
                         else:
-                            #                    print "Else triggered"
                             index = 0
                             cmd = []
                             while cls.complete_cli(BUFFER.split()[0], index, cls.get_cli_search_list()):
@@ -209,7 +204,6 @@ class CLI():
                             cmd = BUFFER.split()[0]
 
                             if cls.cli_search_list_sub.has_key(cmd):
-                                # print 'step2 text = ' + text + " state = " + str(state)
                                 return cls.complete_cli(text, state, cls.cli_search_list_sub[cmd])
                         else:
                             index = 0
@@ -219,6 +213,8 @@ class CLI():
                             if len(argtemp) == 1:
                                 argtemp == argtemp[0]
                     i = i + 1
+            else:
+                return cls.complete_cli(text, state, cls.get_cli_search_list())
         except:
             LOG.exception_err_write()
 

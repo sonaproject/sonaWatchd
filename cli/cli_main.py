@@ -142,9 +142,6 @@ def select_menu():
                     readline.set_completer(CLI.pre_complete_cli)
 
                     while True:
-                        if 'libedit' in readline.__doc__:
-                            CLI.tab_flag = True
-
                         # select_command (handling tab event)
                         cmd = CLI.input_cmd()
 
