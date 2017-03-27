@@ -73,13 +73,13 @@ class USER_LOG():
     def trace_log(self, log):
         try:
             if LOG.trace_log_flag:
-                self.LOG.debug('[TRACE] ' + log)
+                self.LOG.debug(log)
         except:
             LOG.exception_err_write()
 
     def cli_log(self, log):
         try:
             if LOG.cli_log_flag:
-                self.LOG.debug('[CLI] ' + log)
+                self.LOG.debug(log)
         except:
             LOG.exception_err_write()

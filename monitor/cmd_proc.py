@@ -15,9 +15,7 @@ class CMD_PROC():
             res_body['system'] = system
             res_body['param'] = param
 
-            # must have exception handling
             ret = func_map[cmd](system, param)
-
             res_body['result'] = ret
 
         except:
@@ -26,23 +24,32 @@ class CMD_PROC():
         return res_body
 
     @staticmethod
+    def exist_command(req):
+        cmd = req['command']
+
+        if (func_map.has_key(cmd)):
+            return True
+
+        return False
+
+    @staticmethod
     def proc_dis_resource(system, param):
         res = "return proc_dis_resource [sys = " + system + " param = " + param + "]"
-        LOG.info('[CMD_PROC] res_msg = ' + res)
+        LOG.info('[CMD_PROC] RES MSG = ' + res)
 
         return res
 
     @staticmethod
     def proc_dis_onos(system, param):
         res = "return proc_dis_onos [sys = " + system + " param = " + param + "]"
-        LOG.info('[CMD_PROC] res_msg = ' + res)
+        LOG.info('[CMD_PROC] RES MSG = ' + res)
 
         return res
 
     @staticmethod
     def proc_dis_log(system, param):
         res = "return proc_dis_log [sys = " + system + " param = " + param + "]"
-        LOG.info('[CMD_PROC] res_msg = ' + res)
+        LOG.info('[CMD_PROC] RES MSG = ' + res)
 
         return res
 

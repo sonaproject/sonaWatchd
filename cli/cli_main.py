@@ -5,10 +5,10 @@ import threading
 import time
 
 from log_lib import LOG
-from onos_info import ONOS
+from system_info import SYS
 from config import CONFIG
 from cli import CLI
-from trace import TRACE
+from flow_trace import TRACE
 from log_lib import USER_LOG
 from screen import SCREEN
 
@@ -35,10 +35,10 @@ def main():
     LOG.set_log_config()
 
     # inquiry onos info
-    onos_info = ONOS.inquiry_onos_info()
+    onos_info = SYS.inquiry_onos_info()
 
     # setting onos info
-    ONOS.set_onos_info(onos_info)
+    SYS.set_onos_info(onos_info)
 
     # set command list
     CLI.set_cmd_list()
@@ -62,18 +62,18 @@ def main():
 
     # exit
     print 'Processing shutdown...'
-    ONOS.set_onos_thr_flag(False)
+    SYS.set_onos_thr_flag(False)
     onos_thread.join()
     exit()
 
 def check_onos_status():
     try:
-        while ONOS.get_onos_thr_flag():
-            if ONOS.get_onos_redraw_flag():
-                onos_info = ONOS.inquiry_onos_info()
+        while SYS.get_onos_thr_flag():
+            if SYS.get_onos_redraw_flag():
+                onos_info = SYS.inquiry_onos_info()
 
-                if ONOS.changed_onos_info(onos_info) is True:
-                    SCREEN.draw_onos()
+                if SYS.changed_onos_info(onos_info) is True:
+                    SCREEN.draw_system()
 
             time.sleep(1)
     except:
@@ -113,10 +113,10 @@ def select_menu():
     try:
         SCREEN.set_screen()
 
-        SCREEN.draw_onos()
+        SCREEN.draw_system()
         SCREEN.draw_menu(menu_list, selected_menu_no)
 
-        ONOS.set_onos_redraw_flag(True)
+        SYS.set_onos_redraw_flag(True)
 
         x = SCREEN.get_ch()
 
@@ -131,13 +131,13 @@ def select_menu():
 
             elif x == ord("\n"):
                 # stop timer
-                ONOS.set_onos_redraw_flag(False)
+                SYS.set_onos_redraw_flag(False)
 
                 # ?? is it necessary?
                 SCREEN.refresh_screen()
                 SCREEN.screen_exit()
 
-                SCREEN.display_onos_info(1)
+                SCREEN.display_header(menu_list[selected_menu_no - 1])
 
                 if (menu_list[selected_menu_no - 1]) == 'CLI':
                     readline.set_completer(CLI.pre_complete_cli)
@@ -175,11 +175,11 @@ def select_menu():
                         else:
                             print '[' + cmd + '] invalid command.'
 
-            SCREEN.draw_onos()
+            SCREEN.draw_system()
             SCREEN.draw_menu(menu_list, selected_menu_no)
 
             SCREEN.refresh_screen()
-            ONOS.set_onos_redraw_flag(True)
+            SYS.set_onos_redraw_flag(True)
 
             x = SCREEN.get_ch()
 

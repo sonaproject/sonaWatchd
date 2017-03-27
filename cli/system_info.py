@@ -1,6 +1,6 @@
 from log_lib import LOG
 
-class ONOS():
+class SYS():
     # key = onos_name
     # value = info_dic, it contains ip, conn state, app list & status...
     onos_list = {}

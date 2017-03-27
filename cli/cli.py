@@ -5,7 +5,7 @@ import base64
 import readline
 
 from config import CONFIG
-from onos_info import ONOS
+from system_info import SYS
 from log_lib import LOG
 
 class CLI():
@@ -37,14 +37,25 @@ class CLI():
     @classmethod
     def send_cmd(cls, cmd):
         try:
+            cls.CLI_LOG.cli_log('START SEND COMMAND = ' + cmd)
             # remove space
             cmd = cmd.strip()
 
             if cmd in ['quit', 'exit', 'menu']:
                 cls.set_cli_ret_flag(True)
                 return
+            elif len(cmd.strip()) == 0:
+                cls.set_cli_ret_flag(True)
+                return
             elif cmd not in cls.cli_validate_list:
-                print '[' + cmd + '] is undefined command.'
+                if cmd.startswith('sys'):
+                    tmp = cmd.split(' ')
+                    if len(tmp) == 1:
+                        print 'system name is missing.'
+                    if len(tmp) >= 2:
+                        print '[' + cmd[4:] + '] is invalid system name.'
+                else:
+                    print '[' + cmd + '] is undefined command.'
                 cls.set_cli_ret_flag(True)
                 return
             elif cmd.startswith('sys '):
@@ -53,6 +64,7 @@ class CLI():
                 tmp = cmd.split(' ')
                 if len(tmp) == 2:
                     cls.selected_sys = (cmd.split(' '))[1]
+                    cls.CLI_LOG.cli_log('CHANGE TARGET SYSTEM = ' + cls.selected_sys)
                     return
 
             cls.set_cli_ret_flag(False)
@@ -73,16 +85,23 @@ class CLI():
 
             header = {'Content-Type': 'application/json', 'Authorization': base64.b64encode(auth)}
 
+            cls.CLI_LOG.cli_log('---------------------------SEND CMD---------------------------')
+
             try:
                 tmr = threading.Timer(3, cls.check_timeout)
                 tmr.start()
 
                 url = CONFIG.get_rest_addr()
-                cls.CLI_LOG.cli_log('url check' + url)
+                cls.CLI_LOG.cli_log('URL = ' + url)
+                cls.CLI_LOG.cli_log('AUTH = ' + id + ':' + pw)
 
                 myResponse = requests.get(url, headers=header, data=req_body_json, timeout=2)
 
-                cls.CLI_LOG.cli_log('send req | cmd = ' + cmd + ', system = ' + cls.selected_sys + ' [' + id + ':' + pw + ']')
+                cls.CLI_LOG.cli_log('COMMAND = ' + cmd)
+                cls.CLI_LOG.cli_log('SYSTEM = ' + cls.selected_sys)
+                cls.CLI_LOG.cli_log('HEADER = ' + json.dumps(header, sort_keys=True, indent=4))
+                cls.CLI_LOG.cli_log('BODY = ' + json.dumps(req_body, sort_keys=True, indent=4))
+
             except:
                 # req timeout
                 LOG.exception_err_write()
@@ -97,7 +116,14 @@ class CLI():
                 print 'response-code = ' + str(myResponse.status_code)
                 print 'content = ' + myResponse.content
 
-            cls.CLI_LOG.cli_log('RECV RES | response-code = ' + str(myResponse.status_code) + ', content = ' + myResponse.content)
+            cls.CLI_LOG.cli_log('---------------------------RECV RES---------------------------')
+            cls.CLI_LOG.cli_log('RESPONSE CODE = ' + str(myResponse.status_code))
+
+            try:
+                cls.CLI_LOG.cli_log('BODY = ' + json.dumps(json.loads(myResponse.content.replace("\'", '"')), sort_keys=True, indent=4))
+            except:
+                cls.CLI_LOG.cli_log('BODY = ' + myResponse.content)
+                
         except:
             LOG.exception_err_write()
 
@@ -107,6 +133,7 @@ class CLI():
         if cls.get_cli_ret_flag():
             return
 
+        cls.CLI_LOG.cli_log('PROCESSING TIMEOUT')
         print 'Processing timeout.'
 
         cls.set_cli_ret_flag(True)
@@ -134,7 +161,7 @@ class CLI():
             tmp_sys = []
             tmp_sys.append('all')
             cls.cli_validate_list.append('sys all')
-            for onos_name in ONOS.get_onos_list():
+            for onos_name in SYS.get_onos_list():
                 tmp_sys.append(onos_name)
                 cls.cli_validate_list.append('sys ' + onos_name)
             cls.cli_search_list_sub['sys'] = tmp_sys

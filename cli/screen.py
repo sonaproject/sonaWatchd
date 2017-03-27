@@ -1,7 +1,7 @@
 import curses
 import time
 
-from onos_info import ONOS
+from system_info import SYS
 from log_lib import LOG
 
 WHITE = '\033[1;97m'
@@ -75,7 +75,7 @@ class SCREEN():
             return ''
 
     @classmethod
-    def draw_onos(cls):
+    def draw_system(cls):
         try:
             box_onos = cls.display_onos_info(2)
             box_onos.refresh()
@@ -84,7 +84,7 @@ class SCREEN():
 
             now = time.localtime()
             str_time = 'Last Check Time [%02d:%02d:%02d]' % (now.tm_hour, now.tm_min, now.tm_sec)
-            cls.set_main_str(ONOS.get_onos_line_count() + 2 + 4 + 1, MAIN_WIDTH - len(str_time), str_time, time_color)
+            cls.set_main_str(SYS.get_onos_line_count() + 2 + 4 + 1, MAIN_WIDTH - len(str_time), str_time, time_color)
         except:
             LOG.exception_err_write()
 
@@ -98,7 +98,7 @@ class SCREEN():
 
     @staticmethod
     def draw_select(menu_list, selected_menu_no):
-        box_type = curses.newwin(len(menu_list) + 2, MAIN_WIDTH, ONOS.get_onos_line_count() + 3, 1)
+        box_type = curses.newwin(len(menu_list) + 2, MAIN_WIDTH, SYS.get_onos_line_count() + 3, 1)
         box_type.box()
 
         try:
@@ -117,6 +117,17 @@ class SCREEN():
 
         return box_type
 
+    @classmethod
+    def display_header(cls, menu):
+        try:
+            width = 60
+            print BG_WHITE + "|%s|" % ('-' * width).ljust(width) + ENDC
+            print BG_WHITE + '|' + BG_BLUEW + BOLD + \
+                    ("{0:^" + str(width) + "}").format(menu) + BG_WHITE + '|' + ENDC
+            print BG_WHITE + "|%s|" % ('-' * width).ljust(width) + ENDC
+        except:
+            LOG.exception_err_write()
+
     # display onos info
     # type == 1 -> text mode
     # type == 2 -> curses mode
@@ -133,7 +144,7 @@ class SCREEN():
                 LOG.exception_err_write()
 
         elif type is 2:
-            box_onos = curses.newwin(ONOS.get_onos_line_count() + 2, MAIN_WIDTH, 1, 1)
+            box_onos = curses.newwin(SYS.get_onos_line_count() + 2, MAIN_WIDTH, 1, 1)
             box_onos.box()
 
             try:
@@ -144,10 +155,10 @@ class SCREEN():
                 box_onos.addstr(0, 18, ' CONTROL PLAN ', normal_text)
 
                 i = 1
-                for onos in ONOS.onos_list.keys():
+                for onos in SYS.onos_list.keys():
                     str_info = onos + ' ['
                     box_onos.addstr(i, 2, str_info)
-                    str_status = (dict)(ONOS.onos_list[onos])['ping_status']
+                    str_status = (dict)(SYS.onos_list[onos])['ping_status']
 
                     if str_status is 'OK':
                         box_onos.addstr(i, 2 + len(str_info), str_status, status_text_OK)
