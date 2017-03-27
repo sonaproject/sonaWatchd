@@ -80,7 +80,6 @@ def check_onos_status():
         LOG.exception_err_write()
 
 def set_readline_opt():
-    # special processing
     delims = readline.get_completer_delims().replace("-", "^")
     readline.set_completer_delims(delims)
     #delims = readline.get_completer_delims().replace(" ", "^")
