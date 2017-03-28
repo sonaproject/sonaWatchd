@@ -1,3 +1,3 @@
-# sonaWatch
+# sonaWatchd
 
-sonaWatchd   
+sonaWatchd 김정태
