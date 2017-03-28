@@ -17,7 +17,7 @@ ssh key 생성 및 배포를 위해서 setup tool을 사용한다.
       * 각 대상 section 내용
          - list: 대상 장비 IP 정보
          - auto_password: NO인 경우 직접 password를 넣어 인증하게 됨. "YES"(or etc)는 설정 파일에 있는 password를 사용함
-         - username: sudoer에 포함되어 있는 OS의 account
+         - username: sudoer에 포함되어 있는 OS의 account
   
   3. ssh_key_setup.py 실행함.
 
