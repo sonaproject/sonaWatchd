@@ -142,6 +142,11 @@ def select_menu():
                     readline.set_completer(CLI.pre_complete_cli)
 
                     while True:
+                        # mac OS
+                        if 'libedit' in readline.__doc__:
+                            CLI.modify_flag = True
+                            CLI.save_buffer = readline.get_line_buffer()
+
                         # select_command (handling tab event)
                         cmd = CLI.input_cmd()
 

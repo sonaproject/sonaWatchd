@@ -19,6 +19,9 @@ class CLI():
 
     CLI_LOG = None
 
+    modify_flag = False
+    save_buffer = ''
+
     @classmethod
     def set_cli_log(cls, cli_log):
         cls.CLI_LOG = cli_log
@@ -184,6 +187,7 @@ class CLI():
     def pre_complete_cli(cls, text, state):
         try:
             BUFFER = readline.get_line_buffer()
+
             argtemp = []
             if BUFFER != "":
                 i = -1
@@ -192,6 +196,14 @@ class CLI():
                         if BUFFER.count(" ") == 0:
                             return cls.complete_cli(text, state, cls.get_cli_search_list())
                         else:
+                            # mac OS
+                            if 'libedit' in readline.__doc__:
+                                if cls.modify_flag:
+                                    if cls.save_buffer != BUFFER:
+                                        cls.modify_flag = False
+                                    else:
+                                        return cls.complete_cli(text, state, cls.get_cli_search_list())
+
                             index = 0
                             cmd = []
                             while cls.complete_cli(BUFFER.split()[0], index, cls.get_cli_search_list()):
