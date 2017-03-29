@@ -31,4 +31,8 @@ ssh key 생성 및 배포를 위해서 setup tool을 사용한다.
      - restart
          ./sonawatcher.py restart
 
-  2. CLI 
+  2. CLI
+     - start
+         ./cli_main.py
+     - stop
+          cli main 화면에서 Esc 키 입력
