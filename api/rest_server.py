@@ -10,7 +10,6 @@ from monitor.cmd_proc import CMD_PROC
 from api.config import CONF
 from api.sona_log import LOG
 
-import urlparse
 import json
 
 class RestHandler(BaseHTTPRequestHandler):
@@ -68,8 +67,9 @@ class RestHandler(BaseHTTPRequestHandler):
                 LOG.info('[REST-SERVER] AUTH SUCCESS = ' + id_pw)
                 return True
 
-        LOG.info('[REST-SERVER] AUTH FAIL = ' + id_pw)
+        LOG.info('[REST-SERVER] AUTH FAIL = ' + cli_pw)
         return False
+
 
 def run(handlerclass=HTTPServer, handler_class=RestHandler, port=int(CONF.rest()['rest_server_port'])):
     server_address = ("", port)
@@ -78,6 +78,8 @@ def run(handlerclass=HTTPServer, handler_class=RestHandler, port=int(CONF.rest()
 
 
 def rest_server_start():
+    LOG.info("--- REST Server START --- ")
     rest_server_daemon = multiprocess.Process(name='rest_server', target=run)
     rest_server_daemon.daemon = True
     rest_server_daemon.start()
+

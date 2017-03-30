@@ -7,7 +7,6 @@
 import multiprocessing as multiprocess
 import sys
 import time
-import os
 
 import monitor.watchdog as watchdog
 import api.rest_server as REST_SVR
@@ -15,30 +14,36 @@ from api.config import CONF
 from api.sona_log import LOG
 from daemon import Daemon
 
-# INTERVAL = CONF.watchdog()['system_check_interval']
+
 PIDFILE = CONF.get_pid_file()
 
 
 class SonaWatchD(Daemon):
-
     def run(self):
+        # Start RESTful server
         try:
-            # TODO
-            # develop REST API SERVER
-            LOG.info("--- REST Server START ---")
             REST_SVR.rest_server_start()
             pass
-        except Exception, e:
+        except:
             LOG.exception()
             exit(1)
 
-        watchdog.make_file()
+        # Periodic monitoring
+        if CONF.watchdog()['interval'] == 0:
+            LOG.info("--- Not running periodic monitoring ---")
+            while True:
+                time.sleep(3600)
+        else:
+            LOG.info("--- Periodic Monitoring Start ---")
+            while True:
+                try:
+                    watchdog.periodic()
 
-        while True:
-            # TODO
-            # implement periodic system check method
-            watchdog.temp()
-            time.sleep(CONF.watchdog()['system_check_interval'])
+                    time.sleep(CONF.watchdog()['interval'])
+                except:
+                    LOG.exception()
+                    exit(1)
+
 
 if __name__ == "__main__":
 
@@ -48,13 +53,11 @@ if __name__ == "__main__":
 
         if 'start' == sys.argv[1]:
             try:
-                LOG.info("--- Daemon START ---")
                 daemon.start()
             except:
                 pass
 
         elif 'stop' == sys.argv[1]:
-            LOG.info("--- Daemon STOP ---")
             print "Stopping ..."
             daemon.stop()
 

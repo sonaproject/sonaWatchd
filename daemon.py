@@ -53,6 +53,7 @@ class Daemon(object):
 
         pid = str(os.getpid())
 
+        LOG.info("--- Daemon START ---")
         sys.stderr.write("\nstarted with pid %s\n" % pid)
         sys.stderr.flush()
 
@@ -119,6 +120,7 @@ class Daemon(object):
 
         # Try killing the daemon process
         try:
+            LOG.info("--- Daemon STOP ---")
             while 1:
                 for cpid in self.get_child_pid(pid):
                     os.kill(cpid,SIGTERM)
@@ -129,9 +131,10 @@ class Daemon(object):
             if err.find("No such process") > 0:
                 if os.path.exists(self.pidfile):
                     os.remove(self.pidfile)
-                else:
-                    print str(err)
-                    sys.exit(1)
+            else:
+                print str(err)
+                print "Stopping Fail ..."
+                sys.exit(1)
 
     # get id's child process
     def get_child_pid(self, ppid):

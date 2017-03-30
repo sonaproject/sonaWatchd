@@ -38,6 +38,7 @@ class ConfReader:
             value['log_file_name'] = str(self.conf_map['BASE']['log_file_name'])
             value['log_rotate_time'] = str(self.conf_map['BASE']['log_rotate_time'])
             value['log_backup_count'] = int(self.conf_map['BASE']['log_backup_count'])
+
             return value
         except KeyError as KE:
             return dict({'fail': KE})
@@ -45,10 +46,12 @@ class ConfReader:
     def watchdog(self):
         value = dict()
         try:
-            value['system_check_interval'] = int(self.conf_map['WATCHDOG']['system_check_interval'])
-            value['check_command'] = str(self.conf_map['WATCHDOG']['check_command'])
-            value['check_timeout'] = int(self.conf_map['WATCHDOG']['check_timeout'])
-            value['check_retry'] = int(self.conf_map['WATCHDOG']['check_retry'])
+            value['interval'] = int(self.conf_map['WATCHDOG']['interval'])
+            value['check_system'] = self.__list_opt(self.conf_map['WATCHDOG']['check_system'])
+            value['method'] = str(self.conf_map['WATCHDOG']['method'])
+            value['timeout'] = int(self.conf_map['WATCHDOG']['timeout'])
+            value['retry'] = int(self.conf_map['WATCHDOG']['retry'])
+
             return value
         except KeyError as KE:
             return dict({'fail': KE})
@@ -57,6 +60,7 @@ class ConfReader:
         value = dict()
         try:
             value['ssh_req_timeout'] = int(self.conf_map['SSH_CONN']['ssh_req_timeout'])
+
             return value
         except KeyError as KE:
             return dict({'fail': KE})
@@ -66,6 +70,7 @@ class ConfReader:
         try:
             value['rest_server_port'] = int(self.conf_map['REST']['rest_server_port'])
             value['user_password'] = self.__list_opt(self.conf_map['REST']['user_password'])
+
             return value
         except KeyError as KE:
             return dict({'fail': KE})
@@ -75,7 +80,7 @@ class ConfReader:
         try:
             value['list'] = self.__list_opt(self.conf_map['ONOS']['list'])
             value['app_list'] = self.__list_opt(self.conf_map['ONOS']['app_list'])
-            value['system_account'] = self.__list_opt(self.conf_map['ONOS']['system_account'])
+            value['account'] = self.__list_opt(self.conf_map['ONOS']['account'])
 
             return value
         except KeyError as KE:
@@ -85,6 +90,7 @@ class ConfReader:
         value = dict()
         try:
             value['list'] = self.__list_opt(self.conf_map['XOS']['list'])
+            value['account'] = str(self.conf_map['XOS']['account'])
 
             return value
         except KeyError as KE:
@@ -93,18 +99,18 @@ class ConfReader:
     def k8s(self):
         value = dict()
         try:
-            value['list'] = self.__list_opt(self.conf_map['Kubernetes']['list'])
-            value['system_account'] = self.__list_opt(self.conf_map['Kubernetes']['system_account'])
+            value['list'] = self.__list_opt(self.conf_map['K8S']['list'])
+            value['account'] = str(self.conf_map['K8S']['account'])
 
             return value
         except KeyError as KE:
             return dict({'fail': KE})
 
-    def openstack_node(self):
+    def openstack(self):
         value = dict()
         try:
-            value['gateway_list'] = self.__list_opt(self.conf_map['OPENSTACK_NODE']['gateway_list'])
-            value['system_account'] = self.__list_opt(self.conf_map['OPENSTACK_NODE']['system_account'])
+            value['list'] = self.__list_opt(self.conf_map['OPENSTACK']['list'])
+            value['account'] = self.__list_opt(self.conf_map['OPENSTACK']['account'])
 
             return value
         except KeyError as KE:
@@ -117,3 +123,5 @@ class ConfReader:
             return dict({'fail': KE})
 
 CONF = ConfReader()
+
+

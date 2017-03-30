@@ -1,6 +1,7 @@
 import json
 from api.sona_log import LOG
 
+
 class CMD_PROC():
     @staticmethod
     def parse_req(req):

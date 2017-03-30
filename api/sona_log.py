@@ -20,7 +20,7 @@ DEFAULT_LOG_PATH = os.getcwd() + "/log/"
 DEFAULT_LOGGER_NAME = 'sona_logger'
 
 
-class Log:
+class _Log:
     logger = logging.getLogger(DEFAULT_LOGGER_NAME)
 
     def __init__(self, file_name):
@@ -40,20 +40,23 @@ class Log:
 
     @classmethod
     def info(cls, message, *args):
+        message = '[m:' + traceback.extract_stack(None, 2)[0][2] + '] ' + message
         cls.logger.info(message % args)
 
     @classmethod
     def error(cls, message, *args):
+        message = '[m:' + traceback.extract_stack(None, 2)[0][2] + '] ' + message
         cls.logger.error(message % args)
 
     @classmethod
     def exception(cls):
         exc_type, exc_value, exc_traceback = sys.exc_info()
         lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
-        cls.error("%s", ''.join('   | ' + line for line in lines))
+        method = '[m:' + traceback.extract_stack(None, 2)[0][2] + ']'
+        cls.error("Exception Error %s\n%s", method, ''.join('   | ' + line for line in lines))
 
 
-LOG = Log(CONF.base()['log_file_name'])
+LOG = _Log(CONF.base()['log_file_name'])
 
 # TODO
 # multiple create Logger point
