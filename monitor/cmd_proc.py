@@ -37,7 +37,7 @@ class CMD_PROC():
     @staticmethod
     def proc_dis_resource(system, param):
         with DB.connection() as conn:
-            item, time, data = conn.cursor().execute("SELECT * FROM t_status WHERE item='periodic'").fetchone()
+            item, time, data = conn.cursor().execute("SELECT * FROM t_status WHERE item='main_status'").fetchone()
             LOG.info('Get \'periodic\' data: %s %s', time, data)
         return [time, data]
 
