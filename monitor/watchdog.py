@@ -3,11 +3,15 @@
 # SONA Monitoring Solutions.
 
 import sys
+import time
+
+from datetime import datetime
 
 from subprocess import Popen
 from subprocess import PIPE
 from api.config import CONF
 from api.sona_log import LOG
+from api.watcherdb import DB
 from api.sbapi import SshCommand
 
 
@@ -24,31 +28,55 @@ def periodic():
         elif str(node).lower() == 'openstack':
             node_list += CONF.openstack_node()['list']
 
-    # LOG.info("kjt --2-- %s", SshCommand.execute('root', '172.16.130.81', 'ls -al'))
+    result = dict()
+
+    for node in node_list:
+        node_name, node_ip = str(node).split(':')
+        result[node_name] = [{'IP': net_check(node_ip)},
+                             {'APP': onos_app_check(node_ip)}]
+
     try:
-        for node in node_list:
-            node_name, node_ip = str(node).split(':')
-            rt = net_check(node_ip)
-            # TODO data caching
+        with DB.connection() as conn:
+            sql = "INSERT OR REPLACE INTO t_status VALUES (?, ?, ?)"
+            conn.cursor().execute(sql, ('periodic', str(datetime.now()), str(result)))
+            conn.commit()
     except:
         LOG.exception()
 
 
 def net_check(node):
+
     if CONF.watchdog()['method'] == 'ping':
+        timeout = CONF.watchdog()['timeout']
         if sys.platform == 'darwin':
-            timeout = CONF.watchdog()['timeout'] * 1000
-        else:
-            timeout = CONF.watchdog()['timeout']
+            timeout = timeout * 1000
 
         cmd = 'ping -c1 -W%d -n %s' % (timeout, node)
-        # LOG.info("%s", cmd)
 
         result = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
         output, error = result.communicate()
 
         if result.returncode != 0:
-            LOG.error("\'%s\' Network Check Error(errno: %d): %s", node, result.returncode, error)
-            return 'fail'
+            LOG.error("\'%s\' Network Check Error(%d) ", node, result.returncode)
+            return 'nok'
         else:
-            return 'alive'
+            return 'ok'
+
+
+def onos_app_check(node):
+
+    app_rt = SshCommand.onos_ssh_exec(node, 'apps -a -s')
+
+    app_active_list = list()
+    if app_rt is not None:
+        for line in app_rt.splitlines():
+            app_active_list.append(line.split(".")[2].split()[0])
+        if set(CONF.onos()['app_list']).issubset(app_active_list):
+            return 'ok'
+        else:
+            return 'nok'
+    else:
+        print 'nok'
+
+    print app_active_list
+

@@ -4,7 +4,6 @@
 # SONA Monitoring Solutions.
 
 
-import multiprocessing as multiprocess
 import sys
 import time
 
@@ -12,6 +11,7 @@ import monitor.watchdog as watchdog
 import api.rest_server as REST_SVR
 from api.config import CONF
 from api.sona_log import LOG
+from api.watcherdb import DB
 from daemon import Daemon
 
 
@@ -20,6 +20,10 @@ PIDFILE = CONF.get_pid_file()
 
 class SonaWatchD(Daemon):
     def run(self):
+
+        # DB initiation
+        DB.db_initiation()
+
         # Start RESTful server
         try:
             REST_SVR.rest_server_start()

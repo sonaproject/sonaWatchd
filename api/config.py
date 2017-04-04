@@ -38,6 +38,7 @@ class ConfReader:
             value['log_file_name'] = str(self.conf_map['BASE']['log_file_name'])
             value['log_rotate_time'] = str(self.conf_map['BASE']['log_rotate_time'])
             value['log_backup_count'] = int(self.conf_map['BASE']['log_backup_count'])
+            value['db_file'] = str(self.conf_map['BASE']['db_file'])
 
             return value
         except KeyError as KE:
