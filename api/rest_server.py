@@ -2,15 +2,16 @@
 # All Rights Reserved.
 # SONA Monitoring Solutions.
 
-from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 import base64
 import multiprocessing as multiprocess
 
+from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 from monitor.cmd_proc import CMD_PROC
 from api.config import CONF
 from api.sona_log import LOG
 
 import json
+
 
 class RestHandler(BaseHTTPRequestHandler):
     def do_HEAD(self, res_code):
@@ -25,7 +26,6 @@ class RestHandler(BaseHTTPRequestHandler):
         request_str = self.rfile.read(request_sz)
         request_obj = json.loads(request_str)
 
-        LOG.info('[REST-SERVER] ---------------------------START do_GET()---------------------------')
         LOG.info('[REST-SERVER] CLIENT INFO = ' + str(self.client_address))
         LOG.info('[REST-SERVER] RECV BODY = ' + json.dumps(request_obj, sort_keys=True, indent=4))
 
@@ -71,14 +71,15 @@ class RestHandler(BaseHTTPRequestHandler):
         return False
 
 
-def run(handlerclass=HTTPServer, handler_class=RestHandler, port=int(CONF.rest()['rest_server_port'])):
-    server_address = ("", port)
-    httpd = handlerclass(server_address, handler_class)
+# def run(handlerclass=HTTPServer, handler_class=RestHandler, port=int(CONF.rest()['rest_server_port'])):
+def run():
+    server_address = ("", int(CONF.rest()['rest_server_port']))
+    httpd = HTTPServer(server_address, RestHandler)
     httpd.serve_forever()
 
 
 def rest_server_start():
-    LOG.info("--- REST Server START --- ")
+    LOG.info("--- REST Server Start --- ")
     rest_server_daemon = multiprocess.Process(name='rest_server', target=run)
     rest_server_daemon.daemon = True
     rest_server_daemon.start()

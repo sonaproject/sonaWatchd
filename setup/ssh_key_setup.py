@@ -40,11 +40,12 @@ def install_package(package):
 if installed_package(REQUIREMENT_PKG):
     import pexpect
 else:
-    if install_package(REQUIREMENT_PKG) == 0:
-        import pexpect
-    else:
-        print "Must install \"%s\" Package" % REQUIREMENT_PKG
-        exit(1)
+    # if install_package(REQUIREMENT_PKG) == 0:
+    #     import pexpect
+    # else:
+    print "Must install \"%s\" Package" % REQUIREMENT_PKG
+    print "should excute command: \"sudo pip install pexpect\""
+    exit(1)
 
 
 # read ssh setup config file

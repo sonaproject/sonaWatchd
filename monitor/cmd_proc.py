@@ -1,8 +1,9 @@
 import json
 from api.sona_log import LOG
-
+from api.watcherdb import DB
 
 class CMD_PROC():
+
     @staticmethod
     def parse_req(req):
         res_body = {}
@@ -35,10 +36,10 @@ class CMD_PROC():
 
     @staticmethod
     def proc_dis_resource(system, param):
-        res = "return proc_dis_resource [sys = " + system + " param = " + param + "]"
-        LOG.info('[CMD_PROC] RES MSG = ' + res)
-
-        return res
+        with DB.connection() as conn:
+            item, time, data = conn.cursor().execute("SELECT * FROM t_status WHERE item='periodic'").fetchone()
+            LOG.info('Get \'periodic\' data: %s %s', time, data)
+        return [time, data]
 
     @staticmethod
     def proc_dis_onos(system, param):

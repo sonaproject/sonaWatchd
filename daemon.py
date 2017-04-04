@@ -69,7 +69,6 @@ class Daemon(object):
     def delpid(self):
         try:
             os.remove(self.pidfile)
-            os.system("touch /tmp/aaa")
         except OSError:
             pass
 
@@ -86,7 +85,7 @@ class Daemon(object):
             pid = None
 
         if pid:
-            message = "pidfile %s already exist. Daemon already running?\n"
+            message = "pidfile %s already exist. Check Daemon ...\n"
             sys.stderr.write(message % self.pidfile)
             sys.exit(1)
 
