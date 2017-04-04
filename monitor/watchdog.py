@@ -3,7 +3,6 @@
 # SONA Monitoring Solutions.
 
 import sys
-import time
 
 from datetime import datetime
 
@@ -29,16 +28,26 @@ def periodic():
             node_list += CONF.openstack_node()['list']
 
     result = dict()
-
     for node in node_list:
         node_name, node_ip = str(node).split(':')
-        result[node_name] = [{'IP': net_check(node_ip)},
-                             {'APP': onos_app_check(node_ip)}]
+
+        if net_check(node_ip) == 'ok':
+            result[node_name] = {'IP': 'ok'}
+            if node_ip in str(CONF.onos()['list']):
+                result[node_name]['APP'] = onos_app_check(node_ip)
+            elif node_ip in str(CONF.xos()['list']):
+                result[node_name]['APP'] = xos_app_check(node_ip)
+            elif node_ip in str(CONF.k8s()['list']):
+                result[node_name]['APP'] = k8s_app_check(node_ip)
+            elif node_ip in str(CONF.openstack()['list']):
+                result[node_name]['APP'] = openstack_app_check(node_ip)
+        else:
+            result[node_name] = {'IP': 'nok', 'APP': 'nok'}
 
     try:
         with DB.connection() as conn:
             sql = "INSERT OR REPLACE INTO t_status VALUES (?, ?, ?)"
-            conn.cursor().execute(sql, ('periodic', str(datetime.now()), str(result)))
+            conn.cursor().execute(sql, ('main_status', str(datetime.now()), str(result)))
             conn.commit()
     except:
         LOG.exception()
@@ -74,9 +83,23 @@ def onos_app_check(node):
         if set(CONF.onos()['app_list']).issubset(app_active_list):
             return 'ok'
         else:
+            LOG.error("\'%s\' Application Check Error", node)
             return 'nok'
     else:
-        print 'nok'
+        LOG.error("\'%s\' Application Check Error", node)
+        return 'nok'
 
-    print app_active_list
 
+# TODO xos app check
+def xos_app_check(node):
+    return 'nok'
+
+
+# TODO k8s app check
+def k8s_app_check(node):
+    return 'nok'
+
+
+# TODO openstack app check
+def openstack_app_check(node):
+    return 'nok'
