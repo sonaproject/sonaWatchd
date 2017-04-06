@@ -4,11 +4,11 @@ class SYS():
     # key = onos_name
     # value = info_dic, it contains ip, conn state, app list & status...
     onos_list = {}
-    
+
     onos_thr_flag = True
     onos_redraw_flag = False
 
-    @ classmethod
+    @classmethod
     def set_onos_info(cls, onos_info):
         try:
             onos_dtl_list = {}
@@ -67,6 +67,6 @@ class SYS():
     def get_onos_redraw_flag(cls):
         return cls.onos_redraw_flag
 
-    @ classmethod
+    @classmethod
     def set_onos_redraw_flag(cls, ret):
         cls.onos_redraw_flag = ret

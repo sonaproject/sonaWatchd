@@ -5,37 +5,12 @@ from log_lib import LOG
 
 class TRACE():
     TRACE_LOG = None
-    trace_search_list = []
+    trace_l2_cond_list = []
+    trace_l3_cond_list = []
 
     @classmethod
     def set_trace_log(cls, trace_log):
         cls.TRACE_LOG = trace_log
-
-    @classmethod
-    def set_search_list(cls):
-        # set trace condition
-        cls.trace_search_list.append('menu')
-        cls.trace_search_list.append('quit')
-        cls.trace_search_list.append('exit')
-
-    @classmethod
-    def imput_trace(cls):
-        try:
-            while True:
-                ip = raw_input('Flow Trace> Target(ip) : ')
-
-                if TRACE.valid_IPv4(ip):
-                    break
-
-                print '[' + ip + '] invalid IP address.'
-
-            readline.set_completer(cls.complete_trace)
-
-            condition = raw_input('Flow Trace(' + ip + ')> Input Condition : ')
-        except:
-            LOG.exception_err_write()
-
-        return ip, condition
 
     @classmethod
     def send_trace(cls, ip, condition):
@@ -47,19 +22,8 @@ class TRACE():
 
     @classmethod
     def set_cnd_list(cls):
-        cls.trace_search_list = CONFIG.get_cnd_list()
-
-    @classmethod
-    def complete_trace(cls, text, state):
-        try:
-            for cond in cls.trace_search_list:
-                if cond.startswith(text):
-                    if not state:
-                        return str(cond)
-                    else:
-                        state -= 1
-        except:
-            LOG.exception_err_write()
+        cls.trace_l2_cond_list = CONFIG.get_cnd_list('l2')
+        cls.trace_l3_cond_list = CONFIG.get_cnd_list('l3')
 
     @staticmethod
     def valid_IPv4(address):

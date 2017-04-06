@@ -46,9 +46,9 @@ class CONFIG():
             return []
 
     @classmethod
-    def get_cnd_list(cls):
+    def get_cnd_list(cls, layer):
         try:
-            return cls.config_trace.options(TRACE_SECTION_NAME)
+            return cls.config_trace.items(layer + '_' + TRACE_SECTION_NAME)
         except:
             cls.LOG.exception_err_write()
             return []
