@@ -245,3 +245,17 @@ class CLI():
     @classmethod
     def set_cli_ret_flag(cls, ret):
         cls.cli_ret_flag = ret
+
+    @staticmethod
+    def is_menu(cmd):
+        if cmd == 'menu':
+            return True
+
+        return False
+
+    @staticmethod
+    def is_exit(cmd):
+        if cmd == 'quit' or cmd == 'exit':
+            return True
+
+        return False
