@@ -98,7 +98,7 @@ class CLI():
                 cls.CLI_LOG.cli_log('URL = ' + url)
                 cls.CLI_LOG.cli_log('AUTH = ' + id + ':' + pw)
 
-                myResponse = requests.get(url, headers=header, data=req_body_json, timeout=2)
+                myResponse = requests.get(url, headers=header, data=req_body_json, timeout=10)
 
                 cls.CLI_LOG.cli_log('COMMAND = ' + cmd)
                 cls.CLI_LOG.cli_log('SYSTEM = ' + cls.selected_sys)

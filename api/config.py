@@ -81,7 +81,7 @@ class ConfReader:
         try:
             value['list'] = self.__list_opt(self.conf_map['ONOS']['list'])
             value['app_list'] = self.__list_opt(self.conf_map['ONOS']['app_list'])
-            value['account'] = self.__list_opt(self.conf_map['ONOS']['account'])
+            value['account'] = str(self.conf_map['ONOS']['account'])
 
             return value
         except KeyError as KE:
@@ -111,7 +111,7 @@ class ConfReader:
         value = dict()
         try:
             value['list'] = self.__list_opt(self.conf_map['OPENSTACK']['list'])
-            value['account'] = self.__list_opt(self.conf_map['OPENSTACK']['account'])
+            value['account'] = str(self.conf_map['OPENSTACK']['account'])
 
             return value
         except KeyError as KE:
