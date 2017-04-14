@@ -1,72 +1,83 @@
+import json
 from log_lib import LOG
 
 class SYS():
-    # key = onos_name
-    # value = info_dic, it contains ip, conn state, app list & status...
-    onos_list = {}
+    # key = system name
+    # value = info_dic, it contains ip, conn state
+    sys_list = {}
+    last_check_time = ''
 
-    onos_thr_flag = True
-    onos_redraw_flag = False
+    sys_thr_flag = True
+    sys_redraw_flag = False
+
+    pre_sys_info = ''
 
     @classmethod
-    def set_onos_info(cls, onos_info):
+    def set_sys_info(cls, sys_info):
         try:
-            onos_dtl_list = {}
+            #{"command": "dis-resource", "system": "test", "param": "test", "result": ["2017-04-07 17:25:44.092887",
+            #                                                                         "{'ONOS2': {'IP': 'ok', 'APP': 'nok'}, 'ONOS3': {'IP': 'ok', 'APP': 'nok'}, 'ONOS1': {'IP': 'ok', 'APP': 'nok'}}"]}
+            sys_info = json.loads(sys_info)
 
-            # sample data
-            onos_dtl_list['ip'] = '10.10.2.66'
-            onos_dtl_list['ping_status'] = 'OK'
+            result = sys_info['result']
 
-            cls.onos_list['onos1'] = onos_dtl_list
+            cls.last_check_time = result[0]
+            sys_info = result[1]
 
-            onos_dtl_list['ip'] = '10.10.2.67'
-            onos_dtl_list['ping_status'] = 'OK'
+            cls.pre_sys_info = sys_info
 
-            cls.onos_list['onos2'] = onos_dtl_list
+            #sys_info = json.loads(json.dumps(sys_info.replace("\'", '"')))
+            sys_info = eval(sys_info)
+
+            for key in sys_info:
+                dtl_list = {}
+
+                LOG.debug_log('KEY = ' + key)
+
+                dtl_list['IP'] = sys_info[key]['IP']
+                dtl_list['APP'] = sys_info[key]['APP']
+
+                cls.sys_list[key] = dtl_list
         except:
             LOG.exception_err_write()
 
-    # inquery onos info
     @classmethod
-    def inquiry_onos_info(cls):
-        try:
-            onos_info = ''
-
-            # parsing & set data
-
-            return onos_info
-        except:
-            # except handling
-            LOG.exception_err_write()
+    def get_sys_list(cls):
+        return cls.sys_list.keys()
 
     @classmethod
-    def get_onos_list(cls):
-        return cls.onos_list.keys()
-
-    @classmethod
-    def get_onos_line_count(cls):
+    def get_sys_line_count(cls):
         # calc line count
-        line_count = len(cls.onos_list.keys())
+        line_count = len(cls.sys_list.keys())
 
         return line_count
 
     @classmethod
-    def changed_onos_info(cls, new_info):
+    def changed_sys_info(cls, new_info):
         # if changed : return true
-        return True
+        new_sys_info = json.loads(new_info)
+        new_result = new_sys_info['result']
+        cls.last_check_time = new_result[0]
+
+        if cls.pre_sys_info == new_result[1]:
+            return False
+        else:
+            cls.set_sys_info(new_info)
+            return True
 
     @classmethod
-    def get_onos_thr_flag(cls):
-        return cls.onos_thr_flag
+    def get_sys_thr_flag(cls):
+        return cls.sys_thr_flag
 
     @classmethod
-    def set_onos_thr_flag(cls, ret):
-        cls.onos_thr_flag = ret
+    def set_sys_thr_flag(cls, ret):
+        cls.sys_thr_flag = ret
 
     @classmethod
-    def get_onos_redraw_flag(cls):
-        return cls.onos_redraw_flag
+    def get_sys_redraw_flag(cls):
+        return cls.sys_redraw_flag
 
     @classmethod
-    def set_onos_redraw_flag(cls, ret):
-        cls.onos_redraw_flag = ret
+    def set_sys_redraw_flag(cls, ret):
+        cls.sys_redraw_flag = ret
+

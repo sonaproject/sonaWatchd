@@ -47,6 +47,10 @@ class LOG():
         lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
         cls.LOG.debug("%s", ''.join('   || ' + line for line in lines))
 
+    @classmethod
+    def debug_log(cls, log):
+        cls.LOG.debug(log)
+
 
 class USER_LOG():
     LOG = None

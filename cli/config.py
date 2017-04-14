@@ -46,6 +46,14 @@ class CONFIG():
             return []
 
     @classmethod
+    def get_cmd_help(cls, cmd):
+        try:
+            return cls.config_cli.get(COMMAND_SECTION_NAME, cmd)
+        except:
+            cls.LOG.exception_err_write()
+            return ''
+
+    @classmethod
     def get_cnd_list(cls, layer):
         try:
             return cls.config_trace.items(layer + '_' + TRACE_SECTION_NAME)

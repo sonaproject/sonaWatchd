@@ -18,6 +18,11 @@ def parse_command(command):
 
     pass
 
+def proc_dis_system(node, param):
+    with DB.connection() as conn:
+        item, time, data = conn.cursor().execute("SELECT * FROM " + DB.DB_STATUS_TABEL + " WHERE item='main_status'").fetchone()
+        LOG.info('Get \'periodic\' data: %s %s', time, data)
+    return [time, data]
 
 def proc_dis_resource(node, param):
     nodes_info = get_node_list(node)
@@ -98,7 +103,9 @@ COMMAND_MAP = {'dis-resource': proc_dis_resource,
                'dis-onosha': proc_dis_onosha,
                'dis-node': proc_dis_node,
                'dis-connection': proc_dis_connection,
-               'dis-all': proc_dis_all}
+               'dis-all': proc_dis_all,
+               #internal command
+               'dis-system':proc_dis_system}
 
 
 # class CMD_PROC():

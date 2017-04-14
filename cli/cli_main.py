@@ -4,24 +4,22 @@ import sys
 import time
 import threading
 import readline
+import curses
 
 from log_lib import LOG
-from system_info import SYS
 from config import CONFIG
+from system_info import SYS
 from cli import CLI
 from flow_trace import TRACE
 from log_lib import USER_LOG
 from screen import SCREEN
 
-from asciimatics.screen import Screen
-from asciimatics.exceptions import ResizeScreenError
-
 def main():
     try:
         from asciimatics.scene import Scene
     except:
-        print "asciimatics library is not installed."
-        print 'command execution \'sudo pip install asciimatics\''
+        print "This program requires the asciimatics package."
+        print 'Please run \'sudo pip install asciimatics\' and try again.'
         return
 
     # add for readline bug fix
@@ -50,10 +48,16 @@ def main():
     LOG.set_log_config()
 
     # inquiry onos info
-    onos_info = SYS.inquiry_onos_info()
+    res_code, sys_info = CLI.req_sys_info()
 
-    # setting onos info
-    SYS.set_onos_info(onos_info)
+    """
+    if res_code != 200:
+        print "Rest server does not respond to the request."
+        print "code = " + str(res_code)
+        return
+    """
+
+    SYS.set_sys_info(sys_info)
 
     # set command list
     CLI.set_cmd_list()
@@ -64,31 +68,144 @@ def main():
     # set search list
     CLI.set_search_list()
 
+    set_readline_opt()
+
     # create onos check thread
-    onos_thread = threading.Thread(target=check_onos_status)
+    onos_thread = threading.Thread(target=check_system_status)
     onos_thread.daemon = False
     onos_thread.start()
 
-    set_readline_opt()
-
     # select input menu
-    call_main()
+    select_menu()
+
+    if (SCREEN.menu_flag):
+        # restart for redrawing
+        python = sys.executable
+        os.execl(python, python, *sys.argv)
 
     # exit
     print 'Processing shutdown...'
-    SYS.set_onos_thr_flag(False)
+    SYS.set_sys_thr_flag(False)
     onos_thread.join()
 
     return
 
-def check_onos_status():
-    try:
-        while SYS.get_onos_thr_flag():
-            if SYS.get_onos_redraw_flag():
-                onos_info = SYS.inquiry_onos_info()
+def select_menu():
+    menu_list = ["CLI", "Flow Trace"]
 
-                if SYS.changed_onos_info(onos_info) is True:
+    selected_menu_no = 1
+
+    try:
+        SCREEN.set_screen()
+
+        SCREEN.draw_system()
+        SCREEN.draw_menu(menu_list, selected_menu_no)
+
+        SYS.set_sys_redraw_flag(True)
+
+        x = SCREEN.get_ch()
+
+        # 27 = ESC
+        while x != 27:
+            if x == curses.KEY_DOWN:
+                if selected_menu_no != len(menu_list):
+                    selected_menu_no += 1
+
+            elif x == curses.KEY_UP:
+                if selected_menu_no != 1:
+                    selected_menu_no -= 1
+
+            elif x == ord("\n"):
+                # stop timer
+                SYS.set_sys_redraw_flag(False)
+
+                # ?? is it necessary?
+                SCREEN.refresh_screen()
+                SCREEN.screen_exit()
+
+                if (menu_list[selected_menu_no - 1]) == 'CLI':
+                    SCREEN.display_header(menu_list[selected_menu_no - 1])
+                    SCREEN.display_sys(True)
+
+                    readline.set_completer(CLI.pre_complete_cli)
+
+                    while True:
+                        # mac OS
+                        if 'libedit' in readline.__doc__:
+                            CLI.modify_flag = True
+                            CLI.save_buffer = readline.get_line_buffer()
+
+                        # select_command (handling tab event)
+                        cmd = CLI.input_cmd()
+
+                        if CLI.is_menu(cmd):
+                            break
+                        elif CLI.is_exit(cmd):
+                            return
+                        elif cmd == 'dis-system':
+                            SCREEN.display_sys()
+                        elif cmd == 'help':
+                            SCREEN.display_help()
+                        else:
+                            # send command
+                            CLI.send_cmd(cmd)
+
+                            while not CLI.get_cli_ret_flag():
+                                time.sleep(1)
+
+                elif (menu_list[selected_menu_no - 1]) == 'Flow Trace':
+                    from asciimatics.screen import Screen
+                    from asciimatics.exceptions import ResizeScreenError
+
+                    # clear screen
+                    SCREEN.get_screen().clear()
+                    SCREEN.screen_exit()
+
+                    last_scene = None
+
+                    while True:
+                        try:
+                            Screen.wrapper(SCREEN.start_screen, catch_interrupt=True, arguments=[last_scene])
+
+                            if SCREEN.quit_flag:
+                                return
+                            elif SCREEN.menu_flag:
+                                return
+
+                        except ResizeScreenError as e:
+                            last_scene = e.scene
+
+            SCREEN.draw_system()
+            SCREEN.draw_menu(menu_list, selected_menu_no)
+            SCREEN.refresh_screen()
+
+            SYS.set_sys_redraw_flag(True)
+
+            x = SCREEN.get_ch()
+
+        SCREEN.screen_exit()
+    except:
+        LOG.exception_err_write()
+
+def check_system_status():
+    try:
+        while SYS.get_sys_thr_flag():
+            # inquiry onos info
+            res_code, sys_info = CLI.req_sys_info()
+
+            if res_code != 200:
+                LOG.debug_log(
+                    '[SYSTEM_CHECK_THREAD] Rest server does not respond to the request. RES_CODE = ' + res_code)
+                continue
+
+            ret = SYS.changed_sys_info(sys_info)
+
+            if SYS.get_sys_redraw_flag():
+                if ret is True:
+                    LOG.debug_log("call redraw")
                     SCREEN.draw_system()
+                else:
+                    SCREEN.draw_refresh_time()
 
             time.sleep(1)
     except:
@@ -109,6 +226,9 @@ def set_readline_opt():
         readline.parse_and_bind('set editing-mode vi')
     except:
         LOG.exception_err_write()
+
+def complete_dummy(text, state):
+    pass
 
 def call_cli():
     try:
@@ -140,31 +260,6 @@ def call_cli():
     except:
         LOG.exception_err_write()
 
-def call_main():
-    try:
-        last_scene = None
-        while True:
-            try:
-                # for cli_exit
-                if SCREEN.quit_flag:
-                    return
-
-                Screen.wrapper(SCREEN.start_screen, catch_interrupt=True, arguments=[last_scene])
-
-                if SCREEN.quit_flag:
-                    return
-                elif SCREEN.restart_flag:
-                    # restart for redrawing
-                    python = sys.executable
-                    os.execl(python, python, *sys.argv)
-                elif SCREEN.cli_flag:
-                    call_cli()
-
-            except ResizeScreenError as e:
-                last_scene = e.scene
-                LOG.exception_err_write()
-    except:
-        LOG.exception_err_write()
 
 if __name__ == '__main__':
     try:

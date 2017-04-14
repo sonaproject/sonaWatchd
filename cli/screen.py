@@ -1,10 +1,13 @@
-import time
+import curses
 
 from log_lib import LOG
 from flow_trace import TRACE
+from system_info import SYS
+from config import CONFIG
+from cli import CLI
 
 from asciimatics.widgets import Frame, ListBox, Layout, Divider, Text, \
-    Button, Widget, Label
+    Button, Widget, Label, TextBox, PopUpDialog
 from asciimatics.scene import Scene
 from asciimatics.screen import Screen
 from asciimatics.exceptions import NextScene, StopApplication
@@ -29,21 +32,117 @@ BOLD = '\033[1m'
 UNDERLINE = '\033[4m'
 
 MAIN_WIDTH = 50
+
 menu_list = [("CLI", 1), ("Flow Trace", 2)]
 
 class SCREEN():
+    main_scr = None
+
+    menu_flag = False
     cli_flag = False
     quit_flag = False
     restart_flag = False
 
+    main_instance = None
+
+    @classmethod
+    def set_screen(cls):
+        cls.main_scr = curses.initscr()
+
+        curses.noecho()
+        curses.cbreak()
+        curses.start_color()
+        cls.main_scr.keypad(1)
+        curses.curs_set(0)
+        cls.main_scr.refresh()
+
+        curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_CYAN)
+        curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)
+        curses.init_pair(3, curses.COLOR_MAGENTA, curses.COLOR_BLACK)
+
+    @classmethod
+    def set_main_str(cls, x, y, str, color):
+        try:
+            cls.main_scr.addstr(x, y, str, color)
+            cls.refresh_screen()
+        except:
+            LOG.exception_err_write()
+
+    @classmethod
+    def screen_exit(cls):
+        try:
+            curses.endwin()
+        except:
+            LOG.exception_err_write()
+
+    @classmethod
+    def refresh_screen(cls):
+        try:
+            cls.main_scr.refresh()
+        except:
+            LOG.exception_err_write()
+
+    @classmethod
+    def get_screen(cls):
+        return cls.main_scr
+
+    @classmethod
+    def get_ch(cls):
+        try:
+            return cls.main_scr.getch()
+        except:
+            LOG.exception_err_write()
+            return ''
+
     @classmethod
     def draw_system(cls):
         try:
-            now = time.localtime()
-            str_time = 'Last Check Time [%02d:%02d:%02d]' % (now.tm_hour, now.tm_min, now.tm_sec)
-            #cls.set_main_str(SYS.get_onos_line_count() + 2 + 4 + 1, MAIN_WIDTH - len(str_time), str_time, time_color)
+            box_onos = cls.display_sys_info()
+
+            cls.draw_refresh_time()
+
+            box_onos.refresh()
         except:
             LOG.exception_err_write()
+
+    @classmethod
+    def draw_refresh_time(cls):
+        try:
+            time_color = curses.color_pair(3)
+
+            str_time = 'Last Check Time [' + SYS.last_check_time.split('.')[0] + ']'
+            cls.set_main_str(SYS.get_sys_line_count() + 2 + 4 + 1, MAIN_WIDTH - len(str_time), str_time, time_color)
+        except:
+            LOG.exception_err_write()
+
+    @classmethod
+    def draw_menu(cls, menu_list, selected_menu_no):
+        try:
+            box_menu = cls.draw_select(menu_list, selected_menu_no)
+            box_menu.refresh()
+        except:
+            LOG.exception_err_write()
+
+    @staticmethod
+    def draw_select(menu_list, selected_menu_no):
+        box_type = curses.newwin(len(menu_list) + 2, MAIN_WIDTH, SYS.get_sys_line_count() + 3, 1)
+        box_type.box()
+
+        try:
+            highlightText = curses.color_pair(1)
+            normalText = curses.A_NORMAL
+
+            box_type.addstr(0, 22, ' MENU ', normalText)
+
+            for i in range(1, len(menu_list) + 1):
+                if i is selected_menu_no:
+                    box_type.addstr(i, 2, str(i) + "." + menu_list[i - 1], highlightText)
+                else:
+                    box_type.addstr(i, 2, str(i) + "." + menu_list[i - 1], normalText)
+        except:
+            LOG.exception_err_write()
+
+        return box_type
 
     @classmethod
     def display_header(cls, menu):
@@ -56,10 +155,51 @@ class SCREEN():
         except:
             LOG.exception_err_write()
 
-    @staticmethod
-    def start_screen(screen, scene):
+    @classmethod
+    def display_sys(cls, header = False):
+        try:
+            width = 60
+
+            if not header:
+                print BG_WHITE + "|%s|" % ('-' * width).ljust(width) + ENDC
+
+            print '| SYSTEM INFO | TIME : ' + SYS.last_check_time.split('.')[0] + \
+                  ("{0:>" + str(width - len(SYS.last_check_time.split('.')[0]) - len('SYSTEM INFO | TIME : ')) + "}").format('|') + ENDC
+            print BG_WHITE + "|%s|" % ('-' * width).ljust(width) + ENDC
+            for sys in SYS.sys_list.keys():
+                status = 'NOK'
+                if (dict)(SYS.sys_list[sys])['IP'] == 'ok' and (dict)(SYS.sys_list[sys])['APP'] == 'ok':
+                    status = 'OK'
+
+                color = GREEN
+                if status is not 'OK':
+                    color = RED
+                print '| ' + sys + ' [' + color + status + BG_WHITE + ']' + \
+                      ("{0:>" + str(width - len(sys) - len(status) - 3) + "}").format('|') + ENDC
+
+            print BG_WHITE + "|%s|" % ('-' * width).ljust(width) + ENDC
+        except:
+            LOG.exception_err_write()
+
+    @classmethod
+    def display_help(cls):
+        try:
+            print ''
+            for cmd in CLI.command_list:
+                print '\t' + cmd.ljust(15) + '  ' + CONFIG.get_cmd_help(cmd)
+
+                if (CONFIG.get_config_instance().has_section(cmd)):
+                    opt_list = CONFIG.cli_get_value(cmd, CONFIG.get_cmd_opt_key_name())
+
+                    print '\t' + ' '.ljust(15) + '  - option : ' + opt_list.strip()
+            print ''
+        except:
+            LOG.exception_err_write()
+
+    @classmethod
+    def start_screen(cls, screen, scene):
+
         scenes = [
-            Scene([MenuListView(screen)], -1, name="Main"),
             Scene([FlowTraceView(screen)], -1, name="Flow Trace")
         ]
 
@@ -69,116 +209,67 @@ class SCREEN():
     def set_exit(cls):
         cls.quit_flag = True
 
-class MenuListView(Frame):
-    def __init__(self, screen):
+    @classmethod
+    def display_sys_info(cls):
+        box_sys = curses.newwin(SYS.get_sys_line_count() + 2, MAIN_WIDTH, 1, 1)
+        box_sys.box()
+
         try:
-            super(MenuListView, self).__init__(screen,
-                                               screen.height * 7 // 10,
-                                               screen.width * 7 // 10,
-                                               hover_focus=True,
-                                               title=" MENU ")
+            status_text_OK = curses.color_pair(2)
+            status_text_NOK = curses.color_pair(3)
+            normal_text = curses.A_NORMAL
 
-            self._screen = screen
+            box_sys.addstr(0, 18, ' CONTROL PLAN ', normal_text)
 
-            layout_test = Layout([100])
-            self.add_layout(layout_test)
-            layout_test.add_widget(Label(label="test"))
+            i = 1
+            for sys in SYS.sys_list.keys():
+                str_info = sys + ' ['
+                box_sys.addstr(i, 2, str_info)
 
-            # Create the form for displaying the list of contacts.
-            self._list_view = ListBox(
-                Widget.FILL_FRAME,
-                menu_list,
-                name="LIST_MENU",
-                label="TEST LABEL")
-            layout = Layout([100], fill_frame=True)
-            self.add_layout(layout)
-            layout.add_widget(self._list_view)
-            layout.add_widget(Divider())
-            layout2 = Layout([1])
-            self.add_layout(layout2)
-            layout2.add_widget(Button("Quit", self._quit), 0)
-            self.fix()
+                str_status = 'NOK'
+                if (dict)(SYS.sys_list[sys])['IP'] == 'ok' and (dict)(SYS.sys_list[sys])['APP'] == 'ok':
+                    str_status = 'OK'
+
+                if str_status is 'OK':
+                    box_sys.addstr(i, 2 + len(str_info), str_status, status_text_OK)
+                else:
+                    box_sys.addstr(i, 2 + len(str_info), str_status, status_text_NOK)
+
+                box_sys.addstr(i, 2 + len(str_info) + len(str_status), ']')
+                i += 1
+
+                # add app status
         except:
             LOG.exception_err_write()
 
-    def process_event(self, event):
-        if isinstance(event, KeyboardEvent):
-            c = event.key_code
-
-            # Stop on ESC
-            if c == Screen.KEY_ESCAPE:
-                SCREEN.set_exit()
-                raise StopApplication("User terminated app")
-
-            # press enter at list view
-            if self._list_view._has_focus and c == 10:
-                if self._list_view.value == 1:
-                    SCREEN.cli_flag = True
-                    raise StopApplication("User terminated app")
-                elif self._list_view.value == 2:
-                    raise NextScene("Flow Trace")
-
-        return super(MenuListView, self).process_event(event)
-
-    @staticmethod
-    def _quit():
-        SCREEN.set_exit()
-        raise StopApplication("User pressed quit")
+        return box_sys
 
 class FlowTraceView(Frame):
+    trace_history = []
+
     def __init__(self, screen):
         try:
             super(FlowTraceView, self).__init__(screen,
-                                                screen.height * 7 // 10,
-                                                screen.width * 7 // 10,
+                                                screen.height,
+                                                screen.width,
+                                                x = 0, y = 0,
                                                 hover_focus=True,
                                                 title=" FLOW TRACE ",
                                                 reduce_cpu=True)
 
-            layout_l2_title = Layout([20,3,20])
-            self.add_layout(layout_l2_title)
-
-            layout_l2_title.add_widget(Label(label=''), 1)
-            layout_l2_title.add_widget(Divider(height=2), 0)
-            layout_l2_title.add_widget(Label(label=' L2'), 1)
-            layout_l2_title.add_widget(Divider(height=2), 2)
-            layout_l2_title.add_widget(Label(label=''), 1)
+            self._screen = screen
 
             i = 0
-            for key, value in TRACE.trace_l2_cond_list:
+            for key, value in TRACE.trace_l2_cond_list + TRACE.trace_l3_cond_list:
                 if i % 2 == 0:
-                    layout_l2 = Layout([1, 35, 3, 35, 1])
-                    self.add_layout(layout_l2)
+                    layout_line = Layout([1, 35, 3, 35, 1])
+                    self.add_layout(layout_line)
 
-                    layout_l2.add_widget(Text(self.key_name(key), value), 1)
+                    layout_line.add_widget(Text(self.key_name(key), value), 1)
                 else:
-                    layout_l2.add_widget(Text(self.key_name(key), value), 3)
+                    layout_line.add_widget(Text(self.key_name(key), value), 3)
 
                 i = i + 1
-
-            layout_l3_title = Layout([20, 3, 20])
-            self.add_layout(layout_l3_title)
-
-            layout_l3_title.add_widget(Label(label=''), 1)
-            layout_l3_title.add_widget(Divider(height=2), 0)
-            layout_l3_title.add_widget(Label(label=' L3'), 1)
-            layout_l3_title.add_widget(Divider(height=2), 2)
-            layout_l3_title.add_widget(Label(label=''), 1)
-
-            i = 0
-            for key, value in TRACE.trace_l3_cond_list:
-                if i % 2 == 0:
-                    layout_l3 = Layout([1, 35, 3, 35, 1])
-                    self.add_layout(layout_l3)
-
-                    layout_l3.add_widget(Text(self.key_name(key), value), 1)
-                else:
-                    layout_l3.add_widget(Text(self.key_name(key), value), 3)
-
-                i = i + 1
-
-            layout_dummy = Layout([1], fill_frame=True)
-            self.add_layout(layout_dummy)
 
             layout_btn = Layout([1, 3, 3, 3, 3])
             self.add_layout(layout_btn)
@@ -191,6 +282,25 @@ class FlowTraceView(Frame):
             layout_btn.add_widget(Button("Clear All", self.reset), 2)
             layout_btn.add_widget(Button("Menu", self._menu), 3)
             layout_btn.add_widget(Button("Quit", self._quit), 4)
+            layout_btn.add_widget(Divider(height=2), 0)
+            layout_btn.add_widget(Divider(), 1)
+            layout_btn.add_widget(Divider(), 2)
+            layout_btn.add_widget(Divider(), 3)
+            layout_btn.add_widget(Divider(), 4)
+
+            layout_result = Layout([1], fill_frame=True)
+            self.add_layout(layout_result)
+            self._trace_result = TextBox(Widget.FILL_FRAME, name='TEST', as_string=True)
+            layout_result.add_widget(self._trace_result)
+
+            self._list_view = ListBox(
+                5,
+                self.trace_history,
+                name="LIST_HISTORY",
+                label="HISTORY")
+            layout_history = Layout([1])
+            self.add_layout(layout_history)
+            layout_history.add_widget(self._list_view)
 
             self.fix()
         except:
@@ -200,16 +310,26 @@ class FlowTraceView(Frame):
         if isinstance(event, KeyboardEvent):
             c = event.key_code
 
+            LOG.debug_log('KEY = ' + str(c))
+
+            # Backspace -> ctrl + Backspace
+            if c == 8:
+                event.key_code = Screen.KEY_BACK
+
             # Stop on ESC
             if c == Screen.KEY_ESCAPE:
                 SCREEN.set_exit()
                 raise StopApplication("User terminated app")
 
+            # press enter at trace history
+            if self._list_view._has_focus and c == 10:
+                LOG.debug_log('HISTORY run : ' + (self.trace_history[self._list_view.value - 1])[0])
+
         return super(FlowTraceView, self).process_event(event)
 
     def key_name(self, key):
         try:
-            default_width = 10
+            default_width = 12
 
             key = '* ' + key
 
@@ -220,6 +340,7 @@ class FlowTraceView(Frame):
             key = key + ' '
         except:
             LOG.exception_err_write()
+
         return key
 
     def reset(self):
@@ -228,9 +349,32 @@ class FlowTraceView(Frame):
     def _ok(self):
         self.save()
 
+        saved_data = ''
+        for key, real_key in TRACE.trace_l2_cond_list + TRACE.trace_l3_cond_list:
+            val = self.data[real_key].strip()
+
+            if val != '':
+                saved_data = saved_data + key + '=' + val + ','
+
+        saved_data = saved_data[0:-1]
+
+        if len(saved_data) == 0:
+            self._scene.add_effect(PopUpDialog(self._screen, "Please enter a flow-trace condition.", ["OK"]))
+            return
+
+        data = (saved_data, len(self.trace_history) + 1)
+        self.trace_history.insert(0, data)
+
+        self._list_view.value = len(self.trace_history)
+
+        # call trace logic
+        test_txt = 'TRACE RESULT 1\nTRACE RESULT 2\nTRACE RESULT 3\nTRACE RESULT 4\nTRACE RESULT 5\nTRACE RESULT 6\n'
+        self._trace_result.value = test_txt
+
     @staticmethod
     def _menu():
-        raise NextScene("Main")
+        SCREEN.menu_flag = True
+        raise StopApplication("User terminated app")
 
     @staticmethod
     def _quit():

@@ -44,10 +44,7 @@ class CLI():
             # remove space
             cmd = cmd.strip()
 
-            if cmd in ['quit', 'exit', 'menu']:
-                cls.set_cli_ret_flag(True)
-                return
-            elif len(cmd.strip()) == 0:
+            if len(cmd.strip()) == 0:
                 cls.set_cli_ret_flag(True)
                 return
             elif cmd not in cls.cli_validate_list:
@@ -72,9 +69,7 @@ class CLI():
 
             cls.set_cli_ret_flag(False)
 
-            id = CONFIG.get_rest_id().strip()
-            pw = CONFIG.get_rest_pw().strip()
-            auth = id + ':' + pw
+            auth = cls.get_auth()
 
             tmp = cmd.split(' ')
             cmd = tmp[0]
@@ -96,9 +91,9 @@ class CLI():
 
                 url = CONFIG.get_rest_addr()
                 cls.CLI_LOG.cli_log('URL = ' + url)
-                cls.CLI_LOG.cli_log('AUTH = ' + id + ':' + pw)
+                cls.CLI_LOG.cli_log('AUTH = ' + auth)
 
-                myResponse = requests.get(url, headers=header, data=req_body_json, timeout=10)
+                myResponse = requests.get(url, headers=header, data=req_body_json, timeout=20)
 
                 cls.CLI_LOG.cli_log('COMMAND = ' + cmd)
                 cls.CLI_LOG.cli_log('SYSTEM = ' + cls.selected_sys)
@@ -130,6 +125,59 @@ class CLI():
         except:
             LOG.exception_err_write()
 
+    @staticmethod
+    def get_auth():
+        id = CONFIG.get_rest_id().strip()
+        pw = CONFIG.get_rest_pw().strip()
+        auth = id + ':' + pw
+
+        return auth
+
+    sys_command = 'dis-system'
+    @classmethod
+    def req_sys_info(cls):
+        try:
+            cls.CLI_LOG.cli_log('START SEND COMMAND = ' + cls.sys_command)
+
+            auth = cls.get_auth()
+
+            req_body = {'command': cls.sys_command, 'system': 'all', 'param': 'test'}
+            req_body_json = json.dumps(req_body)
+
+            header = {'Content-Type': 'application/json', 'Authorization': base64.b64encode(auth)}
+
+            cls.CLI_LOG.cli_log('---------------------------SEND CMD---------------------------')
+
+            try:
+                url = CONFIG.get_rest_addr()
+                cls.CLI_LOG.cli_log('URL = ' + url)
+                cls.CLI_LOG.cli_log('AUTH = ' + auth)
+
+                #timeout check
+                myResponse = requests.get(url, headers=header, data=req_body_json, timeout=2)
+
+                cls.CLI_LOG.cli_log('COMMAND = ' + cls.sys_command)
+                cls.CLI_LOG.cli_log('SYSTEM = ' + cls.selected_sys)
+                cls.CLI_LOG.cli_log('HEADER = ' + json.dumps(header, sort_keys=True, indent=4))
+                cls.CLI_LOG.cli_log('BODY = ' + json.dumps(req_body, sort_keys=True, indent=4))
+            except:
+                LOG.exception_err_write()
+                return -1, ''
+
+            cls.CLI_LOG.cli_log('---------------------------RECV RES---------------------------')
+            cls.CLI_LOG.cli_log('RESPONSE CODE = ' + str(myResponse.status_code))
+
+            try:
+                cls.CLI_LOG.cli_log(
+                    'BODY = ' + json.dumps(json.loads(myResponse.content.replace("\'", '"')), sort_keys=True, indent=4))
+            except:
+                cls.CLI_LOG.cli_log('BODY = ' + myResponse.content)
+
+        except:
+            LOG.exception_err_write()
+
+        return myResponse.status_code, myResponse.content
+
     @classmethod
     def check_timeout(cls):
 
@@ -160,11 +208,13 @@ class CLI():
             cls.cli_search_list.append('quit')
             cls.cli_search_list.append('exit')
             cls.cli_search_list.append('sys')
+            cls.cli_search_list.append('dis-system')
+            cls.cli_search_list.append('help')
 
             tmp_sys = []
             tmp_sys.append('all')
             cls.cli_validate_list.append('sys all')
-            for onos_name in SYS.get_onos_list():
+            for onos_name in SYS.get_sys_list():
                 tmp_sys.append(onos_name)
                 cls.cli_validate_list.append('sys ' + onos_name)
             cls.cli_search_list_sub['sys'] = tmp_sys

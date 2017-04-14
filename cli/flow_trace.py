@@ -1,5 +1,3 @@
-import readline
-
 from config import CONFIG
 from log_lib import LOG
 
