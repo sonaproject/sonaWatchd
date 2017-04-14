@@ -6,7 +6,7 @@ import base64
 import multiprocessing as multiprocess
 
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
-from monitor.cmd_proc import CMD_PROC
+import monitor.cmd_proc as command
 from api.config import CONF
 from api.sona_log import LOG
 
@@ -27,30 +27,35 @@ class RestHandler(BaseHTTPRequestHandler):
         request_obj = json.loads(request_str)
 
         LOG.info('[REST-SERVER] CLIENT INFO = ' + str(self.client_address))
-        LOG.info('[REST-SERVER] RECV BODY = ' + json.dumps(request_obj, sort_keys=True, indent=4))
+        LOG.info('[REST-SERVER] RECV BODY = \n' + json.dumps(request_obj, sort_keys=True, indent=4))
 
-        if self.headers.getheader('Authorization') == None:
+        if self.headers.getheader('Authorization') is None:
             self.do_HEAD(401)
             self.wfile.write('no auth header received')
 
             LOG.info('[REST-SERVER] no auth header received')
+
         elif not self.path.startswith('/command'):
             self.do_HEAD(404)
             self.wfile.write(self.path + ' not found')
 
             LOG.info('[REST-SERVER] ' + self.path + ' not found')
-        elif not CMD_PROC.exist_command(request_obj):
+
+        elif not command.exist_command(request_obj):
             self.do_HEAD(404)
             self.wfile.write('command not found')
 
             LOG.info('[REST-SERVER] ' + 'command not found')
+
         elif self.auth_pw(self.headers.getheader('Authorization')):
-            res_body = CMD_PROC.parse_req(request_obj)
+            res_body = command.parse_command(request_obj)
 
             self.do_HEAD(200)
             self.wfile.write(json.dumps(res_body))
 
-            LOG.info('[REST-SERVER] RES BODY = ' + json.dumps(res_body, sort_keys=True, indent=4))
+            LOG.info('[REST-SERVER] RES BODY = \n%s',
+                     json.dumps(res_body, sort_keys=True, indent=4))
+
         else:
             self.do_HEAD(401)
             self.wfile.write(self.headers.getheader('Authorization'))

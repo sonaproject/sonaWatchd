@@ -16,20 +16,22 @@ from api.sbapi import SshCommand
 
 def periodic():
     LOG.info("Periodic checking...%s", str(CONF.watchdog()['check_system']))
-    node_list = list()
-    for node in CONF.watchdog()['check_system']:
-        if str(node).lower() == 'onos':
-            node_list += CONF.onos()['list']
-        elif str(node).lower() == 'xos':
-            node_list += CONF.xos()['list']
-        elif str(node).lower() == 'k8s':
-            node_list += CONF.k8s()['list']
-        elif str(node).lower() == 'openstack':
-            node_list += CONF.openstack_node()['list']
+
+    try:
+        with DB.connection() as conn:
+            sql = 'SELECT nodename, ip_addr FROM ' + DB.DB_NODE_TABLE
+            node_list = conn.cursor().execute(sql).fetchall()
+            conn.commit()
+
+            if not node_list:
+                LOG.info("Not Exist Node data ...")
+                return
+    except:
+        LOG.exception()
+        return
 
     result = dict()
-    for node in node_list:
-        node_name, node_ip = str(node).split(':')
+    for node_name, node_ip in node_list:
 
         if net_check(node_ip) == 'ok':
             result[node_name] = {'IP': 'ok'}
@@ -46,8 +48,8 @@ def periodic():
 
     try:
         with DB.connection() as conn:
-            sql = "INSERT OR REPLACE INTO t_status VALUES (?, ?, ?)"
-            conn.cursor().execute(sql, ('main_status', str(datetime.now()), str(result)))
+            sql = "INSERT OR REPLACE INTO " + DB.DB_STATUS_TABEL + " VALUES (?, ?, ?)"
+            conn.cursor().execute(sql, (DB.DB_PERIODIC_ID, str(datetime.now()), str(result)))
             conn.commit()
     except:
         LOG.exception()

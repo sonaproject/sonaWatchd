@@ -9,6 +9,10 @@ from config import CONF
 
 
 class DB(object):
+    DB_STATUS_TABEL = 't_status'
+    DB_NODE_TABLE = 't_nodes'
+    DB_PERIODIC_ID = 'main_status'
+
     def __init__(self):
         self._conn = self.connection()
         self._conn.commit()
@@ -27,22 +31,60 @@ class DB(object):
     def db_cursor(cls):
         return cls.connection().cursor()
 
+    # init DB table
+    # make to empty table by default
     @classmethod
     def db_initiation(cls):
         LOG.info("--- Initiating SONA DB ---")
-        init_sql = ['CREATE TABLE t_status(item text primary key, date, data)']
+        init_sql = ['CREATE TABLE ' + cls.DB_STATUS_TABEL +
+                        '(item text primary key, time, data)',
+                    'CREATE TABLE ' + cls.DB_NODE_TABLE +
+                        '(nodename text primary key, ip_addr, username)']
 
         for sql in init_sql:
             sql_rt = cls.sql_execute(sql)
 
             if "already exist" in sql_rt:
                 table_name = sql_rt.split()[1]
-                LOG.info("\'%s\' table already exist. Delete all tuple of this table...", table_name)
+                LOG.info("\'%s\' table already exist. Delete all tuple of this table...",
+                         table_name)
                 sql = 'DELETE FROM ' + table_name
                 sql_rt = cls.sql_execute(sql)
                 if sql_rt != '':
-                    LOG.info("DB %s table initiation fail", table_name)
+                    LOG.info("DB %s table initiation fail\n%s", table_name, sql_rt)
                     exit(1)
+            elif sql_rt != '':
+                LOG.info("DB initiation fail\n%s", sql_rt)
+                exit(1)
+
+        LOG.info('Insert nodes information ...')
+        for node in CONF.watchdog()['check_system']:
+            if str(node).lower() == 'onos':
+                cls.sql_insert_nodes(CONF.onos()['list'],
+                                     str(CONF.onos()['account']).split(':')[0])
+            elif str(node).lower() == 'xos':
+                cls.sql_insert_nodes(CONF.xos()['list'],
+                                     str(CONF.xos()['account']).split(':')[0])
+            elif str(node).lower() == 'k8s':
+                cls.sql_insert_nodes(CONF.k8s()['list'],
+                                     str(CONF.k8s()['account']).split(':')[0])
+            elif str(node).lower() == 'openstack':
+                cls.sql_insert_nodes(CONF.openstack()['list'],
+                                     str(CONF.openstack()['account']).split(':')[0])
+
+    @classmethod
+    def sql_insert_nodes(cls, node_list, username):
+
+        for node in node_list:
+            name, ip = str(node).split(':')
+            LOG.info('Insert node [%s %s %s]', name, ip, username)
+            sql = 'INSERT INTO ' + cls.DB_NODE_TABLE + \
+                  ' VALUES (\'' + name + '\',\'' + ip + '\',\'' + username + '\')'
+            LOG.info('%s', sql)
+            sql_rt = cls.sql_execute(sql)
+            if sql_rt != '':
+                LOG.info(" Node date insert fail \n%s", sql_rt)
+                exit(1)
 
     @classmethod
     def sql_execute(cls, sql):
