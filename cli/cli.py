@@ -38,9 +38,8 @@ class CLI():
             return ''
 
     @classmethod
-    def send_cmd(cls, cmd):
+    def process_cmd(cls, cmd):
         try:
-            cls.CLI_LOG.cli_log('START SEND COMMAND = ' + cmd)
             # remove space
             cmd = cmd.strip()
 
@@ -69,40 +68,16 @@ class CLI():
 
             cls.set_cli_ret_flag(False)
 
-            auth = cls.get_auth()
 
-            tmp = cmd.split(' ')
-            cmd = tmp[0]
-            param = ''
+            tmr = threading.Timer(3, cls.check_timeout)
+            tmr.start()
 
-            if len(tmp) == 2:
-                param = tmp[1]
+            cls.CLI_LOG.cli_log('START SEND COMMAND = ' + cmd)
 
-            req_body = {'command' : cmd, 'system' : cls.selected_sys, 'param' : param}
-            req_body_json = json.dumps(req_body)
+            ret_code, myResponse = cls.send_rest(cmd)
 
-            header = {'Content-Type': 'application/json', 'Authorization': base64.b64encode(auth)}
-
-            cls.CLI_LOG.cli_log('---------------------------SEND CMD---------------------------')
-
-            try:
-                tmr = threading.Timer(3, cls.check_timeout)
-                tmr.start()
-
-                url = CONFIG.get_rest_addr()
-                cls.CLI_LOG.cli_log('URL = ' + url)
-                cls.CLI_LOG.cli_log('AUTH = ' + auth)
-
-                myResponse = requests.get(url, headers=header, data=req_body_json, timeout=20)
-
-                cls.CLI_LOG.cli_log('COMMAND = ' + cmd)
-                cls.CLI_LOG.cli_log('SYSTEM = ' + cls.selected_sys)
-                cls.CLI_LOG.cli_log('HEADER = ' + json.dumps(header, sort_keys=True, indent=4))
-                cls.CLI_LOG.cli_log('BODY = ' + json.dumps(req_body, sort_keys=True, indent=4))
-
-            except:
-                # req timeout
-                LOG.exception_err_write()
+            # rest timeout
+            if ret_code==-1:
                 return
 
             cls.set_cli_ret_flag(True)
@@ -113,17 +88,54 @@ class CLI():
             else:
                 print 'response-code = ' + str(myResponse.status_code)
                 print 'content = ' + myResponse.content
-
-            cls.CLI_LOG.cli_log('---------------------------RECV RES---------------------------')
-            cls.CLI_LOG.cli_log('RESPONSE CODE = ' + str(myResponse.status_code))
-
-            try:
-                cls.CLI_LOG.cli_log('BODY = ' + json.dumps(json.loads(myResponse.content.replace("\'", '"')), sort_keys=True, indent=4))
-            except:
-                cls.CLI_LOG.cli_log('BODY = ' + myResponse.content)
-
         except:
             LOG.exception_err_write()
+
+    @classmethod
+    def send_rest(cls, cmd):
+        auth = cls.get_auth()
+
+        tmp = cmd.split(' ')
+        cmd = tmp[0]
+        param = ''
+
+        if len(tmp) == 2:
+            param = tmp[1]
+
+        req_body = {'command': cmd, 'system': cls.selected_sys, 'param': param}
+        req_body_json = json.dumps(req_body)
+
+        header = {'Content-Type': 'application/json', 'Authorization': base64.b64encode(auth)}
+
+        cls.CLI_LOG.cli_log('---------------------------SEND CMD---------------------------')
+
+        try:
+            url = CONFIG.get_rest_addr()
+            cls.CLI_LOG.cli_log('URL = ' + url)
+            cls.CLI_LOG.cli_log('AUTH = ' + auth)
+
+            myResponse = requests.get(url, headers=header, data=req_body_json, timeout=CONFIG.get_rest_timeout())
+
+            cls.CLI_LOG.cli_log('COMMAND = ' + cmd)
+            cls.CLI_LOG.cli_log('SYSTEM = ' + cls.selected_sys)
+            cls.CLI_LOG.cli_log('HEADER = ' + json.dumps(header, sort_keys=True, indent=4))
+            cls.CLI_LOG.cli_log('BODY = ' + json.dumps(req_body, sort_keys=True, indent=4))
+
+        except:
+            # req timeout
+            LOG.exception_err_write()
+            return -1, myResponse
+
+        cls.CLI_LOG.cli_log('---------------------------RECV RES---------------------------')
+        cls.CLI_LOG.cli_log('RESPONSE CODE = ' + str(myResponse.status_code))
+
+        try:
+            cls.CLI_LOG.cli_log(
+                'BODY = ' + json.dumps(json.loads(myResponse.content.replace("\'", '"')), sort_keys=True, indent=4))
+        except:
+            cls.CLI_LOG.cli_log('BODY = ' + myResponse.content)
+
+        return 1, myResponse
 
     @staticmethod
     def get_auth():
@@ -133,46 +145,15 @@ class CLI():
 
         return auth
 
-    sys_command = 'dis-system'
+    sys_command = 'dis-system info'
     @classmethod
     def req_sys_info(cls):
         try:
-            cls.CLI_LOG.cli_log('START SEND COMMAND = ' + cls.sys_command)
+            ret_code, myResponse = cls.send_rest(cls.sys_command)
 
-            auth = cls.get_auth()
-
-            req_body = {'command': cls.sys_command, 'system': 'all', 'param': 'test'}
-            req_body_json = json.dumps(req_body)
-
-            header = {'Content-Type': 'application/json', 'Authorization': base64.b64encode(auth)}
-
-            cls.CLI_LOG.cli_log('---------------------------SEND CMD---------------------------')
-
-            try:
-                url = CONFIG.get_rest_addr()
-                cls.CLI_LOG.cli_log('URL = ' + url)
-                cls.CLI_LOG.cli_log('AUTH = ' + auth)
-
-                #timeout check
-                myResponse = requests.get(url, headers=header, data=req_body_json, timeout=2)
-
-                cls.CLI_LOG.cli_log('COMMAND = ' + cls.sys_command)
-                cls.CLI_LOG.cli_log('SYSTEM = ' + cls.selected_sys)
-                cls.CLI_LOG.cli_log('HEADER = ' + json.dumps(header, sort_keys=True, indent=4))
-                cls.CLI_LOG.cli_log('BODY = ' + json.dumps(req_body, sort_keys=True, indent=4))
-            except:
-                LOG.exception_err_write()
-                return -1, ''
-
-            cls.CLI_LOG.cli_log('---------------------------RECV RES---------------------------')
-            cls.CLI_LOG.cli_log('RESPONSE CODE = ' + str(myResponse.status_code))
-
-            try:
-                cls.CLI_LOG.cli_log(
-                    'BODY = ' + json.dumps(json.loads(myResponse.content.replace("\'", '"')), sort_keys=True, indent=4))
-            except:
-                cls.CLI_LOG.cli_log('BODY = ' + myResponse.content)
-
+            # rest timeout
+            if ret_code == -1:
+                return -1, myResponse
         except:
             LOG.exception_err_write()
 

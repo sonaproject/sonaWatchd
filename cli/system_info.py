@@ -26,13 +26,10 @@ class SYS():
 
             cls.pre_sys_info = sys_info
 
-            #sys_info = json.loads(json.dumps(sys_info.replace("\'", '"')))
             sys_info = eval(sys_info)
 
             for key in sys_info:
                 dtl_list = {}
-
-                LOG.debug_log('KEY = ' + key)
 
                 dtl_list['IP'] = sys_info[key]['IP']
                 dtl_list['APP'] = sys_info[key]['APP']

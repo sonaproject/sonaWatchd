@@ -8,6 +8,8 @@ LOG_SECTION_NAME = 'log'
 REST_ID_KEY_NAME = 'id'
 REST_PW_KEY_NAME = 'pw'
 REST_URI_KEY_NAME = 'rest-server-uri'
+REST_TIMEOUT = 'timeout'
+REST_INTERVAL = 'interval'
 
 COMMAND_OPT_KEY_NAME = 'option-list'
 
@@ -96,6 +98,20 @@ class CONFIG():
     @classmethod
     def get_rest_addr(cls):
         return cls.cli_get_value(REST_SECTION_NAME, REST_URI_KEY_NAME)
+
+    @classmethod
+    def get_rest_interval(cls):
+        try:
+            return cls.config_cli.getint(REST_SECTION_NAME, REST_INTERVAL)
+        except:
+            return 3
+
+    @classmethod
+    def get_rest_timeout(cls):
+        try:
+            return cls.config_cli.getint(REST_SECTION_NAME, REST_TIMEOUT)
+        except:
+            return 10
 
     @classmethod
     def get_cli_log(cls):

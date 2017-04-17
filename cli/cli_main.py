@@ -148,7 +148,7 @@ def select_menu():
                             SCREEN.display_help()
                         else:
                             # send command
-                            CLI.send_cmd(cmd)
+                            CLI.process_cmd(cmd)
 
                             while not CLI.get_cli_ret_flag():
                                 time.sleep(1)
@@ -171,6 +171,11 @@ def select_menu():
                                 return
                             elif SCREEN.menu_flag:
                                 return
+                            elif SCREEN.resize_err_flag:
+                                SCREEN.draw_trace_warning()
+                                SCREEN.screen_exit()
+                                SCREEN.menu_flag = True
+                                return
 
                         except ResizeScreenError as e:
                             last_scene = e.scene
@@ -189,6 +194,8 @@ def select_menu():
 
 def check_system_status():
     try:
+        interval = CONFIG.get_rest_interval()
+
         while SYS.get_sys_thr_flag():
             # inquiry onos info
             res_code, sys_info = CLI.req_sys_info()
@@ -207,7 +214,7 @@ def check_system_status():
                 else:
                     SCREEN.draw_refresh_time()
 
-            time.sleep(1)
+            time.sleep(interval)
     except:
         LOG.exception_err_write()
 
@@ -253,7 +260,7 @@ def call_cli():
                 return
             else:
                 # send command
-                CLI.send_cmd(cmd)
+                CLI.process_cmd(cmd)
 
                 while not CLI.get_cli_ret_flag():
                     time.sleep(1)

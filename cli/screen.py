@@ -42,6 +42,7 @@ class SCREEN():
     cli_flag = False
     quit_flag = False
     restart_flag = False
+    resize_err_flag = False
 
     main_instance = None
 
@@ -114,6 +115,32 @@ class SCREEN():
             cls.set_main_str(SYS.get_sys_line_count() + 2 + 4 + 1, MAIN_WIDTH - len(str_time), str_time, time_color)
         except:
             LOG.exception_err_write()
+            
+    @classmethod
+    def draw_trace_warning(cls):
+        try:
+            warn_color = curses.color_pair(3)
+
+            str = 'Flow traces can not be executed on screens smaller than 100 * 25.'
+            cls.set_main_str(3, 3, str, warn_color)
+
+            str = 'After 3 seconds, it automatically switches to the main screen.'
+            cls.set_main_str(4, 3, str, warn_color)
+
+            import time
+            str = '>>> 3 seconds remaining >>>'
+            cls.set_main_str(6, 10, str, warn_color)
+            time.sleep(1)
+
+            str = '>>> 2 seconds remaining >>>'
+            cls.set_main_str(6, 10, str, warn_color)
+            time.sleep(1)
+
+            str = '>>> 1 second remaining >>> '
+            cls.set_main_str(6, 10, str, warn_color)
+            time.sleep(1)
+        except:
+            LOG.exception_err_write()
 
     @classmethod
     def draw_menu(cls, menu_list, selected_menu_no):
@@ -174,8 +201,8 @@ class SCREEN():
                 color = GREEN
                 if status is not 'OK':
                     color = RED
-                print '| ' + sys + ' [' + color + status + BG_WHITE + ']' + \
-                      ("{0:>" + str(width - len(sys) - len(status) - 3) + "}").format('|') + ENDC
+                print '| ' + sys.ljust(6) + ' [' + color + status + BG_WHITE + ']' + \
+                      ("{0:>" + str(width - 6 - len(status) - 3) + "}").format('|') + ENDC
 
             print BG_WHITE + "|%s|" % ('-' * width).ljust(width) + ENDC
         except:
@@ -198,6 +225,9 @@ class SCREEN():
 
     @classmethod
     def start_screen(cls, screen, scene):
+        if (screen.width < 100 or screen.height < 25):
+            cls.resize_err_flag = True
+            return
 
         scenes = [
             Scene([FlowTraceView(screen)], -1, name="Flow Trace")
@@ -223,7 +253,7 @@ class SCREEN():
 
             i = 1
             for sys in SYS.sys_list.keys():
-                str_info = sys + ' ['
+                str_info = sys.ljust(6) + ' ['
                 box_sys.addstr(i, 2, str_info)
 
                 str_status = 'NOK'
