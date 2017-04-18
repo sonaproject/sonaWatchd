@@ -51,12 +51,10 @@ def main():
     # inquiry onos info
     res_code, sys_info = CLI.req_sys_info()
 
-    """
     if res_code != 200:
         print "Rest server does not respond to the request."
         print "code = " + str(res_code)
         return
-    """
 
     SYS.set_sys_info(sys_info)
 

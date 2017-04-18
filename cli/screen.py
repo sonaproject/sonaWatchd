@@ -276,6 +276,7 @@ class SCREEN():
 
 class FlowTraceView(Frame):
     trace_history = []
+    real_trace = []
 
     def __init__(self, screen):
         try:
@@ -342,7 +343,6 @@ class FlowTraceView(Frame):
 
             LOG.debug_log('KEY = ' + str(c))
 
-            # Backspace -> ctrl + Backspace
             if c == 8:
                 event.key_code = Screen.KEY_BACK
 
@@ -353,7 +353,11 @@ class FlowTraceView(Frame):
 
             # press enter at trace history
             if self._list_view._has_focus and c == 10:
-                LOG.debug_log('HISTORY run : ' + (self.trace_history[self._list_view.value - 1])[0])
+                LOG.debug_log('HISTORY run : ' + (self.trace_history[self._list_view.value - 1])[0] + ' value = ' + str(self._list_view.value))
+                cmd_rt = TRACE.ssh_exec('root', '10.20.0.31',(self.real_trace[self._list_view.value - 1])[0])
+
+                # need parsing
+                self._trace_result.value = cmd_rt
 
         return super(FlowTraceView, self).process_event(event)
 
@@ -380,26 +384,34 @@ class FlowTraceView(Frame):
         self.save()
 
         saved_data = ''
+        real_data = ''
         for key, real_key in TRACE.trace_l2_cond_list + TRACE.trace_l3_cond_list:
             val = self.data[real_key].strip()
 
             if val != '':
                 saved_data = saved_data + key + '=' + val + ','
+                real_data = real_data + real_key + '=' + val + ','
 
         saved_data = saved_data[0:-1]
+        real_data = real_data[0:-1]
 
         if len(saved_data) == 0:
             self._scene.add_effect(PopUpDialog(self._screen, "Please enter a flow-trace condition.", ["OK"]))
             return
 
-        data = (saved_data, len(self.trace_history) + 1)
+        num = len(self.trace_history) + 1
+        data = (saved_data, num)
+        r_data = (real_data, num)
+
         self.trace_history.insert(0, data)
+        self.real_trace.insert(0, r_data)
 
         self._list_view.value = len(self.trace_history)
 
-        # call trace logic
-        test_txt = 'TRACE RESULT 1\nTRACE RESULT 2\nTRACE RESULT 3\nTRACE RESULT 4\nTRACE RESULT 5\nTRACE RESULT 6\n'
-        self._trace_result.value = test_txt
+        cmd_rt = TRACE.ssh_exec('root', '10.20.0.31', real_data)
+
+        # need parsing
+        self._trace_result.value = cmd_rt
 
     @staticmethod
     def _menu():

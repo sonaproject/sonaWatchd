@@ -4,6 +4,7 @@ COMMAND_SECTION_NAME = 'command'
 TRACE_SECTION_NAME = 'condition'
 REST_SECTION_NAME = 'rest-server'
 LOG_SECTION_NAME = 'log'
+SSH_SECTION_NAME = 'ssh'
 
 REST_ID_KEY_NAME = 'id'
 REST_PW_KEY_NAME = 'pw'
@@ -20,6 +21,8 @@ TRACE_LOG_KEY_NAME = 'trace_log'
 
 CLI_CONFIG_FILE = 'config/cli_config.ini'
 TRACE_CONFIG_FILE = 'config/trace_config.ini'
+
+SSH_TIMEOUT = 'timeout'
 
 class CONFIG():
 
@@ -136,5 +139,12 @@ class CONFIG():
     @classmethod
     def get_trace_log_backup(cls):
         return cls.trace_get_value(LOG_SECTION_NAME, LOG_BACKUP_KEY_NAME)
+
+    @classmethod
+    def get_ssh_timeout(cls):
+        try:
+            return cls.config_trace.getint(SSH_SECTION_NAME, SSH_TIMEOUT)
+        except:
+            return 10
 
 
