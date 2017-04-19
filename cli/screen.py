@@ -33,8 +33,6 @@ UNDERLINE = '\033[4m'
 
 MAIN_WIDTH = 50
 
-menu_list = [("CLI", 1), ("Flow Trace", 2)]
-
 class SCREEN():
     main_scr = None
 
@@ -353,11 +351,9 @@ class FlowTraceView(Frame):
 
             # press enter at trace history
             if self._list_view._has_focus and c == 10:
-                LOG.debug_log('HISTORY run : ' + (self.trace_history[self._list_view.value - 1])[0] + ' value = ' + str(self._list_view.value))
-                cmd_rt = TRACE.ssh_exec('root', '10.20.0.31',(self.real_trace[self._list_view.value - 1])[0])
-
-                # need parsing
-                self._trace_result.value = cmd_rt
+                LOG.debug_log('HISTORY run : ' + (self.trace_history[len(self.trace_history) - self._list_view.value])[0] + ' value = ' + str(
+                    self._list_view.value))
+                self.start_trace((self.trace_history[len(self.trace_history) - self._list_view.value])[0], self.real_trace[self._list_view.value - 1])
 
         return super(FlowTraceView, self).process_event(event)
 
@@ -399,12 +395,14 @@ class FlowTraceView(Frame):
             self._scene.add_effect(PopUpDialog(self._screen, "Please enter a flow-trace condition.", ["OK"]))
             return
 
+        self.start_trace(saved_data, real_data)
+
+    def start_trace(self, saved_data, real_data):
         num = len(self.trace_history) + 1
         data = (saved_data, num)
-        r_data = (real_data, num)
 
         self.trace_history.insert(0, data)
-        self.real_trace.insert(0, r_data)
+        self.real_trace.append(real_data)
 
         self._list_view.value = len(self.trace_history)
 
