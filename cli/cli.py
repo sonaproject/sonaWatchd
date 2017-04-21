@@ -65,6 +65,16 @@ class CLI():
                     cls.selected_sys = (cmd.split(' '))[1]
                     cls.CLI_LOG.cli_log('CHANGE TARGET SYSTEM = ' + cls.selected_sys)
                     return
+            else:
+                cls.set_cli_ret_flag(True)
+                tmp = cmd.split(' ')
+
+                if (len(tmp) == 1 and CONFIG.get_config_instance().has_section(cmd)):
+                    param = CONFIG.cli_get_value(cmd, CONFIG.get_cmd_opt_key_name()).replace(',', '|')
+                    param = param.replace(' ', '')
+                    print 'This command requires parameter.'
+                    print cmd + ' [' + param + ']'
+                    return
 
             cls.set_cli_ret_flag(False)
 

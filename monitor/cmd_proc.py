@@ -5,18 +5,22 @@ import monitor.resource as res
 
 
 def parse_command(command):
+    try:
+        res_body = dict()
+        res_body['command'] = command['command']
+        res_body['system'] = command['system']
 
-    res_body = dict()
-    res_body['command'] = command['command']
-    res_body['system'] = command['system']
-    res_body['param'] = command['param']
+        try:
+            res_body['param'] = command['param']
+        except:
+            res_body['param'] = ''
 
-    ret = COMMAND_MAP[command['command']](command['system'], command['param'])
-    res_body['result'] = ret
+        ret = COMMAND_MAP[command['command']](command['system'], command['param'])
+        res_body['result'] = ret
 
-    return res_body
-
-    pass
+        return res_body
+    except:
+        return LOG.exception()
 
 def proc_dis_system(node, param):
     with DB.connection() as conn:
@@ -45,7 +49,7 @@ def proc_dis_vrouter(system, param):
     pass
 
 
-def proc_dis_k8s(system, param):
+def proc_dis_swarm(system, param):
     pass
 
 
@@ -98,7 +102,7 @@ COMMAND_MAP = {'dis-resource': proc_dis_resource,
                'dis-onos': proc_dis_onos,
                'dis-log': proc_dis_log,
                'dis-vrouter': proc_dis_vrouter,
-               'dis-k8s': proc_dis_k8s,
+               'dis-swarm': proc_dis_swarm,
                'dis-xos': proc_dis_xos,
                'dis-onosha': proc_dis_onosha,
                'dis-node': proc_dis_node,

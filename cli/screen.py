@@ -12,6 +12,7 @@ from asciimatics.scene import Scene
 from asciimatics.screen import Screen
 from asciimatics.exceptions import NextScene, StopApplication
 from asciimatics.event import KeyboardEvent
+from collections import defaultdict
 
 WHITE = '\033[1;97m'
 BLUE = '\033[1;94m'
@@ -319,22 +320,35 @@ class FlowTraceView(Frame):
 
             layout_result = Layout([1], fill_frame=True)
             self.add_layout(layout_result)
-            self._trace_result = TextBox(Widget.FILL_FRAME, name='TEST', as_string=True)
+            self._trace_result = TextBox(Widget.FILL_FRAME, label='[Flow]', as_string=True)
             layout_result.add_widget(self._trace_result)
+            layout_result.add_widget(Divider())
 
             self._list_view = ListBox(
                 5,
                 self.trace_history,
                 name="LIST_HISTORY",
-                label="HISTORY")
+                label="[HISTORY]")
             layout_history = Layout([1])
             self.add_layout(layout_history)
             layout_history.add_widget(self._list_view)
 
             self.fix()
+
+            self.palette = defaultdict(
+                lambda: (Screen.COLOUR_WHITE, Screen.A_BOLD, Screen.COLOUR_CYAN))
+
+            self.palette["selected_focus_field"] = (Screen.COLOUR_WHITE, Screen.A_BOLD, Screen.COLOUR_YELLOW)
+            self.palette["title"] = (Screen.COLOUR_WHITE, Screen.A_BOLD, Screen.COLOUR_CYAN)
+            self.palette["edit_text"] = (Screen.COLOUR_BLUE, Screen.A_BOLD, Screen.COLOUR_CYAN)
+            self.palette["focus_edit_text"] = (Screen.COLOUR_BLUE, Screen.A_BOLD, Screen.COLOUR_YELLOW)
+            self.palette["focus_button"] = (Screen.COLOUR_WHITE, Screen.A_BOLD, Screen.COLOUR_YELLOW)
+            self.palette["label"] = (Screen.COLOUR_WHITE, Screen.A_BOLD, Screen.COLOUR_CYAN)
+
         except:
             LOG.exception_err_write()
 
+    isKeypad = False
     def process_event(self, event):
         if isinstance(event, KeyboardEvent):
             c = event.key_code
@@ -343,11 +357,17 @@ class FlowTraceView(Frame):
 
             if c == 8:
                 event.key_code = Screen.KEY_BACK
-
-            # Stop on ESC
-            if c == Screen.KEY_ESCAPE:
-                SCREEN.set_exit()
-                raise StopApplication("User terminated app")
+            # for keypad
+            elif c == -1:
+                return
+            elif c == 79:
+                self.isKeypad = True
+                return
+            elif (self.isKeypad and c >= 112 and c <= 121):
+                event.key_code = c - 64
+                self.isKeypad = False
+            elif c == -102:
+                event.key_code = 46
 
             # press enter at trace history
             if self._list_view._has_focus and c == 10:

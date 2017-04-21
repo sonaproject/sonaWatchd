@@ -61,6 +61,33 @@ class TRACE():
                 return 'SSH FAIL\nCOMMAND = ' + command + '\nREASON = ' + error
             else:
                 cls.TRACE_LOG.trace_log("ssh command execute successful\n" + output)
-                return output
+                return cls.parsing(output)
         except:
             LOG.exception_err_write()
+
+    @staticmethod
+    def parsing(output):
+        try:
+            result = ''
+            final_flag = False
+            lines = output.split('\n')
+
+            for line in lines:
+                line = line.strip()
+
+                if final_flag:
+                    result = result + line + '\n'
+                    continue
+
+                if (line.startswith('Bridge:') or line.startswith('Rule:')):
+                    result = result + line + '\n'
+                elif (line.startswith('Flow:') or line.startswith('OpenFlow actions=')):
+                    result = result + line + '\n\n'
+                elif line.startswith('Final flow:'):
+                    result = result + line + '\n'
+                    final_flag = True
+
+            return result
+        except:
+            LOG.exception_err_write()
+            return 'parsing error\n' + output
