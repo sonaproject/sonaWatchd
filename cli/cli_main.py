@@ -49,7 +49,11 @@ def main():
     LOG.set_log_config()
 
     # inquiry onos info
-    res_code, sys_info = CLI.req_sys_info()
+    try:
+        res_code, sys_info = CLI.req_sys_info()
+    except:
+        print "Cannot connect rest server."
+        return
 
     if res_code != 200:
         print "Rest server does not respond to the request."

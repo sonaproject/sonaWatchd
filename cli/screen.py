@@ -361,19 +361,24 @@ class FlowTraceView(Frame):
 
             LOG.debug_log('KEY = ' + str(c))
 
-            if c == 8:
-                event.key_code = Screen.KEY_BACK
-            # for keypad
-            elif c == -1:
-                return
-            elif c == 79:
-                self.isKeypad = True
-                return
-            elif (self.isKeypad and c >= 112 and c <= 121):
-                event.key_code = c - 64
-                self.isKeypad = False
-            elif c == -102:
-                event.key_code = 46
+            # mac OS
+            if 'libedit' in readline.__doc__:
+                if c == 127:
+                    event.key_code = Screen.KEY_BACK
+            else:
+                if c == 8:
+                    event.key_code = Screen.KEY_BACK
+                # for keypad
+                elif c == -1:
+                    return
+                elif c == 79:
+                    self.isKeypad = True
+                    return
+                elif (self.isKeypad and c >= 112 and c <= 121):
+                    event.key_code = c - 64
+                    self.isKeypad = False
+                elif c == -102:
+                    event.key_code = 46
 
             # press enter at trace history
             if self._list_view._has_focus and c == 10:
