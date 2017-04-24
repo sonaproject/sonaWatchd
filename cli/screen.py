@@ -1,4 +1,5 @@
 import curses
+import platform
 
 from log_lib import LOG
 from flow_trace import TRACE
@@ -7,7 +8,7 @@ from config import CONFIG
 from cli import CLI
 
 from asciimatics.widgets import Frame, ListBox, Layout, Divider, Text, \
-    Button, Widget, Label, TextBox, PopUpDialog, RadioButtons
+    Button, Widget, TextBox, PopUpDialog
 from asciimatics.scene import Scene
 from asciimatics.screen import Screen
 from asciimatics.exceptions import NextScene, StopApplication
@@ -362,7 +363,7 @@ class FlowTraceView(Frame):
             LOG.debug_log('KEY = ' + str(c))
 
             # mac OS
-            if 'libedit' in readline.__doc__:
+            if platform.system() == 'Darwin':
                 if c == 127:
                     event.key_code = Screen.KEY_BACK
             else:
