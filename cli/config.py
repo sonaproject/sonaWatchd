@@ -5,6 +5,7 @@ TRACE_SECTION_NAME = 'condition'
 REST_SECTION_NAME = 'rest-server'
 LOG_SECTION_NAME = 'log'
 SSH_SECTION_NAME = 'ssh'
+CPT_SECTION_NAME = "OPENSTACK_COMPUTE"
 
 REST_ID_KEY_NAME = 'id'
 REST_PW_KEY_NAME = 'pw'
@@ -18,6 +19,9 @@ CLI_LOG_KEY_NAME = 'cli_log'
 LOG_ROTATE_KEY_NAME = 'log_rotate_time'
 LOG_BACKUP_KEY_NAME = 'log_backup_count'
 TRACE_LOG_KEY_NAME = 'trace_log'
+
+CPT_LIST_KEY_NAME = 'list'
+CPT_ID_KEY_NAME = 'id'
 
 CLI_CONFIG_FILE = 'config/cli_config.ini'
 TRACE_CONFIG_FILE = 'config/trace_config.ini'
@@ -146,5 +150,13 @@ class CONFIG():
             return cls.config_trace.getint(SSH_SECTION_NAME, SSH_TIMEOUT)
         except:
             return 10
+
+    @classmethod
+    def get_trace_cpt_list(cls):
+        return cls.trace_get_value(CPT_SECTION_NAME, CPT_LIST_KEY_NAME)
+
+    @classmethod
+    def get_trace_cpt_id(cls):
+        return cls.trace_get_value(CPT_SECTION_NAME, CPT_ID_KEY_NAME)
 
 

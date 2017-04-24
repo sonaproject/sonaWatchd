@@ -7,7 +7,7 @@ from config import CONFIG
 from cli import CLI
 
 from asciimatics.widgets import Frame, ListBox, Layout, Divider, Text, \
-    Button, Widget, Label, TextBox, PopUpDialog
+    Button, Widget, Label, TextBox, PopUpDialog, RadioButtons
 from asciimatics.scene import Scene
 from asciimatics.screen import Screen
 from asciimatics.exceptions import NextScene, StopApplication
@@ -289,6 +289,12 @@ class FlowTraceView(Frame):
 
             self._screen = screen
 
+            layout_cpt = Layout([1])
+            self.add_layout(layout_cpt)
+
+            layout_cpt.add_widget(Text(" [COMPUTE] ", "COMPUTE"))
+            layout_cpt.add_widget(Divider())
+
             i = 0
             for key, value in TRACE.trace_l2_cond_list + TRACE.trace_l3_cond_list:
                 if i % 2 == 0:
@@ -411,6 +417,14 @@ class FlowTraceView(Frame):
         saved_data = saved_data[0:-1]
         real_data = real_data[0:-1]
 
+        if (len(self.data['COMPUTE'].strip()) == 0):
+            self._scene.add_effect(PopUpDialog(self._screen, "Please enter a compute node name.", ["OK"]))
+            return
+
+        if not (TRACE.compute_list.has_key(self.data['COMPUTE'].strip())):
+            self._scene.add_effect(PopUpDialog(self._screen, 'No ' + self.data["COMPUTE"].strip() + '(COMPUTE NODE) registered', ["OK"]))
+            return
+
         if len(saved_data) == 0:
             self._scene.add_effect(PopUpDialog(self._screen, "Please enter a flow-trace condition.", ["OK"]))
             return
@@ -426,7 +440,7 @@ class FlowTraceView(Frame):
 
         self._list_view.value = len(self.trace_history)
 
-        cmd_rt = TRACE.ssh_exec('root', '10.20.0.31', real_data)
+        cmd_rt = TRACE.ssh_exec(TRACE.compute_id, TRACE.compute_list[self.data['COMPUTE'].strip()], real_data)
 
         # need parsing
         self._trace_result.value = cmd_rt

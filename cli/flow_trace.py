@@ -7,6 +7,9 @@ class TRACE():
     trace_l2_cond_list = []
     trace_l3_cond_list = []
 
+    compute_id = ''
+    compute_list = {}
+
     @classmethod
     def set_trace_log(cls, trace_log):
         cls.TRACE_LOG = trace_log
@@ -21,6 +24,17 @@ class TRACE():
 
     @classmethod
     def set_cnd_list(cls):
+        cls.compute_id = CONFIG.get_trace_cpt_id()
+        cpt_list = CONFIG.get_trace_cpt_list()
+
+        for cpt in cpt_list.split(','):
+            cpt = cpt.strip()
+
+            tmp = cpt.split(':')
+
+            if len(tmp) == 2:
+                cls.compute_list[tmp[0]] = tmp[1]
+
         cls.trace_l2_cond_list = CONFIG.get_cnd_list('l2')
         cls.trace_l3_cond_list = CONFIG.get_cnd_list('l3')
 

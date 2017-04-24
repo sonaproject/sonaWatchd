@@ -65,9 +65,9 @@ class DB(object):
             elif str(node).lower() == 'xos':
                 cls.sql_insert_nodes(CONF.xos()['list'],
                                      str(CONF.xos()['account']).split(':')[0])
-            elif str(node).lower() == 'k8s':
-                cls.sql_insert_nodes(CONF.k8s()['list'],
-                                     str(CONF.k8s()['account']).split(':')[0])
+            elif str(node).lower() == 'swarm':
+                cls.sql_insert_nodes(CONF.swarm()['list'],
+                                     str(CONF.swarm()['account']).split(':')[0])
             elif str(node).lower() == 'openstack':
                 cls.sql_insert_nodes(CONF.openstack()['list'],
                                      str(CONF.openstack()['account']).split(':')[0])

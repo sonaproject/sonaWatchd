@@ -39,7 +39,7 @@ def periodic():
                 result[node_name]['APP'] = onos_app_check(node_ip)
             elif node_ip in str(CONF.xos()['list']):
                 result[node_name]['APP'] = xos_app_check(node_ip)
-            elif node_ip in str(CONF.k8s()['list']):
+            elif node_ip in str(CONF.swarm()['list']):
                 result[node_name]['APP'] = k8s_app_check(node_ip)
             elif node_ip in str(CONF.openstack()['list']):
                 result[node_name]['APP'] = openstack_app_check(node_ip)
