@@ -149,7 +149,7 @@ class CONFIG():
         try:
             return cls.config_trace.getint(SSH_SECTION_NAME, SSH_TIMEOUT)
         except:
-            return 10
+            return 5
 
     @classmethod
     def get_trace_cpt_list(cls):
