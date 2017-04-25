@@ -106,14 +106,9 @@ def get_resource_usage(node_list, param):
     res_result = dict()
     res_result['time'] = str(datetime.now())
 
-    with DB.connection() as conn:
-        sql = 'SELECT data FROM ' + DB.DB_STATUS_TABEL
-        conn.text_factory = str
-        nodes_status = ast.literal_eval(conn.cursor().execute(sql).fetchone()[0])
-
-    for node_name, node_ip, username in node_list:
+    for node_name, node_ip, username, ping in node_list:
         res_result[node_name] = {}
-        if str(nodes_status[node_name]['IP']).lower() == 'ok':
+        if ping.lower() == 'ok':
             LOG.info("GET %s usage for %s", param, node_name)
             if param == '':
                 res_result[node_name].update(get_cpu_usage(username, node_ip))

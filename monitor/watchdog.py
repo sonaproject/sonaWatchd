@@ -18,7 +18,7 @@ def periodic(conn):
     LOG.info("Periodic checking...%s", str(CONF.watchdog()['check_system']))
 
     try:
-        node_list = cmd_proc.get_node_list('all')
+        node_list = cmd_proc.get_node_list('all', 'nodename, ip_addr, username')
 
         if not node_list:
             LOG.info("Not Exist Node data ...")
@@ -27,37 +27,36 @@ def periodic(conn):
         LOG.exception()
         return
 
-    result = dict()
     for node_name, node_ip, user_name in node_list:
+        ping = net_check(node_ip)
+        app = ''
 
-        if net_check(node_ip) == 'ok':
-            result[node_name] = {'IP': 'ok'}
+        if ping == 'ok':
             if node_ip in str(CONF.onos()['list']):
-                result[node_name]['APP'] = onos_app_check(node_ip)
+                app = onos_app_check(node_ip)
             elif node_ip in str(CONF.xos()['list']):
-                result[node_name]['APP'] = xos_app_check(node_ip)
+                app = xos_app_check(node_ip)
             elif node_ip in str(CONF.swarm()['list']):
-                result[node_name]['APP'] = swarm_app_check(node_ip)
+                app = swarm_app_check(node_ip)
             elif node_ip in str(CONF.openstack()['list']):
-                result[node_name]['APP'] = openstack_app_check(node_ip)
+                app = openstack_app_check(node_ip)
         else:
-            result[node_name] = {'IP': 'nok', 'APP': 'nok'}
+            app = 'nok'
 
-        sql = 'UPDATE ' + DB.NODE_INFO_TBL + \
-              ' SET cpu = ' + str(resource.get_cpu_usage(user_name, node_ip, True)) + ',' + \
-              ' mem = ' + str(resource.get_mem_usage(user_name, node_ip, True)) + ',' + \
-              ' disk = ' + str(resource.get_disk_usage(user_name, node_ip, True)) + \
-              ' WHERE nodename = \'' + node_name + '\''
-        LOG.info('Update Resource info = ' + sql)
-        conn.cursor().execute(sql)
-        conn.commit()
-
-    try:
-        sql = "INSERT OR REPLACE INTO " + DB.DB_STATUS_TABEL + " VALUES (?, ?, ?)"
-        conn.cursor().execute(sql, (DB.DB_PERIODIC_ID, str(datetime.now()), str(result)))
-        conn.commit()
-    except:
-        LOG.exception()
+        try:
+            sql = 'UPDATE ' + DB.NODE_INFO_TBL + \
+                  ' SET cpu = ' + str(resource.get_cpu_usage(user_name, node_ip, True)) + ',' + \
+                  ' mem = ' + str(resource.get_mem_usage(user_name, node_ip, True)) + ',' + \
+                  ' disk = ' + str(resource.get_disk_usage(user_name, node_ip, True)) + ',' + \
+                  ' ping = \'' + ping + '\'' + ',' + \
+                  ' app = \'' + app + '\'' + ',' + \
+                  ' time = \'' + str(datetime.now()) + '\'' + \
+                  ' WHERE nodename = \'' + node_name + '\''
+            LOG.info('Update Resource info = ' + sql)
+            conn.cursor().execute(sql)
+            conn.commit()
+        except:
+            LOG.exception()
 
 
 def net_check(node):

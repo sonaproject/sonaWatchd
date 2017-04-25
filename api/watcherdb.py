@@ -10,9 +10,7 @@ from config import CONF
 
 
 class DB(object):
-    DB_STATUS_TABEL = 't_status'
     NODE_INFO_TBL = 't_nodes'
-    DB_PERIODIC_ID = 'main_status'
 
     def __init__(self):
         self._conn = self.connection()
@@ -37,10 +35,8 @@ class DB(object):
     @classmethod
     def db_initiation(cls):
         LOG.info("--- Initiating SONA DB ---")
-        init_sql = ['CREATE TABLE ' + cls.DB_STATUS_TABEL +
-                        '(item text primary key, time, data)',
-                    'CREATE TABLE ' + cls.NODE_INFO_TBL +
-                        '(nodename text primary key, ip_addr, username, cpu real, mem real, disk real)']
+        init_sql = ['CREATE TABLE ' + cls.NODE_INFO_TBL +
+                        '(nodename text primary key, ip_addr, username, ping, app, cpu real, mem real, disk real, time)']
 
         for sql in init_sql:
             sql_rt = cls.sql_execute(sql)
@@ -80,7 +76,7 @@ class DB(object):
             name, ip = str(node).split(':')
             LOG.info('Insert node [%s %s %s]', name, ip, username)
             sql = 'INSERT INTO ' + cls.NODE_INFO_TBL + \
-                  ' VALUES (\'' + name + '\',\'' + ip + '\',\'' + username + '\', -1, -1, -1)'
+                  ' VALUES (\'' + name + '\',\'' + ip + '\',\'' + username + '\', \'none\', \'none\', -1, -1, -1, \'none\')'
             LOG.info('%s', sql)
             sql_rt = cls.sql_execute(sql)
             if sql_rt != '':

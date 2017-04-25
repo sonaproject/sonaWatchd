@@ -1,7 +1,8 @@
-from api.sona_log import LOG
-from api.watcherdb import DB
+from datetime import datetime
 import monitor.resource as res
 
+from api.sona_log import LOG
+from api.watcherdb import DB
 
 def parse_command(command):
     try:
@@ -22,13 +23,20 @@ def parse_command(command):
         return LOG.exception()
 
 def proc_dis_system(node, param):
-    with DB.connection() as conn:
-        item, time, data = conn.cursor().execute("SELECT * FROM " + DB.DB_STATUS_TABEL + " WHERE item='main_status'").fetchone()
-        LOG.info('Get \'periodic\' data: %s %s', time, data)
-    return [time, data]
+    try:
+        nodes_info = get_node_list(node, 'nodename, ping, app')
+
+        result = dict()
+
+        for nodename, ping, app in nodes_info:
+            result[nodename] = {'IP': ping, 'APP': app}
+
+        return [str(datetime.now()), str(result)]
+    except:
+        LOG.exception()
 
 def proc_dis_resource(node, param):
-    nodes_info = get_node_list(node)
+    nodes_info = get_node_list(node, 'nodename, ip_addr, username, ping')
 
     LOG.info("Get Resource Usage ... %s %s", nodes_info, param)
     resource_usage = res.get_resource_usage(nodes_info, param)
@@ -80,20 +88,18 @@ def exist_command(req):
     return True
 
 
-def get_node_list(nodes):
+def get_node_list(nodes, param):
     try:
         if nodes == 'all':
-            with DB.connection() as conn:
-                sql = 'SELECT nodename, ip_addr, username FROM ' + DB.NODE_INFO_TBL
-                nodes_info = conn.cursor().execute(sql).fetchall()
-                conn.commit()
-                return nodes_info
+            sql = 'SELECT ' + param + ' FROM ' + DB.NODE_INFO_TBL
         else:
-            with DB.connection() as conn:
-                sql = 'SELECT nodename, ip_addr, username FROM ' + DB.NODE_INFO_TBL + ' WHERE nodename=' + nodes
-                node_info = conn.cursor().execute(sql).fetchall()
-                conn.commit()
-                return node_info
+            sql = 'SELECT ' + param + ' FROM ' + DB.NODE_INFO_TBL + ' WHERE nodename = \'' + nodes + '\''
+
+        with DB.connection() as conn:
+            nodes_info = conn.cursor().execute(sql).fetchall()
+
+        conn.close()
+        return nodes_info
     except:
         LOG.exception()
 

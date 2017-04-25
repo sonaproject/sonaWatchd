@@ -140,6 +140,7 @@ def select_menu():
 
                         # select_command (handling tab event)
                         cmd = CLI.input_cmd()
+                        cmd = cmd.strip()
 
                         if CLI.is_menu(cmd):
                             break
