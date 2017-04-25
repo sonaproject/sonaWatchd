@@ -2,6 +2,7 @@
 # All Rights Reserved.
 # SONA Monitoring Solutions.
 
+import sys
 import sqlite3
 
 from sona_log import LOG
@@ -10,7 +11,7 @@ from config import CONF
 
 class DB(object):
     DB_STATUS_TABEL = 't_status'
-    DB_NODE_TABLE = 't_nodes'
+    NODE_INFO_TBL = 't_nodes'
     DB_PERIODIC_ID = 'main_status'
 
     def __init__(self):
@@ -25,7 +26,7 @@ class DB(object):
             return conn
         except:
             LOG.exception()
-            exit(1)
+            sys.exit(1)
 
     @classmethod
     def db_cursor(cls):
@@ -38,8 +39,8 @@ class DB(object):
         LOG.info("--- Initiating SONA DB ---")
         init_sql = ['CREATE TABLE ' + cls.DB_STATUS_TABEL +
                         '(item text primary key, time, data)',
-                    'CREATE TABLE ' + cls.DB_NODE_TABLE +
-                        '(nodename text primary key, ip_addr, username)']
+                    'CREATE TABLE ' + cls.NODE_INFO_TBL +
+                        '(nodename text primary key, ip_addr, username, cpu real, mem real, disk real)']
 
         for sql in init_sql:
             sql_rt = cls.sql_execute(sql)
@@ -52,10 +53,10 @@ class DB(object):
                 sql_rt = cls.sql_execute(sql)
                 if sql_rt != '':
                     LOG.info("DB %s table initiation fail\n%s", table_name, sql_rt)
-                    exit(1)
+                    sys.exit(1)
             elif sql_rt != '':
                 LOG.info("DB initiation fail\n%s", sql_rt)
-                exit(1)
+                sys.exit(1)
 
         LOG.info('Insert nodes information ...')
         for node in CONF.watchdog()['check_system']:
@@ -78,13 +79,13 @@ class DB(object):
         for node in node_list:
             name, ip = str(node).split(':')
             LOG.info('Insert node [%s %s %s]', name, ip, username)
-            sql = 'INSERT INTO ' + cls.DB_NODE_TABLE + \
-                  ' VALUES (\'' + name + '\',\'' + ip + '\',\'' + username + '\')'
+            sql = 'INSERT INTO ' + cls.NODE_INFO_TBL + \
+                  ' VALUES (\'' + name + '\',\'' + ip + '\',\'' + username + '\', -1, -1, -1)'
             LOG.info('%s', sql)
             sql_rt = cls.sql_execute(sql)
             if sql_rt != '':
                 LOG.info(" Node date insert fail \n%s", sql_rt)
-                exit(1)
+                sys.exit(1)
 
     @classmethod
     def sql_execute(cls, sql):
@@ -92,6 +93,8 @@ class DB(object):
             with cls.connection() as conn:
                 conn.cursor().execute(sql)
                 conn.commit()
+
+            conn.close()
             return ''
         except sqlite3.OperationalError, err:
             return err.message
