@@ -2,11 +2,7 @@
 # All Rights Reserved.
 # SONA Monitoring Solutions.
 
-import ast
-
-from datetime import datetime
 from api.sona_log import LOG
-from api.watcherdb import DB
 from api.sbapi import SshCommand
 
 
@@ -104,7 +100,6 @@ def get_disk_usage(username, node_ip, only_value = False):
 
 def get_resource_usage(node_list, param):
     res_result = dict()
-    res_result['time'] = str(datetime.now())
 
     for node_name, node_ip, username, ping in node_list:
         res_result[node_name] = {}

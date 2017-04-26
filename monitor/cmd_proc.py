@@ -17,6 +17,7 @@ def parse_command(command):
 
         ret = COMMAND_MAP[command['command']](command['system'], command['param'])
         res_body['result'] = ret
+        res_body['time'] = str(datetime.now())
 
         return res_body
     except:

@@ -87,19 +87,38 @@ class CLI():
             ret_code, myResponse = cls.send_rest(cmd)
 
             # rest timeout
-            if ret_code==-1:
+            if ret_code == -1:
                 return
 
             cls.set_cli_ret_flag(True)
 
             if (myResponse.status_code == 200):
-                print 'response-code = ' + str(myResponse.status_code)
-                print 'content = ' + myResponse.content
+                cls.parsingRet(myResponse.content)
             else:
                 print 'response-code = ' + str(myResponse.status_code)
                 print 'content = ' + myResponse.content
         except:
             LOG.exception_err_write()
+
+    @staticmethod
+    def parsingRet(result):
+        sys_info = json.loads(result)
+
+        command = sys_info['command']
+        result = sys_info['result']
+        param = sys_info['param']
+
+        if command == 'dis-resource':
+            for sys in result:
+                sys_ret = str(result[sys][(str(param)).upper()])
+                if sys_ret.upper().endswith('FAIL'):
+                    sys_ret = 'fail'
+                else:
+                    sys_ret = str(result[sys][(str(param)).upper()]['RATIO'])
+
+                print '\t' + sys + '\t' + (str(param)).upper() + '\t' + sys_ret
+        else:
+            print 'content = ' + result
 
     @classmethod
     def send_rest(cls, cmd):
