@@ -23,7 +23,7 @@ def parse_command(command):
     except:
         return LOG.exception()
 
-def proc_dis_system(node, param):
+def proc_dis_system(node, dummy):
     try:
         nodes_info = get_node_list(node, 'nodename, ping, app')
 
@@ -32,7 +32,7 @@ def proc_dis_system(node, param):
         for nodename, ping, app in nodes_info:
             result[nodename] = {'IP': ping, 'APP': app}
 
-        return [str(datetime.now()), str(result)]
+        return result
     except:
         LOG.exception()
 

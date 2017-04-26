@@ -360,8 +360,6 @@ class FlowTraceView(Frame):
         if isinstance(event, KeyboardEvent):
             c = event.key_code
 
-            LOG.debug_log('KEY = ' + str(c))
-
             # mac OS
             if platform.system() == 'Darwin':
                 if c == 127:
