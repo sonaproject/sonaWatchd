@@ -327,7 +327,7 @@ class FlowTraceView(Frame):
 
             layout_result = Layout([1], fill_frame=True)
             self.add_layout(layout_result)
-            self._trace_result = TextBox(Widget.FILL_FRAME, label='[Flow]', as_string=True)
+            self._trace_result = TextBox(Widget.FILL_FRAME, name='Flow', label='[Flow]', as_string=True)
             layout_result.add_widget(self._trace_result)
             layout_result.add_widget(Divider())
 
@@ -446,7 +446,6 @@ class FlowTraceView(Frame):
 
         cmd_rt = TRACE.ssh_exec(TRACE.compute_id, TRACE.compute_list[self.data['COMPUTE'].strip()], real_data)
 
-        # need parsing
         self._trace_result.value = cmd_rt
 
     @staticmethod

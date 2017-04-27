@@ -84,7 +84,7 @@ class TRACE():
         try:
             result = ''
             final_flag = False
-            lines = output.split('\n')
+            lines = output.splitlines()
 
             for line in lines:
                 line = line.strip()
