@@ -83,6 +83,8 @@ class TRACE():
     def parsing(output):
         try:
             result = ''
+            result_final = ''
+            result_flow = ''
             final_flag = False
             lines = output.splitlines()
 
@@ -90,18 +92,22 @@ class TRACE():
                 line = line.strip()
 
                 if final_flag:
-                    result = result + line + '\n'
+                    result_final = result_final + line + '\n'
+
+                    if line.startswith('Datapath actions:'):
+                        result = '[' + line + ']\n\n'
+
                     continue
 
                 if (line.startswith('Bridge:') or line.startswith('Rule:')):
-                    result = result + line + '\n'
+                    result_flow = result_flow + line + '\n'
                 elif (line.startswith('Flow:') or line.startswith('OpenFlow actions=')):
-                    result = result + line + '\n\n'
+                    result_flow = result_flow + line + '\n\n'
                 elif line.startswith('Final flow:'):
-                    result = result + line + '\n'
+                    result_final = result_final + line + '\n'
                     final_flag = True
 
-            return result
+            return result + result_final + '\n' + result_flow
         except:
             LOG.exception_err_write()
             return 'parsing error\n' + output
