@@ -43,6 +43,7 @@ class SCREEN():
     quit_flag = False
     restart_flag = False
     resize_err_flag = False
+    evt_flag = False
 
     main_instance = None
 
@@ -96,23 +97,23 @@ class SCREEN():
             return ''
 
     @classmethod
-    def draw_system(cls):
+    def draw_system(cls, menu_list):
         try:
-            box_onos = cls.display_sys_info()
+            box_system = cls.display_sys_info()
 
-            cls.draw_refresh_time()
+            cls.draw_refresh_time(menu_list)
 
-            box_onos.refresh()
+            box_system.refresh()
         except:
             LOG.exception_err_write()
 
     @classmethod
-    def draw_refresh_time(cls):
+    def draw_refresh_time(cls, menu_list):
         try:
             time_color = curses.color_pair(3)
 
             str_time = 'Last Check Time [' + SYS.last_check_time.split('.')[0] + ']'
-            cls.set_main_str(SYS.get_sys_line_count() + 2 + 4 + 1, MAIN_WIDTH - len(str_time), str_time, time_color)
+            cls.set_main_str(SYS.get_sys_line_count() + 2 + 3 + len(menu_list) + 2 + 1, MAIN_WIDTH - len(str_time), str_time, time_color)
         except:
             LOG.exception_err_write()
             
@@ -152,7 +153,7 @@ class SCREEN():
 
     @staticmethod
     def draw_select(menu_list, selected_menu_no):
-        box_type = curses.newwin(len(menu_list) + 2, MAIN_WIDTH, SYS.get_sys_line_count() + 3, 1)
+        box_type = curses.newwin(len(menu_list) + 2, MAIN_WIDTH, SYS.get_sys_line_count() + 3 + 3, 1)
         box_type.box()
 
         try:
@@ -170,6 +171,33 @@ class SCREEN():
             LOG.exception_err_write()
 
         return box_type
+
+    @classmethod
+    def draw_event(cls):
+        try:
+            warn_color = curses.color_pair(3)
+
+            box_event = curses.newwin(3, MAIN_WIDTH, SYS.get_sys_line_count() + 3, 1)
+            box_event.box()
+
+            normalText = curses.A_NORMAL
+
+            box_event.addstr(0, 22, ' EVENT ', normalText)
+
+            # if occur event
+            if cls.evt_flag:
+                str = '[Event occurred]'
+
+                box_event.addstr(1, 2, str, warn_color)
+                box_event.addstr(1, 2 + len(str), ' Check the event history.', normalText)
+            else:
+                str = 'none'
+
+                box_event.addstr(1, 2, str, normalText)
+
+            box_event.refresh()
+        except:
+            LOG.exception_err_write()
 
     @classmethod
     def display_header(cls, menu):
@@ -252,7 +280,10 @@ class SCREEN():
             box_sys.addstr(0, 18, ' CONTROL PLAN ', normal_text)
 
             i = 1
-            for sys in SYS.sys_list.keys():
+
+            sorted_list = sorted(SYS.sys_list.keys())
+
+            for sys in sorted_list:
                 str_info = sys.ljust(6) + ' ['
                 box_sys.addstr(i, 2, str_info)
 

@@ -1,4 +1,5 @@
 import json
+
 from log_lib import LOG
 
 class SYS():
@@ -29,6 +30,7 @@ class SYS():
                 dtl_list['APP'] = sys_info[key]['APP']
 
                 cls.sys_list[key] = dtl_list
+
         except:
             LOG.exception_err_write()
 

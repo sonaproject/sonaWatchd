@@ -27,8 +27,8 @@ class SonaWatchD(Daemon):
         # Start RESTful server
         try:
             REST_SVR.rest_server_start()
-            pass
         except:
+            print 'Rest Server failed to start'
             LOG.exception()
             sys.exit(1)
 

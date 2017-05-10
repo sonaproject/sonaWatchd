@@ -1,11 +1,13 @@
 #!/usr/bin/python
-# CLI_COMMIT TEST
 import os
 import sys
 import time
 import threading
 import readline
 import curses
+import multiprocessing
+
+import cli_rest
 
 from log_lib import LOG
 from config import CONFIG
@@ -14,6 +16,8 @@ from cli import CLI
 from flow_trace import TRACE
 from log_lib import USER_LOG
 from screen import SCREEN
+
+menu_list = ["CLI", "Flow Trace", "Event List"]
 
 def main():
     try:
@@ -45,10 +49,26 @@ def main():
     trace_log.set_log('sonawatched_trace.log', CONFIG.get_trace_log_rotate(), int(CONFIG.get_trace_log_backup()))
     TRACE.set_trace_log(trace_log)
 
+    # Start RESTful server for event
+    evt = multiprocessing.Event()
+
+    # create listen event thread
+    evt_thread = threading.Thread(target=listen_evt, args=(evt,))
+    evt_thread.daemon = False
+    evt_thread.start()
+
+    try:
+        # create rest server process
+        cli_rest.rest_server_start(evt)
+    except:
+        print 'Rest Server failed to start'
+        LOG.exception_err_write()
+        return
+
     # read log option
     LOG.set_log_config()
 
-    # inquiry onos info
+    # inquiry controller info
     try:
         res_code, sys_info = CLI.req_sys_info()
     except:
@@ -73,10 +93,10 @@ def main():
 
     set_readline_opt()
 
-    # create onos check thread
-    onos_thread = threading.Thread(target=check_system_status)
-    onos_thread.daemon = False
-    onos_thread.start()
+    # create system check thread
+    check_thread = threading.Thread(target=check_system_status)
+    check_thread.daemon = False
+    check_thread.start()
 
     # select input menu
     select_menu()
@@ -89,19 +109,19 @@ def main():
     # exit
     print 'Processing shutdown...'
     SYS.set_sys_thr_flag(False)
-    onos_thread.join()
+    check_thread.join()
+    evt_thread.join()
 
     return
 
 def select_menu():
-    menu_list = ["CLI", "Flow Trace"]
-
     selected_menu_no = 1
 
     try:
         SCREEN.set_screen()
 
-        SCREEN.draw_system()
+        SCREEN.draw_system(menu_list)
+        SCREEN.draw_event()
         SCREEN.draw_menu(menu_list, selected_menu_no)
 
         SYS.set_sys_redraw_flag(True)
@@ -184,7 +204,11 @@ def select_menu():
                         except ResizeScreenError as e:
                             last_scene = e.scene
 
-            SCREEN.draw_system()
+                elif (menu_list[selected_menu_no - 1]) == 'Event List':
+                    SCREEN.evt_flag = False
+
+            SCREEN.draw_system(menu_list)
+            SCREEN.draw_event()
             SCREEN.draw_menu(menu_list, selected_menu_no)
             SCREEN.refresh_screen()
 
@@ -195,6 +219,18 @@ def select_menu():
         SCREEN.screen_exit()
     except:
         LOG.exception_err_write()
+
+def listen_evt(evt):
+    while SYS.get_sys_thr_flag():
+        evt.wait(3)
+
+        if evt.is_set():
+            SCREEN.evt_flag = True
+
+            if SYS.get_sys_redraw_flag():
+                SCREEN.draw_event()
+
+            evt.clear()
 
 def check_system_status():
     try:
@@ -214,9 +250,9 @@ def check_system_status():
             if SYS.get_sys_redraw_flag():
                 if ret is True:
                     LOG.debug_log("call redraw")
-                    SCREEN.draw_system()
+                    SCREEN.draw_system(menu_list)
                 else:
-                    SCREEN.draw_refresh_time()
+                    SCREEN.draw_refresh_time(menu_list)
 
             time.sleep(interval)
     except:

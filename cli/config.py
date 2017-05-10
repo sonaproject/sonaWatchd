@@ -12,6 +12,7 @@ REST_PW_KEY_NAME = 'pw'
 REST_URI_KEY_NAME = 'rest-server-uri'
 REST_TIMEOUT = 'timeout'
 REST_INTERVAL = 'interval'
+REST_SVR_PORT = 'rest_server_port'
 
 COMMAND_OPT_KEY_NAME = 'option-list'
 
@@ -112,6 +113,13 @@ class CONFIG():
             return cls.config_cli.getint(REST_SECTION_NAME, REST_INTERVAL)
         except:
             return 3
+
+    @classmethod
+    def get_rest_port(cls):
+        try:
+            return cls.config_cli.getint(REST_SECTION_NAME, REST_SVR_PORT)
+        except:
+            return -1
 
     @classmethod
     def get_rest_timeout(cls):
