@@ -2,23 +2,21 @@
 # All Rights Reserved.
 # SONA Monitoring Solutions.
 
-import ast
-from datetime import datetime
-
-from api.config import CONF
 from api.sona_log import LOG
-from api.watcherdb import DB
 from api.sbapi import SshCommand
 
 
-def get_cpu_usage(username, node_ip):
-
+def get_cpu_usage(username, node_ip, only_value = False):
     cmd = 'grep \'cpu\ \' /proc/stat'
     cmd_rt = SshCommand.ssh_exec(username, node_ip, cmd)
 
     ratio = float()
     if cmd_rt is None:
         LOG.info("%s CPU check Fail", node_ip)
+
+        if only_value:
+            return -1
+
         return {'CPU': 'Command fail'}
     else:
         if 'cpu ' in cmd_rt:
@@ -32,10 +30,14 @@ def get_cpu_usage(username, node_ip):
 
     result = {'CPU': {'RATIO': float(format(ratio, '.2f')), 'Description': cmd_rt}}
     LOG.info(" CPU check ... %s", result)
+
+    if only_value:
+        return float(format(ratio, '.2f'))
+
     return result
 
 
-def get_mem_usage(username, node_ip):
+def get_mem_usage(username, node_ip, only_value = False):
 
     cmd = 'free -t -m | grep Mem'
     cmd_rt = SshCommand.ssh_exec(username, node_ip, cmd)
@@ -43,6 +45,10 @@ def get_mem_usage(username, node_ip):
     ratio = float()
     if cmd_rt is None:
         LOG.info("%s Memory check Fail", node_ip)
+
+        if only_value:
+            return -1
+
         return {'MEMORY': 'Command fail'}
     else:
         if 'Mem' in cmd_rt:
@@ -55,10 +61,14 @@ def get_mem_usage(username, node_ip):
 
     result = {'MEMORY': {'RATIO': float(format(ratio, '.2f')), 'Description': cmd_rt}}
     LOG.info(" Memory check ... %s", result)
+
+    if only_value:
+        return float(format(ratio, '.2f'))
+
     return result
 
 
-def get_disk_usage(username, node_ip):
+def get_disk_usage(username, node_ip, only_value = False):
 
     cmd = 'df -h / | grep -v Filesystem'
     cmd_rt = SshCommand.ssh_exec(username, node_ip, cmd)
@@ -66,6 +76,10 @@ def get_disk_usage(username, node_ip):
     ratio = float()
     if cmd_rt is None:
         LOG.info("%s Diksk check Fail", node_ip)
+
+        if only_value:
+            return -1
+
         return {'DISK': 'Command fail'}
     else:
         if '/' in cmd_rt:
@@ -77,22 +91,19 @@ def get_disk_usage(username, node_ip):
 
     result = {'DISK': {'RATIO': float(format(ratio, '.2f')), 'Description': cmd_rt}}
     LOG.info(" Disk check ... %s", result)
+
+    if only_value:
+        return float(format(ratio, '.2f'))
+
     return result
 
 
 def get_resource_usage(node_list, param):
     res_result = dict()
-    res_result['time'] = str(datetime.now())
 
-    with DB.connection() as conn:
-        sql = 'SELECT data FROM ' + DB.DB_STATUS_TABEL
-        conn.text_factory = str
-        nodes_status = ast.literal_eval(conn.cursor().execute(sql).fetchone()[0])
-        conn.commit()
-
-    for node_name, node_ip, username in node_list:
+    for node_name, node_ip, username, ping in node_list:
         res_result[node_name] = {}
-        if str(nodes_status[node_name]['IP']).lower() == 'ok':
+        if ping.lower() == 'ok':
             LOG.info("GET %s usage for %s", param, node_name)
             if param == '':
                 res_result[node_name].update(get_cpu_usage(username, node_ip))

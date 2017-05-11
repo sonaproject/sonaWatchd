@@ -27,10 +27,10 @@ class SonaWatchD(Daemon):
         # Start RESTful server
         try:
             REST_SVR.rest_server_start()
-            pass
         except:
+            print 'Rest Server failed to start'
             LOG.exception()
-            exit(1)
+            sys.exit(1)
 
         # Periodic monitoring
         if CONF.watchdog()['interval'] == 0:
@@ -39,14 +39,18 @@ class SonaWatchD(Daemon):
                 time.sleep(3600)
         else:
             LOG.info("--- Periodic Monitoring Start ---")
+
+            conn = DB.connection()
+
             while True:
                 try:
-                    watchdog.periodic()
+                    watchdog.periodic(conn)
 
                     time.sleep(CONF.watchdog()['interval'])
                 except:
+                    conn.close()
                     LOG.exception()
-                    exit(1)
+                    sys.exit(1)
 
 
 if __name__ == "__main__":

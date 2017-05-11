@@ -97,10 +97,10 @@ class ConfReader:
         except KeyError as KE:
             return dict({'fail': KE})
 
-    def k8s(self):
+    def swarm(self):
         value = dict()
         try:
-            value['list'] = self.__list_opt(self.conf_map['K8S']['list'])
+            value['list'] = self.__list_opt(self.conf_map['swarm']['list'])
             value['account'] = str(self.conf_map['K8S']['account'])
 
             return value

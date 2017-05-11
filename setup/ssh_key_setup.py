@@ -135,8 +135,8 @@ def xos():
     print "\n\n[Setup] Start to copy ssh-key to XOS systems ......"
 
 
-def k8s():
-    print "\n\n[Setup] Start to copy ssh-key to K8S systems ......"
+def swarm():
+    print "\n\n[Setup] Start to copy ssh-key to SWARM systems ......"
 
 
 def openstack():
@@ -161,8 +161,8 @@ def main():
             onos()
         if node.__eq__('XOS'):
             xos()
-        if node.__eq__('K8S'):
-            k8s()
+        if node.__eq__('SWARM'):
+            swarm()
         if node.__eq__('OPENSTACK'):
             openstack()
 

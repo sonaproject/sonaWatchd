@@ -3,9 +3,13 @@
 # SONA Monitoring Solutions.
 
 import sys
+import resource
+import cmd_proc
+import requests
+import base64
+import json
 
 from datetime import datetime
-
 from subprocess import Popen
 from subprocess import PIPE
 from api.config import CONF
@@ -13,50 +17,65 @@ from api.sona_log import LOG
 from api.watcherdb import DB
 from api.sbapi import SshCommand
 
-
-def periodic():
+def periodic(conn):
     LOG.info("Periodic checking...%s", str(CONF.watchdog()['check_system']))
 
     try:
-        with DB.connection() as conn:
-            sql = 'SELECT nodename, ip_addr FROM ' + DB.DB_NODE_TABLE
-            node_list = conn.cursor().execute(sql).fetchall()
-            conn.commit()
+        node_list = cmd_proc.get_node_list('all', 'nodename, ip_addr, username')
 
-            if not node_list:
-                LOG.info("Not Exist Node data ...")
-                return
+        if not node_list:
+            LOG.info("Not Exist Node data ...")
+            return
     except:
         LOG.exception()
         return
 
-    result = dict()
-    for node_name, node_ip in node_list:
+    for node_name, node_ip, user_name in node_list:
+        ping = net_check(node_ip)
+        app = ''
 
-        if net_check(node_ip) == 'ok':
-            result[node_name] = {'IP': 'ok'}
+        if ping == 'ok':
             if node_ip in str(CONF.onos()['list']):
-                result[node_name]['APP'] = onos_app_check(node_ip)
+                app = onos_app_check(node_ip)
             elif node_ip in str(CONF.xos()['list']):
-                result[node_name]['APP'] = xos_app_check(node_ip)
-            elif node_ip in str(CONF.k8s()['list']):
-                result[node_name]['APP'] = k8s_app_check(node_ip)
+                app = xos_app_check(node_ip)
+            elif node_ip in str(CONF.swarm()['list']):
+                app = swarm_app_check(node_ip)
             elif node_ip in str(CONF.openstack()['list']):
-                result[node_name]['APP'] = openstack_app_check(node_ip)
+                app = openstack_app_check(node_ip)
         else:
-            result[node_name] = {'IP': 'nok', 'APP': 'nok'}
+            app = 'nok'
+
+        try:
+            sql = 'UPDATE ' + DB.NODE_INFO_TBL + \
+                  ' SET cpu = ' + str(resource.get_cpu_usage(user_name, node_ip, True)) + ',' + \
+                  ' mem = ' + str(resource.get_mem_usage(user_name, node_ip, True)) + ',' + \
+                  ' disk = ' + str(resource.get_disk_usage(user_name, node_ip, True)) + ',' + \
+                  ' ping = \'' + ping + '\'' + ',' + \
+                  ' app = \'' + app + '\'' + ',' + \
+                  ' time = \'' + str(datetime.now()) + '\'' + \
+                  ' WHERE nodename = \'' + node_name + '\''
+            LOG.info('Update Resource info = ' + sql)
+            conn.cursor().execute(sql)
+            conn.commit()
+        except:
+            LOG.exception()
+
+    # occur event (rest)
+    header = {'Content-Type': 'application/json', 'Authorization': base64.b64encode('admin:admin')}
+    req_body = {'evt': 'test text'}
+    req_body_json = json.dumps(req_body)
+
+    url = 'http://localhost:8001/event'
 
     try:
-        with DB.connection() as conn:
-            sql = "INSERT OR REPLACE INTO " + DB.DB_STATUS_TABEL + " VALUES (?, ?, ?)"
-            conn.cursor().execute(sql, (DB.DB_PERIODIC_ID, str(datetime.now()), str(result)))
-            conn.commit()
+        requests.post(url, headers=header, data=req_body_json, timeout = 2)
     except:
+        # rest timeout
         LOG.exception()
 
 
 def net_check(node):
-
     if CONF.watchdog()['method'] == 'ping':
         timeout = CONF.watchdog()['timeout']
         if sys.platform == 'darwin':
@@ -97,11 +116,13 @@ def xos_app_check(node):
     return 'nok'
 
 
-# TODO k8s app check
-def k8s_app_check(node):
+# TODO swarm app check
+def swarm_app_check(node):
     return 'nok'
 
 
 # TODO openstack app check
 def openstack_app_check(node):
     return 'nok'
+
+

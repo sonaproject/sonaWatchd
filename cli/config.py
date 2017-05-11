@@ -4,10 +4,15 @@ COMMAND_SECTION_NAME = 'command'
 TRACE_SECTION_NAME = 'condition'
 REST_SECTION_NAME = 'rest-server'
 LOG_SECTION_NAME = 'log'
+SSH_SECTION_NAME = 'ssh'
+CPT_SECTION_NAME = "OPENSTACK_COMPUTE"
 
 REST_ID_KEY_NAME = 'id'
 REST_PW_KEY_NAME = 'pw'
 REST_URI_KEY_NAME = 'rest-server-uri'
+REST_TIMEOUT = 'timeout'
+REST_INTERVAL = 'interval'
+REST_SVR_PORT = 'rest_server_port'
 
 COMMAND_OPT_KEY_NAME = 'option-list'
 
@@ -16,8 +21,13 @@ LOG_ROTATE_KEY_NAME = 'log_rotate_time'
 LOG_BACKUP_KEY_NAME = 'log_backup_count'
 TRACE_LOG_KEY_NAME = 'trace_log'
 
+CPT_LIST_KEY_NAME = 'list'
+CPT_ID_KEY_NAME = 'id'
+
 CLI_CONFIG_FILE = 'config/cli_config.ini'
 TRACE_CONFIG_FILE = 'config/trace_config.ini'
+
+SSH_TIMEOUT = 'timeout'
 
 class CONFIG():
 
@@ -44,6 +54,14 @@ class CONFIG():
         except:
             cls.LOG.exception_err_write()
             return []
+
+    @classmethod
+    def get_cmd_help(cls, cmd):
+        try:
+            return cls.config_cli.get(COMMAND_SECTION_NAME, cmd)
+        except:
+            cls.LOG.exception_err_write()
+            return ''
 
     @classmethod
     def get_cnd_list(cls, layer):
@@ -90,6 +108,27 @@ class CONFIG():
         return cls.cli_get_value(REST_SECTION_NAME, REST_URI_KEY_NAME)
 
     @classmethod
+    def get_rest_interval(cls):
+        try:
+            return cls.config_cli.getint(REST_SECTION_NAME, REST_INTERVAL)
+        except:
+            return 3
+
+    @classmethod
+    def get_rest_port(cls):
+        try:
+            return cls.config_cli.getint(REST_SECTION_NAME, REST_SVR_PORT)
+        except:
+            return -1
+
+    @classmethod
+    def get_rest_timeout(cls):
+        try:
+            return cls.config_cli.getint(REST_SECTION_NAME, REST_TIMEOUT)
+        except:
+            return 10
+
+    @classmethod
     def get_cli_log(cls):
         return cls.cli_get_value(LOG_SECTION_NAME, CLI_LOG_KEY_NAME)
 
@@ -112,5 +151,20 @@ class CONFIG():
     @classmethod
     def get_trace_log_backup(cls):
         return cls.trace_get_value(LOG_SECTION_NAME, LOG_BACKUP_KEY_NAME)
+
+    @classmethod
+    def get_ssh_timeout(cls):
+        try:
+            return cls.config_trace.getint(SSH_SECTION_NAME, SSH_TIMEOUT)
+        except:
+            return 5
+
+    @classmethod
+    def get_trace_cpt_list(cls):
+        return cls.trace_get_value(CPT_SECTION_NAME, CPT_LIST_KEY_NAME)
+
+    @classmethod
+    def get_trace_cpt_id(cls):
+        return cls.trace_get_value(CPT_SECTION_NAME, CPT_ID_KEY_NAME)
 
 

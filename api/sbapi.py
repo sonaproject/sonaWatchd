@@ -15,7 +15,6 @@ class SshCommand:
     @classmethod
     def ssh_exec(cls, username, node, command):
         cmd = 'ssh %s %s@%s %s' % (cls.ssh_options, username, node, command)
-        # LOG.info('Command: %s', cmd)
 
         try:
             result = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
@@ -33,10 +32,9 @@ class SshCommand:
     @classmethod
     def onos_ssh_exec(cls, node, command):
 
-        cls.ssh_options = cls.ssh_options + " -p 8101"
+        local_ssh_options = cls.ssh_options + " -p 8101"
 
-        cmd = 'ssh %s %s %s' % (cls.ssh_options, node, command)
-        # LOG.info('Command: %s', cmd)
+        cmd = 'ssh %s %s %s' % (local_ssh_options, node, command)
 
         try:
             result = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)

@@ -78,14 +78,20 @@ class RestHandler(BaseHTTPRequestHandler):
 
 # def run(handlerclass=HTTPServer, handler_class=RestHandler, port=int(CONF.rest()['rest_server_port'])):
 def run():
-    server_address = ("", int(CONF.rest()['rest_server_port']))
-    httpd = HTTPServer(server_address, RestHandler)
-    httpd.serve_forever()
+    try:
+        server_address = ("", int(CONF.rest()['rest_server_port']))
+        httpd = HTTPServer(server_address, RestHandler)
+        httpd.serve_forever()
+    except:
+        print 'Rest Server failed to start'
+        LOG.exception()
 
 
 def rest_server_start():
     LOG.info("--- REST Server Start --- ")
+
     rest_server_daemon = multiprocess.Process(name='rest_server', target=run)
     rest_server_daemon.daemon = True
     rest_server_daemon.start()
+
 

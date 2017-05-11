@@ -2,6 +2,7 @@
 # All Rights Reserved.
 # SONA Monitoring Solutions.
 
+import sys
 import sqlite3
 
 from sona_log import LOG
@@ -9,9 +10,7 @@ from config import CONF
 
 
 class DB(object):
-    DB_STATUS_TABEL = 't_status'
-    DB_NODE_TABLE = 't_nodes'
-    DB_PERIODIC_ID = 'main_status'
+    NODE_INFO_TBL = 't_nodes'
 
     def __init__(self):
         self._conn = self.connection()
@@ -25,7 +24,7 @@ class DB(object):
             return conn
         except:
             LOG.exception()
-            exit(1)
+            sys.exit(1)
 
     @classmethod
     def db_cursor(cls):
@@ -36,10 +35,8 @@ class DB(object):
     @classmethod
     def db_initiation(cls):
         LOG.info("--- Initiating SONA DB ---")
-        init_sql = ['CREATE TABLE ' + cls.DB_STATUS_TABEL +
-                        '(item text primary key, time, data)',
-                    'CREATE TABLE ' + cls.DB_NODE_TABLE +
-                        '(nodename text primary key, ip_addr, username)']
+        init_sql = ['CREATE TABLE ' + cls.NODE_INFO_TBL +
+                        '(nodename text primary key, ip_addr, username, ping, app, cpu real, mem real, disk real, time)']
 
         for sql in init_sql:
             sql_rt = cls.sql_execute(sql)
@@ -52,10 +49,10 @@ class DB(object):
                 sql_rt = cls.sql_execute(sql)
                 if sql_rt != '':
                     LOG.info("DB %s table initiation fail\n%s", table_name, sql_rt)
-                    exit(1)
+                    sys.exit(1)
             elif sql_rt != '':
                 LOG.info("DB initiation fail\n%s", sql_rt)
-                exit(1)
+                sys.exit(1)
 
         LOG.info('Insert nodes information ...')
         for node in CONF.watchdog()['check_system']:
@@ -65,9 +62,9 @@ class DB(object):
             elif str(node).lower() == 'xos':
                 cls.sql_insert_nodes(CONF.xos()['list'],
                                      str(CONF.xos()['account']).split(':')[0])
-            elif str(node).lower() == 'k8s':
-                cls.sql_insert_nodes(CONF.k8s()['list'],
-                                     str(CONF.k8s()['account']).split(':')[0])
+            elif str(node).lower() == 'swarm':
+                cls.sql_insert_nodes(CONF.swarm()['list'],
+                                     str(CONF.swarm()['account']).split(':')[0])
             elif str(node).lower() == 'openstack':
                 cls.sql_insert_nodes(CONF.openstack()['list'],
                                      str(CONF.openstack()['account']).split(':')[0])
@@ -78,13 +75,13 @@ class DB(object):
         for node in node_list:
             name, ip = str(node).split(':')
             LOG.info('Insert node [%s %s %s]', name, ip, username)
-            sql = 'INSERT INTO ' + cls.DB_NODE_TABLE + \
-                  ' VALUES (\'' + name + '\',\'' + ip + '\',\'' + username + '\')'
+            sql = 'INSERT INTO ' + cls.NODE_INFO_TBL + \
+                  ' VALUES (\'' + name + '\',\'' + ip + '\',\'' + username + '\', \'none\', \'none\', -1, -1, -1, \'none\')'
             LOG.info('%s', sql)
             sql_rt = cls.sql_execute(sql)
             if sql_rt != '':
                 LOG.info(" Node date insert fail \n%s", sql_rt)
-                exit(1)
+                sys.exit(1)
 
     @classmethod
     def sql_execute(cls, sql):
@@ -92,6 +89,8 @@ class DB(object):
             with cls.connection() as conn:
                 conn.cursor().execute(sql)
                 conn.commit()
+
+            conn.close()
             return ''
         except sqlite3.OperationalError, err:
             return err.message
