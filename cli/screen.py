@@ -221,7 +221,10 @@ class SCREEN():
             print '| SYSTEM INFO | TIME : ' + SYS.last_check_time.split('.')[0] + \
                   ("{0:>" + str(width - len(SYS.last_check_time.split('.')[0]) - len('SYSTEM INFO | TIME : ')) + "}").format('|') + ENDC
             print BG_WHITE + "|%s|" % ('-' * width).ljust(width) + ENDC
-            for sys in SYS.sys_list.keys():
+
+            sorted_list = sorted(SYS.sys_list.keys())
+
+            for sys in sorted_list:
                 status = 'NOK'
                 if (dict)(SYS.sys_list[sys])['IP'] == 'ok' and (dict)(SYS.sys_list[sys])['APP'] == 'ok':
                     status = 'OK'
