@@ -110,7 +110,7 @@ class CLI():
 
         if command == 'dis-resource':
             for sys in result:
-                sys_ret = str(result[sys][(str(param)).upper()])
+                sys_ret = str(result[sys])
                 if sys_ret.upper().endswith('FAIL'):
                     sys_ret = 'fail'
                 else:
