@@ -4,24 +4,82 @@ import monitor.resource as res
 from api.sona_log import LOG
 from api.watcherdb import DB
 
-def parse_command(command):
+def parse_command(req_obj):
     try:
         res_body = dict()
-        res_body['command'] = command['command']
-        res_body['system'] = command['system']
+        res_body['command'] = req_obj['command']
+        res_body['system'] = req_obj['system']
 
         try:
-            res_body['param'] = command['param']
+            res_body['param'] = req_obj['param']
         except:
             res_body['param'] = ''
 
-        ret = COMMAND_MAP[command['command']](command['system'], command['param'])
+        ret = COMMAND_MAP[req_obj['command']](req_obj['system'], req_obj['param'])
         res_body['result'] = ret
         res_body['time'] = str(datetime.now())
 
         return res_body
     except:
-        return LOG.exception()
+        LOG.exception()
+        return {'Result': 'FAIL'}
+
+def regi_url(url, auth):
+    try:
+        sql = 'SELECT * FROM ' + DB.REGI_SYS_TBL + ' WHERE url = \'' + url + '\''
+
+        with DB.connection() as conn:
+            url_info = conn.cursor().execute(sql).fetchall()
+
+        conn.close()
+
+        # if already exist
+        if len(url_info) == 1:
+            res_body = {'Result': 'SUCCESS'}
+        else:
+            # insert db
+            sql = 'INSERT INTO ' + DB.REGI_SYS_TBL + ' VALUES (\'' + url  + '\', \'' + auth + '\' )'
+
+            ret = DB.sql_execute(sql)
+
+            if ret == 'SUCCESS':
+                res_body = {'Result': 'SUCCESS'}
+            else:
+                res_body = {'Result': 'FAIL'}
+
+        return res_body
+    except:
+        LOG.exception()
+        return {'Result': 'FAIL'}
+
+def unregi_url(url):
+    try:
+        sql = 'SELECT * FROM ' + DB.REGI_SYS_TBL + ' WHERE url = \'' + url + '\''
+
+        with DB.connection() as conn:
+            url_info = conn.cursor().execute(sql).fetchall()
+
+        conn.close()
+
+        # if no exist
+        if len(url_info) == 0:
+            res_body = {'Result': 'SUCCESS'}
+        else:
+            # delete db
+            sql = 'DELETE FROM ' + DB.REGI_SYS_TBL + ' WHERE url = \'' + url + '\''
+
+            ret = DB.sql_execute(sql)
+
+            if ret == 'SUCCESS':
+                res_body = {'Result': 'SUCCESS'}
+            else:
+                res_body = {'Result': 'FAIL'}
+
+        return res_body
+    except:
+        LOG.exception()
+        return {'Result': 'FAIL'}
+
 
 def proc_dis_system(node, dummy):
     try:
@@ -35,6 +93,7 @@ def proc_dis_system(node, dummy):
         return result
     except:
         LOG.exception()
+        return {'Result': 'FAIL'}
 
 def proc_dis_resource(node, param):
     nodes_info = get_node_list(node, 'nodename, ip_addr, username, ping')
@@ -103,6 +162,7 @@ def get_node_list(nodes, param):
         return nodes_info
     except:
         LOG.exception()
+        return None
 
 COMMAND_MAP = {'dis-resource': proc_dis_resource,
                'dis-onos': proc_dis_onos,

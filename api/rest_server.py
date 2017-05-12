@@ -2,15 +2,16 @@
 # All Rights Reserved.
 # SONA Monitoring Solutions.
 
+import json
 import base64
 import multiprocessing as multiprocess
 
-from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 import monitor.cmd_proc as command
+
+from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 from api.config import CONF
 from api.sona_log import LOG
-
-import json
+from watcherdb import DB
 
 
 class RestHandler(BaseHTTPRequestHandler):
@@ -35,26 +36,57 @@ class RestHandler(BaseHTTPRequestHandler):
 
             LOG.info('[REST-SERVER] no auth header received')
 
-        elif not self.path.startswith('/command'):
-            self.do_HEAD(404)
-            self.wfile.write(self.path + ' not found')
-
-            LOG.info('[REST-SERVER] ' + self.path + ' not found')
-
-        elif not command.exist_command(request_obj):
-            self.do_HEAD(404)
-            self.wfile.write('command not found')
-
-            LOG.info('[REST-SERVER] ' + 'command not found')
-
         elif self.auth_pw(self.headers.getheader('Authorization')):
-            res_body = command.parse_command(request_obj)
+            if self.path.startswith('/command'):
+                if command.exist_command(request_obj):
+                    res_body = command.parse_command(request_obj)
 
-            self.do_HEAD(200)
-            self.wfile.write(json.dumps(res_body))
+                    self.do_HEAD(200)
+                    self.wfile.write(json.dumps(res_body))
 
-            LOG.info('[REST-SERVER] RES BODY = \n%s',
-                     json.dumps(res_body, sort_keys=True, indent=4))
+                    LOG.info('[REST-SERVER] RES BODY = \n%s',
+                             json.dumps(res_body, sort_keys=True, indent=4))
+                else:
+                    self.do_HEAD(404)
+                    self.wfile.write('command not found')
+
+                    LOG.info('[REST-SERVER] ' + 'command not found')
+
+            elif self.path.startswith('/regi'):
+                try:
+                    self.do_HEAD(200)
+
+                    url = 'http://' + self.client_address[0] + ':' + request_obj['port']  + '/' + str(request_obj['uri'])
+
+                    res_body = command.regi_url(url, self.headers.getheader('Authorization'))
+
+                    self.wfile.write(json.dumps(res_body))
+
+                    LOG.info('[REST-SERVER] RES BODY = \n%s',
+                             json.dumps(res_body, sort_keys=True, indent=4))
+                except:
+                    LOG.exception()
+
+            elif self.path.startswith('/unregi'):
+                try:
+                    self.do_HEAD(200)
+
+                    url = 'http://' + self.client_address[0] + ':' + request_obj['port']  + '/' + str(request_obj['uri'])
+
+                    res_body = command.unregi_url(url)
+
+                    self.wfile.write(json.dumps(res_body))
+
+                    LOG.info('[REST-SERVER] RES BODY = \n%s',
+                             json.dumps(res_body, sort_keys=True, indent=4))
+                except:
+                    LOG.exception()
+
+            else:
+                self.do_HEAD(404)
+                self.wfile.write(self.path + ' not found')
+
+                LOG.info('[REST-SERVER] ' + self.path + ' not found')
 
         else:
             self.do_HEAD(401)
@@ -75,8 +107,6 @@ class RestHandler(BaseHTTPRequestHandler):
         LOG.info('[REST-SERVER] AUTH FAIL = ' + cli_pw)
         return False
 
-
-# def run(handlerclass=HTTPServer, handler_class=RestHandler, port=int(CONF.rest()['rest_server_port'])):
 def run():
     try:
         server_address = ("", int(CONF.rest()['rest_server_port']))

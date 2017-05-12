@@ -54,8 +54,6 @@ def run(evt):
 
 
 def rest_server_start(evt):
-    LOG.debug_log("--- REST Server Start --- ")
-
     rest_server_daemon = multiprocess.Process(name='cli_rest_svr', target=run, args=(evt,))
     rest_server_daemon.daemon = True
     rest_server_daemon.start()
