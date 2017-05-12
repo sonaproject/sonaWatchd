@@ -11,6 +11,7 @@ from config import CONF
 
 class DB(object):
     NODE_INFO_TBL = 't_nodes'
+    REGI_SYS_TBL = 't_regi'
 
     def __init__(self):
         self._conn = self.connection()
@@ -36,21 +37,26 @@ class DB(object):
     def db_initiation(cls):
         LOG.info("--- Initiating SONA DB ---")
         init_sql = ['CREATE TABLE ' + cls.NODE_INFO_TBL +
-                        '(nodename text primary key, ip_addr, username, ping, app, cpu real, mem real, disk real, time)']
+                        '(nodename text primary key, ip_addr, username, ping, app, cpu real, mem real, disk real, time)',
+                    'CREATE TABLE ' + cls.REGI_SYS_TBL + '(url text primary key, auth)']
 
         for sql in init_sql:
             sql_rt = cls.sql_execute(sql)
 
             if "already exist" in sql_rt:
+
+                if cls.REGI_SYS_TBL in init_sql:
+                    continue
+
                 table_name = sql_rt.split()[1]
                 LOG.info("\'%s\' table already exist. Delete all tuple of this table...",
                          table_name)
                 sql = 'DELETE FROM ' + table_name
                 sql_rt = cls.sql_execute(sql)
-                if sql_rt != '':
+                if sql_rt != 'SUCCESS':
                     LOG.info("DB %s table initiation fail\n%s", table_name, sql_rt)
                     sys.exit(1)
-            elif sql_rt != '':
+            elif sql_rt != 'SUCCESS':
                 LOG.info("DB initiation fail\n%s", sql_rt)
                 sys.exit(1)
 
@@ -79,7 +85,7 @@ class DB(object):
                   ' VALUES (\'' + name + '\',\'' + ip + '\',\'' + username + '\', \'none\', \'none\', -1, -1, -1, \'none\')'
             LOG.info('%s', sql)
             sql_rt = cls.sql_execute(sql)
-            if sql_rt != '':
+            if sql_rt != 'SUCCESS':
                 LOG.info(" Node date insert fail \n%s", sql_rt)
                 sys.exit(1)
 
@@ -91,11 +97,13 @@ class DB(object):
                 conn.commit()
 
             conn.close()
-            return ''
+            return 'SUCCESS'
         except sqlite3.OperationalError, err:
+            LOG.error(err.message)
             return err.message
         except:
             LOG.exception()
+            return 'FAIL'
 
 
 DB_CONN = DB().connection()

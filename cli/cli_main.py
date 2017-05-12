@@ -49,6 +49,9 @@ def main():
     trace_log.set_log('sonawatched_trace.log', CONFIG.get_trace_log_rotate(), int(CONFIG.get_trace_log_backup()))
     TRACE.set_trace_log(trace_log)
 
+    # read log option
+    LOG.set_log_config()
+
     # Start RESTful server for event
     evt = multiprocessing.Event()
 
@@ -62,22 +65,39 @@ def main():
         cli_rest.rest_server_start(evt)
     except:
         print 'Rest Server failed to start'
+        print 'Processing shutdown...'
         LOG.exception_err_write()
+        SYS.set_sys_thr_flag(False)
+        evt_thread.join()
         return
 
-    # read log option
-    LOG.set_log_config()
+    # regi event
+    if CLI.send_regi() == False:
+        print 'Event registration failed'
+        print 'Processing shutdown...'
+        LOG.exception_err_write()
+        SYS.set_sys_thr_flag(False)
+        evt_thread.join()
+        return
 
     # inquiry controller info
     try:
         res_code, sys_info = CLI.req_sys_info()
     except:
         print "Cannot connect rest server."
+        print 'Processing shutdown...'
+        CLI.send_regi('unregi')
+        SYS.set_sys_thr_flag(False)
+        evt_thread.join()
         return
 
     if res_code != 200:
         print "Rest server does not respond to the request."
         print "code = " + str(res_code)
+        print 'Processing shutdown...'
+        CLI.send_regi('unregi')
+        SYS.set_sys_thr_flag(False)
+        evt_thread.join()
         return
 
     SYS.set_sys_info(sys_info)
@@ -108,6 +128,7 @@ def main():
 
     # exit
     print 'Processing shutdown...'
+    CLI.send_regi('unregi')
     SYS.set_sys_thr_flag(False)
     check_thread.join()
     evt_thread.join()

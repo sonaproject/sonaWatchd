@@ -62,17 +62,24 @@ def periodic(conn):
             LOG.exception()
 
     # occur event (rest)
-    header = {'Content-Type': 'application/json', 'Authorization': base64.b64encode('admin:admin')}
-    req_body = {'evt': 'test text'}
-    req_body_json = json.dumps(req_body)
 
-    url = 'http://localhost:8001/event'
+    sql = 'SELECT * FROM ' + DB.REGI_SYS_TBL
 
-    try:
-        requests.post(url, headers=header, data=req_body_json, timeout = 2)
-    except:
-        # rest timeout
-        LOG.exception()
+    with DB.connection() as conn:
+        url_list = conn.cursor().execute(sql).fetchall()
+
+    conn.close()
+
+    for url, auth in url_list:
+        header = {'Content-Type': 'application/json', 'Authorization': auth}
+        req_body = {'evt': 'test text'}
+        req_body_json = json.dumps(req_body)
+
+        try:
+            requests.post(url, headers=header, data=req_body_json, timeout = 2)
+        except:
+            # rest timeout
+            LOG.exception()
 
 
 def net_check(node):
