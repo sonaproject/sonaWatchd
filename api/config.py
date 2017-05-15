@@ -117,6 +117,18 @@ class ConfReader:
         except KeyError as KE:
             return dict({'fail': KE})
 
+    def alarm(self):
+        value = dict()
+        try:
+            value['item_list'] = self.__list_opt(self.conf_map['ALARM']['item_list'])
+            value['cpu'] = self.__list_opt(self.conf_map['ALARM']['cpu'])
+            value['memory'] = self.__list_opt(self.conf_map['ALARM']['memory'])
+            value['disk'] = self.__list_opt(self.conf_map['ALARM']['disk'])
+
+            return value
+        except KeyError as KE:
+            return dict({'fail': KE})
+
     def get_pid_file(self):
         try:
             return str(self.conf_map['BASE']['pidfile'])

@@ -12,6 +12,7 @@ from config import CONF
 class DB(object):
     NODE_INFO_TBL = 't_nodes'
     REGI_SYS_TBL = 't_regi'
+    EVENT_TBL = 't_event'
 
     def __init__(self):
         self._conn = self.connection()
@@ -38,14 +39,15 @@ class DB(object):
         LOG.info("--- Initiating SONA DB ---")
         init_sql = ['CREATE TABLE ' + cls.NODE_INFO_TBL +
                         '(nodename text primary key, ip_addr, username, ping, app, cpu real, mem real, disk real, time)',
-                    'CREATE TABLE ' + cls.REGI_SYS_TBL + '(url text primary key, auth)']
+                    'CREATE TABLE ' + cls.REGI_SYS_TBL + '(url text primary key, auth)',
+                    'CREATE TABLE ' + cls.EVENT_TBL + '(nodename, item, grade, desc, time, PRIMARY KEY (nodename, item))']
 
         for sql in init_sql:
             sql_rt = cls.sql_execute(sql)
 
             if "already exist" in sql_rt:
 
-                if cls.REGI_SYS_TBL in init_sql:
+                if cls.REGI_SYS_TBL in sql:
                     continue
 
                 table_name = sql_rt.split()[1]
@@ -75,6 +77,7 @@ class DB(object):
                 cls.sql_insert_nodes(CONF.openstack()['list'],
                                      str(CONF.openstack()['account']).split(':')[0])
 
+
     @classmethod
     def sql_insert_nodes(cls, node_list, username):
 
@@ -86,17 +89,33 @@ class DB(object):
             LOG.info('%s', sql)
             sql_rt = cls.sql_execute(sql)
             if sql_rt != 'SUCCESS':
-                LOG.info(" Node date insert fail \n%s", sql_rt)
+                LOG.info(" Node data insert fail \n%s", sql_rt)
                 sys.exit(1)
 
+            # add Alarm Items
+            for item in CONF.alarm()['item_list']:
+                LOG.info('Insert item [%s %s]', name, item)
+                sql = 'INSERT INTO ' + cls.EVENT_TBL + \
+                      ' VALUES (\'' + name + '\',\'' + item + '\',\'none\', \'none\', \'none\')'
+                LOG.info('%s', sql)
+                sql_rt = cls.sql_execute(sql)
+                if sql_rt != 'SUCCESS':
+                    LOG.info(" Item data insert fail \n%s", sql_rt)
+                    sys.exit(1)
+
     @classmethod
-    def sql_execute(cls, sql):
+    def sql_execute(cls, sql, conn = None):
         try:
-            with cls.connection() as conn:
+            if conn == None:
+                with cls.connection() as conn:
+                    conn.cursor().execute(sql)
+                    conn.commit()
+
+                conn.close()
+            else:
                 conn.cursor().execute(sql)
                 conn.commit()
 
-            conn.close()
             return 'SUCCESS'
         except sqlite3.OperationalError, err:
             LOG.error(err.message)
