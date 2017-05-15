@@ -101,7 +101,7 @@ class ConfReader:
         value = dict()
         try:
             value['list'] = self.__list_opt(self.conf_map['swarm']['list'])
-            value['account'] = str(self.conf_map['K8S']['account'])
+            value['account'] = str(self.conf_map['SWARM']['account'])
 
             return value
         except KeyError as KE:

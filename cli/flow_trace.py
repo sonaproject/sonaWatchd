@@ -85,6 +85,7 @@ class TRACE():
             result = ''
             result_final = ''
             result_flow = ''
+            last_action = ''
             final_flag = False
             lines = output.splitlines()
 
@@ -94,8 +95,10 @@ class TRACE():
                 if final_flag:
                     result_final = result_final + line + '\n'
 
-                    if line.startswith('Datapath actions:'):
-                        result = '[' + line + ']\n\n'
+                    if line.startswith('Datapath actions:') and "drop" in line:
+                        result = 'result = [DROP]\n'
+                    else:
+                        result = 'result = [SUCCESS]\n'
 
                     continue
 
@@ -103,11 +106,18 @@ class TRACE():
                     result_flow = result_flow + line + '\n'
                 elif (line.startswith('Flow:') or line.startswith('OpenFlow actions=')):
                     result_flow = result_flow + line + '\n\n'
+
+                    if line.startswith('OpenFlow actions='):
+                        if 'output' in line:
+                            last_action = 'Last OpenFlow action = [' + line[line.find('output'):]  + ']\n\n'
+                        else:
+                            last_action = 'Last ' + line + '\n\n'
+
                 elif line.startswith('Final flow:'):
                     result_final = result_final + line + '\n'
                     final_flag = True
 
-            return result + result_final + '\n' + result_flow
+            return result + last_action + result_final + '\n' + result_flow
         except:
             LOG.exception_err_write()
             return 'parsing error\n' + output

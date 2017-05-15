@@ -327,7 +327,7 @@ class FlowTraceView(Frame):
             layout_cpt = Layout([1])
             self.add_layout(layout_cpt)
 
-            layout_cpt.add_widget(Text(" [COMPUTE] ", "COMPUTE"))
+            layout_cpt.add_widget(Text(" [NODE] ", "COMPUTE"))
             layout_cpt.add_widget(Divider())
 
             i = 0
