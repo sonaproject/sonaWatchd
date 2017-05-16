@@ -83,7 +83,7 @@ def unregi_url(url):
 
 def proc_dis_system(node, dummy):
     try:
-        nodes_info = get_node_list(node, 'nodename, ping, app')
+        nodes_info = get_node_list(node, 'nodename, ping, app', DB.STATUS_TBL)
 
         result = dict()
 
@@ -96,12 +96,19 @@ def proc_dis_system(node, dummy):
         return {'Result': 'FAIL'}
 
 def proc_dis_resource(node, param):
-    nodes_info = get_node_list(node, 'nodename, ip_addr, username, ping')
+    res_result = dict()
 
-    LOG.info("Get Resource Usage ... %s %s", nodes_info, param)
-    resource_usage = res.get_resource_usage(nodes_info, param)
+    nodes_info = get_node_list(node, 'nodename, ' + param, DB.STATUS_TBL)
 
-    return resource_usage
+    LOG.info('*****' + str(nodes_info))
+
+    for nodename, value in nodes_info:
+        if value < 0:
+            res_result[nodename] = 'FAIL'
+        else:
+            res_result[nodename] = value
+
+    return res_result
 
 
 def proc_dis_onos(system, param):
@@ -148,12 +155,12 @@ def exist_command(req):
     return True
 
 
-def get_node_list(nodes, param):
+def get_node_list(nodes, param, tbl = DB.NODE_INFO_TBL):
     try:
         if nodes == 'all':
-            sql = 'SELECT ' + param + ' FROM ' + DB.NODE_INFO_TBL
+            sql = 'SELECT ' + param + ' FROM ' + tbl
         else:
-            sql = 'SELECT ' + param + ' FROM ' + DB.NODE_INFO_TBL + ' WHERE nodename = \'' + nodes + '\''
+            sql = 'SELECT ' + param + ' FROM ' + tbl + ' WHERE nodename = \'' + nodes + '\''
 
         with DB.connection() as conn:
             nodes_info = conn.cursor().execute(sql).fetchall()

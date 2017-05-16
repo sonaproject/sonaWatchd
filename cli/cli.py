@@ -113,8 +113,6 @@ class CLI():
                 sys_ret = str(result[sys])
                 if sys_ret.upper().endswith('FAIL'):
                     sys_ret = 'fail'
-                else:
-                    sys_ret = str(result[sys][(str(param)).upper()]['RATIO'])
 
                 print '\t' + sys + '\t' + (str(param)).upper() + '\t' + sys_ret
         else:

@@ -13,6 +13,7 @@ class DB(object):
     NODE_INFO_TBL = 't_nodes'
     REGI_SYS_TBL = 't_regi'
     EVENT_TBL = 't_event'
+    STATUS_TBL = 't_status'
 
     def __init__(self):
         self._conn = self.connection()
@@ -38,7 +39,9 @@ class DB(object):
     def db_initiation(cls):
         LOG.info("--- Initiating SONA DB ---")
         init_sql = ['CREATE TABLE ' + cls.NODE_INFO_TBL +
-                        '(nodename text primary key, ip_addr, username, ping, app, cpu real, mem real, disk real, time)',
+                        '(nodename text primary key, ip_addr, username)',
+                    'CREATE TABLE ' + cls.STATUS_TBL +
+                    '(nodename text primary key, ping, app, cpu real, memory real, disk real, time)',
                     'CREATE TABLE ' + cls.REGI_SYS_TBL + '(url text primary key, auth)',
                     'CREATE TABLE ' + cls.EVENT_TBL + '(nodename, item, grade, desc, time, PRIMARY KEY (nodename, item))']
 
@@ -85,11 +88,20 @@ class DB(object):
             name, ip = str(node).split(':')
             LOG.info('Insert node [%s %s %s]', name, ip, username)
             sql = 'INSERT INTO ' + cls.NODE_INFO_TBL + \
-                  ' VALUES (\'' + name + '\',\'' + ip + '\',\'' + username + '\', \'none\', \'none\', -1, -1, -1, \'none\')'
+                  ' VALUES (\'' + name + '\',\'' + ip + '\',\'' + username + '\')'
             LOG.info('%s', sql)
             sql_rt = cls.sql_execute(sql)
             if sql_rt != 'SUCCESS':
-                LOG.info(" Node data insert fail \n%s", sql_rt)
+                LOG.info(" [NODE TABLE] Node data insert fail \n%s", sql_rt)
+                sys.exit(1)
+
+            # set status tbl
+            sql = 'INSERT INTO ' + cls.STATUS_TBL + \
+                  ' VALUES (\'' + name + '\', \'none\', \'none\', -1, -1, -1, \'none\')'
+            LOG.info('%s', sql)
+            sql_rt = cls.sql_execute(sql)
+            if sql_rt != 'SUCCESS':
+                LOG.info(" [STATUS TABLE] Node data insert fail \n%s", sql_rt)
                 sys.exit(1)
 
             # add Alarm Items
@@ -100,7 +112,7 @@ class DB(object):
                 LOG.info('%s', sql)
                 sql_rt = cls.sql_execute(sql)
                 if sql_rt != 'SUCCESS':
-                    LOG.info(" Item data insert fail \n%s", sql_rt)
+                    LOG.info(" [ITEM TABLE] Item data insert fail \n%s", sql_rt)
                     sys.exit(1)
 
     @classmethod
