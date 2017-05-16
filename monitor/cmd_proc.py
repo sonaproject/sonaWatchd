@@ -27,15 +27,23 @@ def parse_command(req_obj):
 def regi_url(url, auth):
     try:
         sql = 'SELECT * FROM ' + DB.REGI_SYS_TBL + ' WHERE url = \'' + url + '\''
+        sql_evt = 'SELECT * FROM ' + DB.EVENT_TBL
 
         with DB.connection() as conn:
             url_info = conn.cursor().execute(sql).fetchall()
-
+            evt_list = conn.cursor().execute(sql_evt).fetchall()
         conn.close()
+
+        event_list = []
+
+        for nodename, item, grade, desc, time in evt_list:
+            if not grade in ['ok', 'normal']:
+                evt = {'event': 'occur', 'system': nodename, 'item': item, 'grade': grade, 'desc': desc, 'time': time}
+                event_list.append(evt)
 
         # if already exist
         if len(url_info) == 1:
-            res_body = {'Result': 'SUCCESS'}
+            res_body = {'Result': 'SUCCESS', 'Event list': event_list}
         else:
             # insert db
             sql = 'INSERT INTO ' + DB.REGI_SYS_TBL + ' VALUES (\'' + url  + '\', \'' + auth + '\' )'
@@ -43,7 +51,7 @@ def regi_url(url, auth):
             ret = DB.sql_execute(sql)
 
             if ret == 'SUCCESS':
-                res_body = {'Result': 'SUCCESS'}
+                res_body = {'Result': 'SUCCESS', 'Event list': event_list}
             else:
                 res_body = {'Result': 'FAIL'}
 
@@ -83,12 +91,12 @@ def unregi_url(url):
 
 def proc_dis_system(node, dummy):
     try:
-        nodes_info = get_node_list(node, 'nodename, ping, app', DB.STATUS_TBL)
+        nodes_info = get_node_list(node, 'nodename, ping, app, cpu, memory, disk')
 
         result = dict()
 
-        for nodename, ping, app in nodes_info:
-            result[nodename] = {'IP': ping, 'APP': app}
+        for nodename, ping, app, cpu, memory, disk in nodes_info:
+            result[nodename] = {'ping': ping, 'app': app, 'cpu': cpu, 'memory': memory, 'disk': disk}
 
         return result
     except:

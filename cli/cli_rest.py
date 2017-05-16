@@ -26,6 +26,9 @@ class RestHandler(BaseHTTPRequestHandler):
 
         elif self.auth_pw(self.headers.getheader('Authorization')):
             global_evt.set()
+
+            if request_obj['system'] == 'sonawatcher' and request_obj['item'] == 'disconnect':
+                LOG.debug_log('[REST-SERVER] ' + request_obj['desc'])
             # add event
         else:
             LOG.debug_log('[REST-SERVER] not authenticated')

@@ -151,7 +151,7 @@ class CLI():
         except:
             # req timeout
             LOG.exception_err_write()
-            return -1, myResponse
+            return -1, None
 
         cls.CLI_LOG.cli_log('---------------------------RECV RES---------------------------')
         cls.CLI_LOG.cli_log('RESPONSE CODE = ' + str(myResponse.status_code))

@@ -263,7 +263,7 @@ def check_system_status():
 
             if res_code != 200:
                 LOG.debug_log(
-                    '[SYSTEM_CHECK_THREAD] Rest server does not respond to the request. RES_CODE = ' + res_code)
+                    '[SYSTEM_CHECK_THREAD] Rest server does not respond to the request. RES_CODE = ' + str(res_code))
                 continue
 
             ret = SYS.changed_sys_info(sys_info)

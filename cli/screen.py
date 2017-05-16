@@ -290,9 +290,13 @@ class SCREEN():
                 str_info = sys.ljust(6) + ' ['
                 box_sys.addstr(i, 2, str_info)
 
-                str_status = 'NOK'
-                if (dict)(SYS.sys_list[sys])['IP'] == 'ok' and (dict)(SYS.sys_list[sys])['APP'] == 'ok':
-                    str_status = 'OK'
+                str_status = 'OK'
+
+                status_list = (dict)(SYS.sys_list[sys]).values()
+                for status in status_list:
+                    if not (status == 'ok' or status == 'normal'):
+                        str_status = 'NOK'
+                        break
 
                 if str_status is 'OK':
                     box_sys.addstr(i, 2 + len(str_info), str_status, status_text_OK)
@@ -301,8 +305,6 @@ class SCREEN():
 
                 box_sys.addstr(i, 2 + len(str_info) + len(str_status), ']')
                 i += 1
-
-                # add app status
         except:
             LOG.exception_err_write()
 

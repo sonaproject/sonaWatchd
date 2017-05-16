@@ -13,7 +13,7 @@ from api.config import CONF
 from api.sona_log import LOG
 from api.watcherdb import DB
 from daemon import Daemon
-
+from datetime import datetime
 
 PIDFILE = CONF.get_pid_file()
 
@@ -48,6 +48,7 @@ class SonaWatchD(Daemon):
 
                     time.sleep(CONF.watchdog()['interval'])
                 except:
+                    watchdog.push_event('sonawatcher', 'disconnect', 'critical', 'sonawatcher server shutdown', str(datetime.now()))
                     conn.close()
                     LOG.exception()
                     sys.exit(1)
@@ -67,10 +68,12 @@ if __name__ == "__main__":
 
         elif 'stop' == sys.argv[1]:
             print "Stopping ..."
+            watchdog.push_event('sonawatcher', 'disconnect', 'critical', 'sonawatcher server shutdown', str(datetime.now()))
             daemon.stop()
 
         elif 'restart' == sys.argv[1]:
             print "Restaring ..."
+            watchdog.push_event('sonawatcher', 'disconnect', 'critical', 'sonawatcher server shutdown', str(datetime.now()))
             daemon.restart()
 
         elif 'status' == sys.argv[1]:

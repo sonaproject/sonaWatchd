@@ -18,7 +18,6 @@ from api.watcherdb import DB
 from api.sbapi import SshCommand
 
 def periodic(conn):
-    change_flag = False
     cur_info = {}
     LOG.info("Periodic checking...%s", str(CONF.watchdog()['check_system']))
 
@@ -95,17 +94,20 @@ def periodic(conn):
             occur_event(conn, node_name, 'app', cur_info[node_name]['app'], app)
 
         # 3. resource check (CPU/MEM/DISK)
-        grade = get_grade('cpu', cpu)
-        if cur_info[node_name]['cpu'] != grade:
-            occur_event(conn, node_name, 'cpu', cur_info[node_name]['cpu'], grade)
+        if CONF.alarm().has_key('cpu'):
+            grade = get_grade('cpu', cpu)
+            if cur_info[node_name]['cpu'] != grade:
+                occur_event(conn, node_name, 'cpu', cur_info[node_name]['cpu'], grade)
 
-        grade = get_grade('memory', mem)
-        if cur_info[node_name]['memory'] != grade:
-            occur_event(conn, node_name, 'memory', cur_info[node_name]['memory'], grade)
+        if CONF.alarm().has_key('memory'):
+            grade = get_grade('memory', mem)
+            if cur_info[node_name]['memory'] != grade:
+                occur_event(conn, node_name, 'memory', cur_info[node_name]['memory'], grade)
 
-        grade = get_grade('disk', disk)
-        if cur_info[node_name]['disk'] != grade:
-            occur_event(conn, node_name, 'disk', cur_info[node_name]['disk'], grade)
+        if CONF.alarm().has_key('disk'):
+            grade = get_grade('disk', disk)
+            if cur_info[node_name]['disk'] != grade:
+                occur_event(conn, node_name, 'disk', cur_info[node_name]['disk'], grade)
 
 def get_grade(item, value):
     critical, major, minor = (CONF.alarm()[item])
@@ -120,11 +122,12 @@ def get_grade(item, value):
     return 'normal'
 
 def occur_event(conn, node_name, item, pre_value, cur_value):
+    time = str(datetime.now())
     desc = pre_value + ' -> ' + cur_value
     sql = 'UPDATE ' + DB.EVENT_TBL + \
           ' SET grade = \'' + cur_value + '\'' + ',' + \
           ' desc = \'' + desc + '\'' + ',' + \
-          ' time = \'' + str(datetime.now()) + '\'' + \
+          ' time = \'' + time + '\'' + \
           ' WHERE nodename = \'' + node_name + '\' and item = \'' + item + '\''
     LOG.info('Update alarm info = ' + sql)
 
@@ -133,9 +136,9 @@ def occur_event(conn, node_name, item, pre_value, cur_value):
 
     # if default->ok or normal, skip
     if not (pre_value == 'none' and cur_value in ['ok', 'normal']):
-        push_event(node_name, item, cur_value, desc)
+        push_event(node_name, item, cur_value, desc, time)
 
-def push_event(node_name, item, grade, desc):
+def push_event(node_name, item, grade, desc, time):
     sql = 'SELECT * FROM ' + DB.REGI_SYS_TBL
 
     with DB.connection() as conn:
@@ -145,7 +148,7 @@ def push_event(node_name, item, grade, desc):
 
     for url, auth in url_list:
         header = {'Content-Type': 'application/json', 'Authorization': auth}
-        req_body = {'event': 'occur', 'system': node_name, 'item': item, 'grade': grade, 'desc': desc}
+        req_body = {'event': 'occur', 'system': node_name, 'item': item, 'grade': grade, 'desc': desc, 'time': time}
         req_body_json = json.dumps(req_body)
 
         try:
