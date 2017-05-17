@@ -137,7 +137,7 @@ class CLI():
         cls.CLI_LOG.cli_log('---------------------------SEND CMD---------------------------')
 
         try:
-            url = CONFIG.get_rest_addr()
+            url = CONFIG.get_cmd_addr()
             cls.CLI_LOG.cli_log('URL = ' + url)
             cls.CLI_LOG.cli_log('AUTH = ' + auth)
 

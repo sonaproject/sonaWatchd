@@ -91,7 +91,7 @@ def unregi_url(url):
 
 def proc_dis_system(node, dummy):
     try:
-        nodes_info = get_node_list(node, 'nodename, ping, app, cpu, memory, disk')
+        nodes_info = get_node_list(node, 'nodename, ping, app, cpu, memory, disk', DB.STATUS_TBL)
 
         result = dict()
 
@@ -106,7 +106,7 @@ def proc_dis_system(node, dummy):
 def proc_dis_resource(node, param):
     res_result = dict()
 
-    nodes_info = get_node_list(node, 'nodename, ' + param, DB.STATUS_TBL)
+    nodes_info = get_node_list(node, 'nodename, ' + param, DB.RESOURCE_TBL)
 
     LOG.info('*****' + str(nodes_info))
 

@@ -14,6 +14,7 @@ class DB(object):
     REGI_SYS_TBL = 't_regi'
     EVENT_TBL = 't_event'
     STATUS_TBL = 't_status'
+    RESOURCE_TBL = 't_resource'
 
     def __init__(self):
         self._conn = self.connection()
@@ -41,7 +42,8 @@ class DB(object):
         init_sql = ['CREATE TABLE ' + cls.NODE_INFO_TBL +
                         '(nodename text primary key, ip_addr, username)',
                     'CREATE TABLE ' + cls.STATUS_TBL +
-                    '(nodename text primary key, ping, app, cpu real, memory real, disk real, time)',
+                    '(nodename text primary key, ping, app, cpu, memory, disk, time)',
+                    'CREATE TABLE ' + cls.RESOURCE_TBL + '(nodename text primary key, cpu real, memory real, disk real)',
                     'CREATE TABLE ' + cls.REGI_SYS_TBL + '(url text primary key, auth)',
                     'CREATE TABLE ' + cls.EVENT_TBL + '(nodename, item, grade, desc, time, PRIMARY KEY (nodename, item))']
 
@@ -49,10 +51,6 @@ class DB(object):
             sql_rt = cls.sql_execute(sql)
 
             if "already exist" in sql_rt:
-
-                if cls.REGI_SYS_TBL in sql:
-                    continue
-
                 table_name = sql_rt.split()[1]
                 LOG.info("\'%s\' table already exist. Delete all tuple of this table...",
                          table_name)
@@ -97,11 +95,19 @@ class DB(object):
 
             # set status tbl
             sql = 'INSERT INTO ' + cls.STATUS_TBL + \
-                  ' VALUES (\'' + name + '\', \'none\', \'none\', -1, -1, -1, \'none\')'
+                  ' VALUES (\'' + name + '\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\')'
             LOG.info('%s', sql)
             sql_rt = cls.sql_execute(sql)
             if sql_rt != 'SUCCESS':
                 LOG.info(" [STATUS TABLE] Node data insert fail \n%s", sql_rt)
+                sys.exit(1)
+
+            # set resource tbl
+            sql = 'INSERT INTO ' + cls.RESOURCE_TBL + ' VALUES (\'' + name + '\', -1, -1, -1)'
+            LOG.info('%s', sql)
+            sql_rt = cls.sql_execute(sql)
+            if sql_rt != 'SUCCESS':
+                LOG.info(" [RESOURCE TABLE] Node data insert fail \n%s", sql_rt)
                 sys.exit(1)
 
             # add Alarm Items

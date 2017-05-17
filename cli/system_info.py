@@ -13,6 +13,9 @@ class SYS():
 
     pre_sys_info = ''
 
+    disconnect_flag = False
+    abnormal_flag = False
+
     @classmethod
     def set_sys_info(cls, sys_info):
         try:

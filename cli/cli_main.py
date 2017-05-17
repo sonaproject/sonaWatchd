@@ -54,20 +54,26 @@ def main():
 
     # Start RESTful server for event
     evt = multiprocessing.Event()
+    disconnect_evt = multiprocessing.Event()
 
     # create listen event thread
     evt_thread = threading.Thread(target=listen_evt, args=(evt,))
     evt_thread.daemon = False
     evt_thread.start()
 
+    conn_evt_thread = threading.Thread(target=listen_disconnect_evt, args=(disconnect_evt,))
+    conn_evt_thread.daemon = False
+    conn_evt_thread.start()
+
     try:
         # create rest server process
-        cli_rest.rest_server_start(evt)
+        cli_rest.rest_server_start(evt, disconnect_evt)
     except:
         print 'Rest Server failed to start'
         print 'Processing shutdown...'
         LOG.exception_err_write()
         SYS.set_sys_thr_flag(False)
+        conn_evt_thread.join()
         evt_thread.join()
         return
 
@@ -77,6 +83,7 @@ def main():
         print 'Processing shutdown...'
         LOG.exception_err_write()
         SYS.set_sys_thr_flag(False)
+        conn_evt_thread.join()
         evt_thread.join()
         return
 
@@ -88,6 +95,7 @@ def main():
         print 'Processing shutdown...'
         CLI.send_regi('unregi')
         SYS.set_sys_thr_flag(False)
+        conn_evt_thread.join()
         evt_thread.join()
         return
 
@@ -97,6 +105,7 @@ def main():
         print 'Processing shutdown...'
         CLI.send_regi('unregi')
         SYS.set_sys_thr_flag(False)
+        conn_evt_thread.join()
         evt_thread.join()
         return
 
@@ -113,10 +122,8 @@ def main():
 
     set_readline_opt()
 
-    # create system check thread
-    check_thread = threading.Thread(target=check_system_status)
-    check_thread.daemon = False
-    check_thread.start()
+    # system check
+    check_system()
 
     # select input menu
     select_menu()
@@ -130,7 +137,7 @@ def main():
     print 'Processing shutdown...'
     CLI.send_regi('unregi')
     SYS.set_sys_thr_flag(False)
-    check_thread.join()
+    conn_evt_thread.join()
     evt_thread.join()
 
     return
@@ -142,7 +149,7 @@ def select_menu():
         SCREEN.set_screen()
 
         SCREEN.draw_system(menu_list)
-        SCREEN.draw_event()
+        SCREEN.draw_event(SYS.disconnect_flag)
         SCREEN.draw_menu(menu_list, selected_menu_no)
 
         SYS.set_sys_redraw_flag(True)
@@ -167,9 +174,14 @@ def select_menu():
                 SCREEN.refresh_screen()
                 SCREEN.screen_exit()
 
-                if (menu_list[selected_menu_no - 1]) == 'CLI':
-                    SCREEN.display_header(menu_list[selected_menu_no - 1])
-                    SCREEN.display_sys(True)
+                menu = menu_list[selected_menu_no - 1]
+
+                if menu == 'CLI' or menu == 'Event List':
+                    if menu == 'CLI':
+                        SCREEN.display_header(menu_list[selected_menu_no - 1])
+                        SCREEN.display_sys(True)
+                    elif menu == 'Event List':
+                        SCREEN.display_event()
 
                     readline.set_completer(CLI.pre_complete_cli)
 
@@ -198,7 +210,7 @@ def select_menu():
                             while not CLI.get_cli_ret_flag():
                                 time.sleep(1)
 
-                elif (menu_list[selected_menu_no - 1]) == 'Flow Trace':
+                elif menu == 'Flow Trace':
                     from asciimatics.screen import Screen
                     from asciimatics.exceptions import ResizeScreenError
 
@@ -225,11 +237,9 @@ def select_menu():
                         except ResizeScreenError as e:
                             last_scene = e.scene
 
-                elif (menu_list[selected_menu_no - 1]) == 'Event List':
-                    SCREEN.evt_flag = False
 
             SCREEN.draw_system(menu_list)
-            SCREEN.draw_event()
+            SCREEN.draw_event(SYS.disconnect_flag)
             SCREEN.draw_menu(menu_list, selected_menu_no)
             SCREEN.refresh_screen()
 
@@ -241,41 +251,44 @@ def select_menu():
     except:
         LOG.exception_err_write()
 
+def listen_disconnect_evt(evt):
+    while SYS.get_sys_thr_flag():
+        evt.wait(3)
+
+        if evt.is_set():
+            SYS.disconnect_flag = True
+            SCREEN.draw_event(SYS.disconnect_flag)
+            evt.clear()
+
 def listen_evt(evt):
     while SYS.get_sys_thr_flag():
         evt.wait(3)
 
         if evt.is_set():
-            SCREEN.evt_flag = True
-
-            if SYS.get_sys_redraw_flag():
-                SCREEN.draw_event()
-
             evt.clear()
+            # system check
+            check_system()
 
-def check_system_status():
+def check_system():
     try:
-        interval = CONFIG.get_rest_interval()
+        # inquiry onos info
+        res_code, sys_info = CLI.req_sys_info()
 
-        while SYS.get_sys_thr_flag():
-            # inquiry onos info
-            res_code, sys_info = CLI.req_sys_info()
+        if res_code != 200:
+            SYS.disconnect_flag = True
+            SCREEN.draw_event(SYS.disconnect_flag)
+            LOG.debug_log(
+                '[SYSTEM_CHECK_THREAD] Rest server does not respond to the request. RES_CODE = ' + str(res_code))
+            return
 
-            if res_code != 200:
-                LOG.debug_log(
-                    '[SYSTEM_CHECK_THREAD] Rest server does not respond to the request. RES_CODE = ' + str(res_code))
-                continue
+        ret = SYS.changed_sys_info(sys_info)
 
-            ret = SYS.changed_sys_info(sys_info)
-
-            if SYS.get_sys_redraw_flag():
-                if ret is True:
-                    LOG.debug_log("call redraw")
-                    SCREEN.draw_system(menu_list)
-                else:
-                    SCREEN.draw_refresh_time(menu_list)
-
-            time.sleep(interval)
+        if SYS.get_sys_redraw_flag():
+            if ret is True:
+                SCREEN.draw_system(menu_list)
+                SCREEN.draw_event(SYS.disconnect_flag)
+            else:
+                SCREEN.draw_refresh_time(menu_list)
     except:
         LOG.exception_err_write()
 

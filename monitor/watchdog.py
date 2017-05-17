@@ -44,10 +44,10 @@ def periodic(conn):
 
     for node_name, node_ip, user_name in node_list:
         ping = net_check(node_ip)
-        app = ''
-        cpu = ''
-        mem = ''
-        disk = ''
+        app = 'fail'
+        cpu = '-1'
+        mem = '-1'
+        disk = '-1'
 
         if ping == 'ok':
             if node_ip in str(CONF.onos()['list']):
@@ -62,22 +62,14 @@ def periodic(conn):
             cpu = str(resource.get_cpu_usage(user_name, node_ip, True))
             mem = str(resource.get_mem_usage(user_name, node_ip, True))
             disk = str(resource.get_disk_usage(user_name, node_ip, True))
-        else:
-            app = 'nok'
-            cpu = '-1'
-            mem = '-1'
-            disk = '-1'
 
         try:
-            sql = 'UPDATE ' + DB.STATUS_TBL + \
-                  ' SET cpu = ' + cpu + ',' + \
-                  ' memory = ' + mem + ',' + \
-                  ' disk = ' + disk + ',' + \
-                  ' ping = \'' + ping + '\'' + ',' + \
-                  ' app = \'' + app + '\'' + ',' + \
-                  ' time = \'' + str(datetime.now()) + '\'' + \
+            sql = 'UPDATE ' + DB.RESOURCE_TBL + \
+                  ' SET cpu = \'' + cpu + '\',' + \
+                  ' memory = \'' + mem + '\',' + \
+                  ' disk = \'' + disk + '\'' \
                   ' WHERE nodename = \'' + node_name + '\''
-            LOG.info('Update Status info = ' + sql)
+            LOG.info('Update Resource info = ' + sql)
 
             if DB.sql_execute(sql, conn) != 'SUCCESS':
                 LOG.error('DB Update Fail.')
@@ -94,29 +86,51 @@ def periodic(conn):
             occur_event(conn, node_name, 'app', cur_info[node_name]['app'], app)
 
         # 3. resource check (CPU/MEM/DISK)
+        cpu_grade = 'fail'
         if CONF.alarm().has_key('cpu'):
-            grade = get_grade('cpu', cpu)
-            if cur_info[node_name]['cpu'] != grade:
-                occur_event(conn, node_name, 'cpu', cur_info[node_name]['cpu'], grade)
+            cpu_grade = get_grade('cpu', cpu)
+            if cur_info[node_name]['cpu'] != cpu_grade:
+                occur_event(conn, node_name, 'cpu', cur_info[node_name]['cpu'], cpu_grade)
 
+        mem_grade = 'fail'
         if CONF.alarm().has_key('memory'):
-            grade = get_grade('memory', mem)
-            if cur_info[node_name]['memory'] != grade:
-                occur_event(conn, node_name, 'memory', cur_info[node_name]['memory'], grade)
+            mem_grade = get_grade('memory', mem)
+            if cur_info[node_name]['memory'] != mem_grade:
+                occur_event(conn, node_name, 'memory', cur_info[node_name]['memory'], mem_grade)
 
+        disk_grade = 'fail'
         if CONF.alarm().has_key('disk'):
-            grade = get_grade('disk', disk)
-            if cur_info[node_name]['disk'] != grade:
-                occur_event(conn, node_name, 'disk', cur_info[node_name]['disk'], grade)
+            disk_grade = get_grade('disk', disk)
+            if cur_info[node_name]['disk'] != disk_grade:
+                occur_event(conn, node_name, 'disk', cur_info[node_name]['disk'], disk_grade)
+
+        try:
+            sql = 'UPDATE ' + DB.STATUS_TBL + \
+                  ' SET cpu = \'' + cpu_grade + '\',' + \
+                  ' memory = \'' + mem_grade + '\',' + \
+                  ' disk = \'' + disk_grade + '\',' + \
+                  ' ping = \'' + ping + '\',' + \
+                  ' app = \'' + app + '\',' + \
+                  ' time = \'' + str(datetime.now()) + '\'' + \
+                  ' WHERE nodename = \'' + node_name + '\''
+            LOG.info('Update Status info = ' + sql)
+
+            if DB.sql_execute(sql, conn) != 'SUCCESS':
+                LOG.error('DB Update Fail.')
+        except:
+            LOG.exception()
 
 def get_grade(item, value):
     critical, major, minor = (CONF.alarm()[item])
 
-    if value >= critical:
+    if value == '-1':
+        return 'fail'
+
+    if float(value) >= float(critical):
         return 'critical'
-    elif value >= major:
+    elif float(value) >= float(major):
         return 'major'
-    elif value >= minor:
+    elif float(value) >= float(minor):
         return 'minor'
 
     return 'normal'
@@ -134,9 +148,7 @@ def occur_event(conn, node_name, item, pre_value, cur_value):
     if DB.sql_execute(sql, conn) != 'SUCCESS':
         LOG.error('DB Update Fail.')
 
-    # if default->ok or normal, skip
-    if not (pre_value == 'none' and cur_value in ['ok', 'normal']):
-        push_event(node_name, item, cur_value, desc, time)
+    push_event(node_name, item, cur_value, desc, time)
 
 def push_event(node_name, item, grade, desc, time):
     sql = 'SELECT * FROM ' + DB.REGI_SYS_TBL

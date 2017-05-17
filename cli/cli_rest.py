@@ -10,6 +10,7 @@ from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 class RestHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         global global_evt
+        global global_conn_evt
 
         request_sz = int(self.headers["Content-length"])
         request_str = self.rfile.read(request_sz)
@@ -25,11 +26,11 @@ class RestHandler(BaseHTTPRequestHandler):
             LOG.debug_log('[REST-SERVER] ' + self.path + ' not found')
 
         elif self.auth_pw(self.headers.getheader('Authorization')):
-            global_evt.set()
-
             if request_obj['system'] == 'sonawatcher' and request_obj['item'] == 'disconnect':
+                global_conn_evt.set()
                 LOG.debug_log('[REST-SERVER] ' + request_obj['desc'])
-            # add event
+            else:
+                global_evt.set()
         else:
             LOG.debug_log('[REST-SERVER] not authenticated')
 
@@ -40,12 +41,15 @@ class RestHandler(BaseHTTPRequestHandler):
         return False
 
 global_evt = None
+global_conn_evt = None
 
-def run(evt):
+def run(evt, conn_evt):
+    global global_conn_evt
     global global_evt
     LOG.debug_log("--- REST Server Start --- ")
 
     global_evt = evt
+    global_conn_evt = conn_evt
 
     try:
         server_address = ("", CONFIG.get_rest_port())
@@ -56,7 +60,7 @@ def run(evt):
         # occure rest server err event
 
 
-def rest_server_start(evt):
-    rest_server_daemon = multiprocess.Process(name='cli_rest_svr', target=run, args=(evt,))
+def rest_server_start(evt, conn_evt):
+    rest_server_daemon = multiprocess.Process(name='cli_rest_svr', target=run, args=(evt, conn_evt))
     rest_server_daemon.daemon = True
     rest_server_daemon.start()

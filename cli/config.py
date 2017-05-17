@@ -9,11 +9,11 @@ CPT_SECTION_NAME = "OPENSTACK_COMPUTE"
 
 REST_ID_KEY_NAME = 'id'
 REST_PW_KEY_NAME = 'pw'
-REST_URI_KEY_NAME = 'rest-server-uri'
+REST_URI_KEY_NAME = 'rest-server'
+REST_COMMAND_URI = 'command-uri'
 REST_EVENT_REGI_URI = 'event-regi-uri'
 REST_EVENT_UNREGI_URI = 'event-unregi-uri'
 REST_TIMEOUT = 'timeout'
-REST_INTERVAL = 'interval'
 REST_SVR_PORT = 'rest_server_port'
 
 COMMAND_OPT_KEY_NAME = 'option-list'
@@ -106,23 +106,19 @@ class CONFIG():
         return cls.cli_get_value(REST_SECTION_NAME, REST_PW_KEY_NAME)
 
     @classmethod
-    def get_rest_addr(cls):
-        return cls.cli_get_value(REST_SECTION_NAME, REST_URI_KEY_NAME)
+    def get_cmd_addr(cls):
+        return cls.cli_get_value(REST_SECTION_NAME, REST_URI_KEY_NAME) + \
+               cls.cli_get_value(REST_SECTION_NAME, REST_COMMAND_URI)
 
     @classmethod
     def get_regi_uri(cls):
-        return cls.cli_get_value(REST_SECTION_NAME, REST_EVENT_REGI_URI)
+        return cls.cli_get_value(REST_SECTION_NAME, REST_URI_KEY_NAME) + \
+               cls.cli_get_value(REST_SECTION_NAME, REST_EVENT_REGI_URI)
 
     @classmethod
     def get_unregi_uri(cls):
-        return cls.cli_get_value(REST_SECTION_NAME, REST_EVENT_UNREGI_URI)
-
-    @classmethod
-    def get_rest_interval(cls):
-        try:
-            return cls.config_cli.getint(REST_SECTION_NAME, REST_INTERVAL)
-        except:
-            return 3
+        return cls.cli_get_value(REST_SECTION_NAME, REST_URI_KEY_NAME) + \
+               cls.cli_get_value(REST_SECTION_NAME, REST_EVENT_UNREGI_URI)
 
     @classmethod
     def get_rest_port(cls):
