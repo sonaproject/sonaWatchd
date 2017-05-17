@@ -43,7 +43,6 @@ class SCREEN():
     quit_flag = False
     restart_flag = False
     resize_err_flag = False
-    evt_flag = False
 
     main_instance = None
 
@@ -173,7 +172,7 @@ class SCREEN():
         return box_type
 
     @classmethod
-    def draw_event(cls):
+    def draw_event(cls, disconnect = False):
         try:
             warn_color = curses.color_pair(3)
 
@@ -184,16 +183,19 @@ class SCREEN():
 
             box_event.addstr(0, 22, ' EVENT ', normalText)
 
-            # if occur event
-            if cls.evt_flag:
-                str = '[Event occurred]'
-
-                box_event.addstr(1, 2, str, warn_color)
-                box_event.addstr(1, 2 + len(str), ' Check the event history.', normalText)
+            if disconnect:
+                box_event.addstr(1, 2, '[Server shutdown] check server and restart', warn_color)
             else:
-                str = 'none'
+                # if occur event
+                if SYS.abnormal_flag:
+                    str = '[Event occurred]'
 
-                box_event.addstr(1, 2, str, normalText)
+                    box_event.addstr(1, 2, str, warn_color)
+                    box_event.addstr(1, 2 + len(str), ' Check the event list.', normalText)
+                else:
+                    str = '[Event] normal'
+
+                    box_event.addstr(1, 2, str, normalText)
 
             box_event.refresh()
         except:
@@ -206,6 +208,41 @@ class SCREEN():
             print BG_WHITE + "|%s|" % ('-' * width).ljust(width) + ENDC
             print BG_WHITE + '|' + BG_BLUEW + BOLD + \
                     ("{0:^" + str(width) + "}").format(menu) + BG_WHITE + '|' + ENDC
+            print BG_WHITE + "|%s|" % ('-' * width).ljust(width) + ENDC
+        except:
+            LOG.exception_err_write()
+
+    @classmethod
+    def display_event(cls):
+        try:
+
+            sorted_list = sorted(SYS.sys_list.keys())
+
+            title = ('   system'.ljust(13))
+            for sys in sorted_list:
+                item_list = (dict)(SYS.sys_list[sys]).keys()
+
+                for item in item_list:
+                    title = title + item.ljust(10)
+                break
+
+            width = len(title)
+
+            print BG_WHITE + "|%s|" % ('-' * width).ljust(width) + ENDC
+            print '| SYSTEM INFO | TIME : ' + SYS.last_check_time.split('.')[0] + \
+                  ("{0:>" + str(width - len(SYS.last_check_time.split('.')[0]) - len('SYSTEM INFO | TIME : ')) + "}").format('|') + ENDC
+            print BG_WHITE + "|%s|" % ('-' * width).ljust(width) + ENDC
+            print '|' + title + '|'
+            print BG_WHITE + "|%s|" % ('-' * width).ljust(width) + ENDC
+
+            for sys in sorted_list:
+                line = ('   ' + sys).ljust(13)
+                status_list = (dict)(SYS.sys_list[sys]).values()
+                for status in status_list:
+                    line = line + status.ljust(10)
+                print '|' + line + '|'
+
+
             print BG_WHITE + "|%s|" % ('-' * width).ljust(width) + ENDC
         except:
             LOG.exception_err_write()
@@ -225,15 +262,22 @@ class SCREEN():
             sorted_list = sorted(SYS.sys_list.keys())
 
             for sys in sorted_list:
-                status = 'NOK'
-                if (dict)(SYS.sys_list[sys])['IP'] == 'ok' and (dict)(SYS.sys_list[sys])['APP'] == 'ok':
-                    status = 'OK'
+                str_status = 'OK'
+
+                status_list = (dict)(SYS.sys_list[sys]).values()
+                for status in status_list:
+                    if (status == 'none'):
+                        str_status = 'loading'
+                        break
+                    elif not (status == 'ok' or status == 'normal'):
+                        str_status = 'NOK'
+                        break
 
                 color = GREEN
                 if status is not 'OK':
                     color = RED
-                print '| ' + sys.ljust(6) + ' [' + color + status + BG_WHITE + ']' + \
-                      ("{0:>" + str(width - 6 - len(status) - 3) + "}").format('|') + ENDC
+                print '| ' + sys.ljust(6) + ' [' + color + str_status + BG_WHITE + ']' + \
+                      ("{0:>" + str(width - 6 - len(str_status) - 3) + "}").format('|') + ENDC
 
             print BG_WHITE + "|%s|" % ('-' * width).ljust(width) + ENDC
         except:
@@ -286,13 +330,22 @@ class SCREEN():
 
             sorted_list = sorted(SYS.sys_list.keys())
 
+            alarm_flag = False
             for sys in sorted_list:
                 str_info = sys.ljust(6) + ' ['
                 box_sys.addstr(i, 2, str_info)
 
-                str_status = 'NOK'
-                if (dict)(SYS.sys_list[sys])['IP'] == 'ok' and (dict)(SYS.sys_list[sys])['APP'] == 'ok':
-                    str_status = 'OK'
+                str_status = 'OK'
+
+                status_list = (dict)(SYS.sys_list[sys]).values()
+                for status in status_list:
+                    if (status == 'none'):
+                        str_status = 'loading'
+                        break
+                    elif not (status == 'ok' or status == 'normal'):
+                        str_status = 'NOK'
+                        alarm_flag = True
+                        break
 
                 if str_status is 'OK':
                     box_sys.addstr(i, 2 + len(str_info), str_status, status_text_OK)
@@ -302,7 +355,7 @@ class SCREEN():
                 box_sys.addstr(i, 2 + len(str_info) + len(str_status), ']')
                 i += 1
 
-                # add app status
+            SYS.abnormal_flag = alarm_flag
         except:
             LOG.exception_err_write()
 

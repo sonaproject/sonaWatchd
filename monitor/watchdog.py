@@ -18,6 +18,7 @@ from api.watcherdb import DB
 from api.sbapi import SshCommand
 
 def periodic(conn):
+    cur_info = {}
     LOG.info("Periodic checking...%s", str(CONF.watchdog()['check_system']))
 
     try:
@@ -30,9 +31,23 @@ def periodic(conn):
         LOG.exception()
         return
 
+    # Read cur alarm status
+    sql = 'SELECT nodename, item, grade FROM ' + DB.EVENT_TBL
+    LOG.info(sql)
+    cur_grade = conn.cursor().execute(sql).fetchall()
+
+    for nodename, item, grade in cur_grade:
+        if not cur_info.has_key(nodename):
+            cur_info[nodename] = {}
+
+        cur_info[nodename][item] = grade
+
     for node_name, node_ip, user_name in node_list:
         ping = net_check(node_ip)
-        app = ''
+        app = 'fail'
+        cpu = '-1'
+        mem = '-1'
+        disk = '-1'
 
         if ping == 'ok':
             if node_ip in str(CONF.onos()['list']):
@@ -43,26 +58,99 @@ def periodic(conn):
                 app = swarm_app_check(node_ip)
             elif node_ip in str(CONF.openstack()['list']):
                 app = openstack_app_check(node_ip)
-        else:
-            app = 'nok'
+
+            cpu = str(resource.get_cpu_usage(user_name, node_ip, True))
+            mem = str(resource.get_mem_usage(user_name, node_ip, True))
+            disk = str(resource.get_disk_usage(user_name, node_ip, True))
 
         try:
-            sql = 'UPDATE ' + DB.NODE_INFO_TBL + \
-                  ' SET cpu = ' + str(resource.get_cpu_usage(user_name, node_ip, True)) + ',' + \
-                  ' mem = ' + str(resource.get_mem_usage(user_name, node_ip, True)) + ',' + \
-                  ' disk = ' + str(resource.get_disk_usage(user_name, node_ip, True)) + ',' + \
-                  ' ping = \'' + ping + '\'' + ',' + \
-                  ' app = \'' + app + '\'' + ',' + \
-                  ' time = \'' + str(datetime.now()) + '\'' + \
+            sql = 'UPDATE ' + DB.RESOURCE_TBL + \
+                  ' SET cpu = \'' + cpu + '\',' + \
+                  ' memory = \'' + mem + '\',' + \
+                  ' disk = \'' + disk + '\'' \
                   ' WHERE nodename = \'' + node_name + '\''
             LOG.info('Update Resource info = ' + sql)
-            conn.cursor().execute(sql)
-            conn.commit()
+
+            if DB.sql_execute(sql, conn) != 'SUCCESS':
+                LOG.error('DB Update Fail.')
         except:
             LOG.exception()
 
-    # occur event (rest)
+        # occur event (rest)
+        # 1. ping check
+        if cur_info[node_name]['ping'] != ping:
+            occur_event(conn, node_name, 'ping', cur_info[node_name]['ping'], ping)
 
+        # 2. app check
+        if cur_info[node_name]['app'] != app:
+            occur_event(conn, node_name, 'app', cur_info[node_name]['app'], app)
+
+        # 3. resource check (CPU/MEM/DISK)
+        cpu_grade = 'fail'
+        if CONF.alarm().has_key('cpu'):
+            cpu_grade = get_grade('cpu', cpu)
+            if cur_info[node_name]['cpu'] != cpu_grade:
+                occur_event(conn, node_name, 'cpu', cur_info[node_name]['cpu'], cpu_grade)
+
+        mem_grade = 'fail'
+        if CONF.alarm().has_key('memory'):
+            mem_grade = get_grade('memory', mem)
+            if cur_info[node_name]['memory'] != mem_grade:
+                occur_event(conn, node_name, 'memory', cur_info[node_name]['memory'], mem_grade)
+
+        disk_grade = 'fail'
+        if CONF.alarm().has_key('disk'):
+            disk_grade = get_grade('disk', disk)
+            if cur_info[node_name]['disk'] != disk_grade:
+                occur_event(conn, node_name, 'disk', cur_info[node_name]['disk'], disk_grade)
+
+        try:
+            sql = 'UPDATE ' + DB.STATUS_TBL + \
+                  ' SET cpu = \'' + cpu_grade + '\',' + \
+                  ' memory = \'' + mem_grade + '\',' + \
+                  ' disk = \'' + disk_grade + '\',' + \
+                  ' ping = \'' + ping + '\',' + \
+                  ' app = \'' + app + '\',' + \
+                  ' time = \'' + str(datetime.now()) + '\'' + \
+                  ' WHERE nodename = \'' + node_name + '\''
+            LOG.info('Update Status info = ' + sql)
+
+            if DB.sql_execute(sql, conn) != 'SUCCESS':
+                LOG.error('DB Update Fail.')
+        except:
+            LOG.exception()
+
+def get_grade(item, value):
+    critical, major, minor = (CONF.alarm()[item])
+
+    if value == '-1':
+        return 'fail'
+
+    if float(value) >= float(critical):
+        return 'critical'
+    elif float(value) >= float(major):
+        return 'major'
+    elif float(value) >= float(minor):
+        return 'minor'
+
+    return 'normal'
+
+def occur_event(conn, node_name, item, pre_value, cur_value):
+    time = str(datetime.now())
+    desc = pre_value + ' -> ' + cur_value
+    sql = 'UPDATE ' + DB.EVENT_TBL + \
+          ' SET grade = \'' + cur_value + '\'' + ',' + \
+          ' desc = \'' + desc + '\'' + ',' + \
+          ' time = \'' + time + '\'' + \
+          ' WHERE nodename = \'' + node_name + '\' and item = \'' + item + '\''
+    LOG.info('Update alarm info = ' + sql)
+
+    if DB.sql_execute(sql, conn) != 'SUCCESS':
+        LOG.error('DB Update Fail.')
+
+    push_event(node_name, item, cur_value, desc, time)
+
+def push_event(node_name, item, grade, desc, time):
     sql = 'SELECT * FROM ' + DB.REGI_SYS_TBL
 
     with DB.connection() as conn:
@@ -72,7 +160,7 @@ def periodic(conn):
 
     for url, auth in url_list:
         header = {'Content-Type': 'application/json', 'Authorization': auth}
-        req_body = {'evt': 'test text'}
+        req_body = {'event': 'occur', 'system': node_name, 'item': item, 'grade': grade, 'desc': desc, 'time': time}
         req_body_json = json.dumps(req_body)
 
         try:

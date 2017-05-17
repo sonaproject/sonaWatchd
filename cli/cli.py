@@ -113,8 +113,6 @@ class CLI():
                 sys_ret = str(result[sys])
                 if sys_ret.upper().endswith('FAIL'):
                     sys_ret = 'fail'
-                else:
-                    sys_ret = str(result[sys][(str(param)).upper()]['RATIO'])
 
                 print '\t' + sys + '\t' + (str(param)).upper() + '\t' + sys_ret
         else:
@@ -139,7 +137,7 @@ class CLI():
         cls.CLI_LOG.cli_log('---------------------------SEND CMD---------------------------')
 
         try:
-            url = CONFIG.get_rest_addr()
+            url = CONFIG.get_cmd_addr()
             cls.CLI_LOG.cli_log('URL = ' + url)
             cls.CLI_LOG.cli_log('AUTH = ' + auth)
 
@@ -153,7 +151,7 @@ class CLI():
         except:
             # req timeout
             LOG.exception_err_write()
-            return -1, myResponse
+            return -1, None
 
         cls.CLI_LOG.cli_log('---------------------------RECV RES---------------------------')
         cls.CLI_LOG.cli_log('RESPONSE CODE = ' + str(myResponse.status_code))

@@ -12,6 +12,9 @@ from config import CONF
 class DB(object):
     NODE_INFO_TBL = 't_nodes'
     REGI_SYS_TBL = 't_regi'
+    EVENT_TBL = 't_event'
+    STATUS_TBL = 't_status'
+    RESOURCE_TBL = 't_resource'
 
     def __init__(self):
         self._conn = self.connection()
@@ -37,17 +40,17 @@ class DB(object):
     def db_initiation(cls):
         LOG.info("--- Initiating SONA DB ---")
         init_sql = ['CREATE TABLE ' + cls.NODE_INFO_TBL +
-                        '(nodename text primary key, ip_addr, username, ping, app, cpu real, mem real, disk real, time)',
-                    'CREATE TABLE ' + cls.REGI_SYS_TBL + '(url text primary key, auth)']
+                        '(nodename text primary key, ip_addr, username)',
+                    'CREATE TABLE ' + cls.STATUS_TBL +
+                    '(nodename text primary key, ping, app, cpu, memory, disk, time)',
+                    'CREATE TABLE ' + cls.RESOURCE_TBL + '(nodename text primary key, cpu real, memory real, disk real)',
+                    'CREATE TABLE ' + cls.REGI_SYS_TBL + '(url text primary key, auth)',
+                    'CREATE TABLE ' + cls.EVENT_TBL + '(nodename, item, grade, desc, time, PRIMARY KEY (nodename, item))']
 
         for sql in init_sql:
             sql_rt = cls.sql_execute(sql)
 
             if "already exist" in sql_rt:
-
-                if cls.REGI_SYS_TBL in init_sql:
-                    continue
-
                 table_name = sql_rt.split()[1]
                 LOG.info("\'%s\' table already exist. Delete all tuple of this table...",
                          table_name)
@@ -75,6 +78,7 @@ class DB(object):
                 cls.sql_insert_nodes(CONF.openstack()['list'],
                                      str(CONF.openstack()['account']).split(':')[0])
 
+
     @classmethod
     def sql_insert_nodes(cls, node_list, username):
 
@@ -82,21 +86,54 @@ class DB(object):
             name, ip = str(node).split(':')
             LOG.info('Insert node [%s %s %s]', name, ip, username)
             sql = 'INSERT INTO ' + cls.NODE_INFO_TBL + \
-                  ' VALUES (\'' + name + '\',\'' + ip + '\',\'' + username + '\', \'none\', \'none\', -1, -1, -1, \'none\')'
+                  ' VALUES (\'' + name + '\',\'' + ip + '\',\'' + username + '\')'
             LOG.info('%s', sql)
             sql_rt = cls.sql_execute(sql)
             if sql_rt != 'SUCCESS':
-                LOG.info(" Node date insert fail \n%s", sql_rt)
+                LOG.info(" [NODE TABLE] Node data insert fail \n%s", sql_rt)
                 sys.exit(1)
 
+            # set status tbl
+            sql = 'INSERT INTO ' + cls.STATUS_TBL + \
+                  ' VALUES (\'' + name + '\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\')'
+            LOG.info('%s', sql)
+            sql_rt = cls.sql_execute(sql)
+            if sql_rt != 'SUCCESS':
+                LOG.info(" [STATUS TABLE] Node data insert fail \n%s", sql_rt)
+                sys.exit(1)
+
+            # set resource tbl
+            sql = 'INSERT INTO ' + cls.RESOURCE_TBL + ' VALUES (\'' + name + '\', -1, -1, -1)'
+            LOG.info('%s', sql)
+            sql_rt = cls.sql_execute(sql)
+            if sql_rt != 'SUCCESS':
+                LOG.info(" [RESOURCE TABLE] Node data insert fail \n%s", sql_rt)
+                sys.exit(1)
+
+            # add Alarm Items
+            for item in CONF.alarm()['item_list']:
+                LOG.info('Insert item [%s %s]', name, item)
+                sql = 'INSERT INTO ' + cls.EVENT_TBL + \
+                      ' VALUES (\'' + name + '\',\'' + item + '\',\'none\', \'none\', \'none\')'
+                LOG.info('%s', sql)
+                sql_rt = cls.sql_execute(sql)
+                if sql_rt != 'SUCCESS':
+                    LOG.info(" [ITEM TABLE] Item data insert fail \n%s", sql_rt)
+                    sys.exit(1)
+
     @classmethod
-    def sql_execute(cls, sql):
+    def sql_execute(cls, sql, conn = None):
         try:
-            with cls.connection() as conn:
+            if conn == None:
+                with cls.connection() as conn:
+                    conn.cursor().execute(sql)
+                    conn.commit()
+
+                conn.close()
+            else:
                 conn.cursor().execute(sql)
                 conn.commit()
 
-            conn.close()
             return 'SUCCESS'
         except sqlite3.OperationalError, err:
             LOG.error(err.message)

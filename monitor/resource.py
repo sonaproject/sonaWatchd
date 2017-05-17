@@ -105,12 +105,7 @@ def get_resource_usage(node_list, param):
         res_result[node_name] = {}
         if ping.lower() == 'ok':
             LOG.info("GET %s usage for %s", param, node_name)
-            if param == '':
-                res_result[node_name].update(get_cpu_usage(username, node_ip))
-                res_result[node_name].update(get_mem_usage(username, node_ip))
-                res_result[node_name].update(get_disk_usage(username, node_ip))
-            else:
-                res_result[node_name] = PARAM_MAP[param](username, node_ip)
+            res_result[node_name] = PARAM_MAP[param](username, node_ip)
         else:
             LOG.info("Can not get %s Usage... %s Network is NOK", param, node_name)
             res_result[node_name] = 'Net fail'

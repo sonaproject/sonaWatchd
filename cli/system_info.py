@@ -13,6 +13,9 @@ class SYS():
 
     pre_sys_info = ''
 
+    disconnect_flag = False
+    abnormal_flag = False
+
     @classmethod
     def set_sys_info(cls, sys_info):
         try:
@@ -26,8 +29,11 @@ class SYS():
             for key in sys_info:
                 dtl_list = {}
 
-                dtl_list['IP'] = sys_info[key]['IP']
-                dtl_list['APP'] = sys_info[key]['APP']
+                dtl_list['ping'] = sys_info[key]['ping']
+                dtl_list['app'] = sys_info[key]['app']
+                dtl_list['cpu'] = sys_info[key]['cpu']
+                dtl_list['memory'] = sys_info[key]['memory']
+                dtl_list['disk'] = sys_info[key]['disk']
 
                 cls.sys_list[key] = dtl_list
 
