@@ -102,21 +102,21 @@ class CLI():
 
     @staticmethod
     def parsingRet(result):
-        sys_info = json.loads(result)
+        try:
+            sys_info = json.loads(result)
 
-        command = sys_info['command']
-        result = sys_info['result']
-        param = sys_info['param']
+            command = sys_info['command']
+            result = sys_info['result']
+            param = sys_info['param']
 
-        if command == 'dis-resource':
             for sys in result:
                 sys_ret = str(result[sys])
                 if sys_ret.upper().endswith('FAIL'):
                     sys_ret = 'fail'
 
                 print '\t' + sys + '\t' + (str(param)).upper() + '\t' + sys_ret
-        else:
-            print 'content = ' + result
+        except:
+            LOG.exception_err_write()
 
     @classmethod
     def send_rest(cls, cmd):

@@ -34,6 +34,9 @@ class SYS():
                 dtl_list['cpu'] = sys_info[key]['cpu']
                 dtl_list['memory'] = sys_info[key]['memory']
                 dtl_list['disk'] = sys_info[key]['disk']
+                dtl_list['ovsdb'] = sys_info[key]['ovsdb']
+                dtl_list['of'] = sys_info[key]['of']
+                dtl_list['cluster'] = sys_info[key]['cluster']
 
                 cls.sys_list[key] = dtl_list
 

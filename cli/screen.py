@@ -215,16 +215,15 @@ class SCREEN():
     @classmethod
     def display_event(cls):
         try:
-
             sorted_list = sorted(SYS.sys_list.keys())
 
             title = ('   system'.ljust(13))
+            item_list = []
             for sys in sorted_list:
-                item_list = (dict)(SYS.sys_list[sys]).keys()
-
-                for item in item_list:
-                    title = title + item.ljust(10)
-                break
+                for item in (dict)(SYS.sys_list[sys]).keys():
+                    if not item in item_list:
+                        item_list.append(item)
+                        title = title + item.ljust(10)
 
             width = len(title)
 
@@ -237,9 +236,13 @@ class SCREEN():
 
             for sys in sorted_list:
                 line = ('   ' + sys).ljust(13)
-                status_list = (dict)(SYS.sys_list[sys]).values()
-                for status in status_list:
-                    line = line + status.ljust(10)
+
+                LOG.debug_log(str(item_list))
+                for item in item_list:
+                    if (dict)(SYS.sys_list[sys]).has_key(item):
+                        line = line + SYS.sys_list[sys][item].ljust(10)
+                    else:
+                        line = line + ('-').ljust(10)
                 print '|' + line + '|'
 
 

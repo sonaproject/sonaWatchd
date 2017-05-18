@@ -91,12 +91,17 @@ def unregi_url(url):
 
 def proc_dis_system(node, dummy):
     try:
-        nodes_info = get_node_list(node, 'nodename, ping, app, cpu, memory, disk', DB.STATUS_TBL)
+        nodes_info = get_node_list(node, 'nodename, ping, app, cpu, memory, disk, ovsdb, of, cluster', DB.STATUS_TBL)
 
         result = dict()
 
-        for nodename, ping, app, cpu, memory, disk in nodes_info:
-            result[nodename] = {'ping': ping, 'app': app, 'cpu': cpu, 'memory': memory, 'disk': disk}
+        for nodename, ping, app, cpu, memory, disk, ovsdb, of, cluster in nodes_info:
+            node_type = get_node_list(nodename, 'type')
+
+            if 'ONOS' in str(node_type).upper():
+                result[nodename] = {'ping': ping, 'app': app, 'cpu': cpu, 'memory': memory, 'disk': disk, 'ovsdb': ovsdb, 'of': of, 'cluster': cluster}
+            else:
+                result[nodename] = {'ping': ping, 'app': app, 'cpu': cpu, 'memory': memory, 'disk': disk}
 
         return result
     except:
@@ -107,8 +112,6 @@ def proc_dis_resource(node, param):
     res_result = dict()
 
     nodes_info = get_node_list(node, 'nodename, ' + param, DB.RESOURCE_TBL)
-
-    LOG.info('*****' + str(nodes_info))
 
     for nodename, value in nodes_info:
         if value < 0:
@@ -147,8 +150,18 @@ def proc_dis_node(system, param):
     pass
 
 
-def proc_dis_connection(system, param):
-    pass
+def proc_dis_connection(node, param):
+    res_result = dict()
+
+    nodes_info = get_node_list(node, 'nodename, ' + param, DB.CONNECTION_TBL)
+
+    for nodename, value in nodes_info:
+        if value < 0:
+            res_result[nodename] = 'FAIL'
+        else:
+            res_result[nodename] = value
+
+    return res_result
 
 
 def proc_dis_all(system, param):

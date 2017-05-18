@@ -6,7 +6,6 @@ import sys
 import resource
 import cmd_proc
 import requests
-import base64
 import json
 
 from datetime import datetime
@@ -22,7 +21,7 @@ def periodic(conn):
     LOG.info("Periodic checking...%s", str(CONF.watchdog()['check_system']))
 
     try:
-        node_list = cmd_proc.get_node_list('all', 'nodename, ip_addr, username')
+        node_list = cmd_proc.get_node_list('all', 'nodename, ip_addr, username, type')
 
         if not node_list:
             LOG.info("Not Exist Node data ...")
@@ -42,21 +41,28 @@ def periodic(conn):
 
         cur_info[nodename][item] = grade
 
-    for node_name, node_ip, user_name in node_list:
+    for node_name, node_ip, user_name, type in node_list:
         ping = net_check(node_ip)
         app = 'fail'
         cpu = '-1'
         mem = '-1'
         disk = '-1'
+        of_status = 'fail'
+        ovsdb_status = 'fail'
+        cluster_status = 'fail'
 
         if ping == 'ok':
-            if node_ip in str(CONF.onos()['list']):
+            if type.upper() == 'ONOS':
                 app = onos_app_check(node_ip)
-            elif node_ip in str(CONF.xos()['list']):
+
+                # check connection
+                of_status, ovsdb_status, cluster_status = onos_conn_check(conn, node_name, node_ip)
+
+            elif type.upper() == 'XOS':
                 app = xos_app_check(node_ip)
-            elif node_ip in str(CONF.swarm()['list']):
+            elif type.upper() == 'SWARM':
                 app = swarm_app_check(node_ip)
-            elif node_ip in str(CONF.openstack()['list']):
+            elif type.upper() == 'OPENSTACK':
                 app = openstack_app_check(node_ip)
 
             cpu = str(resource.get_cpu_usage(user_name, node_ip, True))
@@ -111,6 +117,9 @@ def periodic(conn):
                   ' disk = \'' + disk_grade + '\',' + \
                   ' ping = \'' + ping + '\',' + \
                   ' app = \'' + app + '\',' + \
+                  ' ovsdb = \'' + ovsdb_status + '\',' + \
+                  ' of = \'' + of_status + '\',' + \
+                  ' cluster = \'' + cluster_status + '\',' + \
                   ' time = \'' + str(datetime.now()) + '\'' + \
                   ' WHERE nodename = \'' + node_name + '\''
             LOG.info('Update Status info = ' + sql)
@@ -187,7 +196,6 @@ def net_check(node):
         else:
             return 'ok'
 
-
 def onos_app_check(node):
 
     app_rt = SshCommand.onos_ssh_exec(node, 'apps -a -s')
@@ -205,6 +213,57 @@ def onos_app_check(node):
         LOG.error("\'%s\' Application Check Error", node)
         return 'nok'
 
+def onos_conn_check(conn, node_name, node_ip):
+    try:
+        device_rt = SshCommand.onos_ssh_exec(node_ip, 'devices')
+        nodes_rt = SshCommand.onos_ssh_exec(node_ip, 'nodes')
+
+        str_ovsdb = ''
+        str_of = ''
+
+        if device_rt is not None:
+            of_status = 'ok'
+            ovsdb_status = 'ok'
+            for line in device_rt.splitlines():
+                if line.startswith('id=of'):
+                    str_of = str_of + line + '\n'
+                    if not (CONF.onos()['of'] in line):
+                        of_status = 'nok'
+                elif line.startswith('id=ovsdb'):
+                    str_ovsdb = str_ovsdb + line + '\n'
+                    if not (CONF.onos()['ovsdb'] in line):
+                        ovsdb_status = 'nok'
+        else:
+            LOG.error("\'%s\' Connection Check Error", node_ip)
+            of_status = 'fail'
+            ovsdb_status = 'fail'
+
+        if nodes_rt is not None:
+            cluster_status = 'ok'
+            for line in device_rt.splitlines():
+                if not (CONF.onos()['cluster'] in line):
+                    cluster_status = 'nok'
+        else:
+            LOG.error("\'%s\' Connection Check Error", node_ip)
+            cluster_status = 'fail'
+
+        try:
+            sql = 'UPDATE ' + DB.CONNECTION_TBL + \
+                  ' SET ovsdb = \'' + str_ovsdb + '\',' + \
+                  ' of = \'' + str_of + '\',' + \
+                  ' cluster = \'' + nodes_rt + '\'' \
+                  ' WHERE nodename = \'' + node_name + '\''
+            LOG.info('Update Resource info = ' + sql)
+
+            if DB.sql_execute(sql, conn) != 'SUCCESS':
+                LOG.error('DB Update Fail.')
+        except:
+            LOG.exception()
+
+        return of_status, ovsdb_status, cluster_status
+    except:
+        LOG.exception()
+        return 'fail', 'fail', 'fail'
 
 # TODO xos app check
 def xos_app_check(node):
