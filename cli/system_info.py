@@ -13,14 +13,12 @@ class SYS():
 
     pre_sys_info = ''
 
-    disconnect_flag = False
+    disconnect_type = 'default'
     abnormal_flag = False
 
     @classmethod
     def set_sys_info(cls, sys_info):
         try:
-            #{"command": "dis-resource", "system": "test", "param": "test", "result": "{'ONOS2': {'IP': 'ok', 'APP': 'nok'}, 'ONOS3': {'IP': 'ok', 'APP': 'nok'}, 'ONOS1': {'IP': 'ok', 'APP': 'nok'}}"}
-
             sys_info = json.loads(sys_info)
             sys_info = sys_info['result']
 
@@ -29,11 +27,8 @@ class SYS():
             for key in sys_info:
                 dtl_list = {}
 
-                dtl_list['ping'] = sys_info[key]['ping']
-                dtl_list['app'] = sys_info[key]['app']
-                dtl_list['cpu'] = sys_info[key]['cpu']
-                dtl_list['memory'] = sys_info[key]['memory']
-                dtl_list['disk'] = sys_info[key]['disk']
+                for item in (dict)(sys_info[key]).keys():
+                    dtl_list[item] = sys_info[key][item]
 
                 cls.sys_list[key] = dtl_list
 

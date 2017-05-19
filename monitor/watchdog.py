@@ -6,7 +6,6 @@ import sys
 import resource
 import cmd_proc
 import requests
-import base64
 import json
 
 from datetime import datetime
@@ -22,7 +21,7 @@ def periodic(conn):
     LOG.info("Periodic checking...%s", str(CONF.watchdog()['check_system']))
 
     try:
-        node_list = cmd_proc.get_node_list('all', 'nodename, ip_addr, username')
+        node_list = cmd_proc.get_node_list('all', 'nodename, ip_addr, username, type')
 
         if not node_list:
             LOG.info("Not Exist Node data ...")
@@ -42,67 +41,88 @@ def periodic(conn):
 
         cur_info[nodename][item] = grade
 
-    for node_name, node_ip, user_name in node_list:
+    for node_name, node_ip, user_name, type in node_list:
+        # check ping
         ping = net_check(node_ip)
+
         app = 'fail'
         cpu = '-1'
         mem = '-1'
         disk = '-1'
+        of_status = 'fail'
+        ovsdb_status = 'fail'
+        cluster_status = 'fail'
 
         if ping == 'ok':
-            if node_ip in str(CONF.onos()['list']):
-                app = onos_app_check(node_ip)
-            elif node_ip in str(CONF.xos()['list']):
-                app = xos_app_check(node_ip)
-            elif node_ip in str(CONF.swarm()['list']):
-                app = swarm_app_check(node_ip)
-            elif node_ip in str(CONF.openstack()['list']):
-                app = openstack_app_check(node_ip)
+            # check app
+            app = check_app(node_ip, type)
 
-            cpu = str(resource.get_cpu_usage(user_name, node_ip, True))
-            mem = str(resource.get_mem_usage(user_name, node_ip, True))
-            disk = str(resource.get_disk_usage(user_name, node_ip, True))
+            if type.upper() == 'ONOS':
+                # check connection
+                of_status, ovsdb_status, cluster_status = onos_conn_check(conn, node_name, node_ip)
 
-        try:
-            sql = 'UPDATE ' + DB.RESOURCE_TBL + \
-                  ' SET cpu = \'' + cpu + '\',' + \
-                  ' memory = \'' + mem + '\',' + \
-                  ' disk = \'' + disk + '\'' \
-                  ' WHERE nodename = \'' + node_name + '\''
-            LOG.info('Update Resource info = ' + sql)
-
-            if DB.sql_execute(sql, conn) != 'SUCCESS':
-                LOG.error('DB Update Fail.')
-        except:
-            LOG.exception()
+            # check resource
+            cpu, mem, disk = check_resource(conn, node_name, user_name, node_ip)
 
         # occur event (rest)
         # 1. ping check
+        LOG.info(node_name)
+        LOG.info(str(cur_info[node_name]))
         if cur_info[node_name]['ping'] != ping:
             occur_event(conn, node_name, 'ping', cur_info[node_name]['ping'], ping)
 
         # 2. app check
         if cur_info[node_name]['app'] != app:
-            occur_event(conn, node_name, 'app', cur_info[node_name]['app'], app)
+            if not is_monitor_item(type, 'app'):
+                app = '-'
+            else:
+                occur_event(conn, node_name, 'app', cur_info[node_name]['app'], app)
 
         # 3. resource check (CPU/MEM/DISK)
         cpu_grade = 'fail'
         if CONF.alarm().has_key('cpu'):
-            cpu_grade = get_grade('cpu', cpu)
-            if cur_info[node_name]['cpu'] != cpu_grade:
-                occur_event(conn, node_name, 'cpu', cur_info[node_name]['cpu'], cpu_grade)
+            if not is_monitor_item(type, 'cpu'):
+                cpu_grade = '-'
+            else:
+                cpu_grade = get_grade('cpu', cpu)
+                if cur_info[node_name]['cpu'] != cpu_grade:
+                    occur_event(conn, node_name, 'cpu', cur_info[node_name]['cpu'], cpu_grade)
+
 
         mem_grade = 'fail'
         if CONF.alarm().has_key('memory'):
-            mem_grade = get_grade('memory', mem)
-            if cur_info[node_name]['memory'] != mem_grade:
-                occur_event(conn, node_name, 'memory', cur_info[node_name]['memory'], mem_grade)
+            if not is_monitor_item(type, 'memory'):
+                mem_grade = '-'
+            else:
+                mem_grade = get_grade('memory', mem)
+                if cur_info[node_name]['memory'] != mem_grade:
+                    occur_event(conn, node_name, 'memory', cur_info[node_name]['memory'], mem_grade)
 
         disk_grade = 'fail'
         if CONF.alarm().has_key('disk'):
-            disk_grade = get_grade('disk', disk)
-            if cur_info[node_name]['disk'] != disk_grade:
-                occur_event(conn, node_name, 'disk', cur_info[node_name]['disk'], disk_grade)
+            if not is_monitor_item(type, 'disk'):
+                disk_grade = '-'
+            else:
+                disk_grade = get_grade('disk', disk)
+                if cur_info[node_name]['disk'] != disk_grade:
+                    occur_event(conn, node_name, 'disk', cur_info[node_name]['disk'], disk_grade)
+
+        # 4. Connection check (ovsdb, of, cluster) (ONOS)
+        if type.upper() == 'ONOS':
+            if not is_monitor_item(type, 'ovsdb'):
+                ovsdb_status = '-'
+            elif cur_info[node_name]['ovsdb'] != ovsdb_status:
+                occur_event(conn, node_name, 'ovsdb', cur_info[node_name]['ovsdb'], ovsdb_status)
+
+            if not is_monitor_item(type, 'of'):
+                of_status = '-'
+            elif cur_info[node_name]['of'] != of_status:
+                occur_event(conn, node_name, 'of', cur_info[node_name]['of'], of_status)
+
+            if not is_monitor_item(type, 'cluster'):
+                cluster_status = '-'
+            elif cur_info[node_name]['cluster'] != cluster_status:
+                occur_event(conn, node_name, 'cluster', cur_info[node_name]['cluster'], cluster_status)
 
         try:
             sql = 'UPDATE ' + DB.STATUS_TBL + \
@@ -111,6 +131,9 @@ def periodic(conn):
                   ' disk = \'' + disk_grade + '\',' + \
                   ' ping = \'' + ping + '\',' + \
                   ' app = \'' + app + '\',' + \
+                  ' ovsdb = \'' + ovsdb_status + '\',' + \
+                  ' of = \'' + of_status + '\',' + \
+                  ' cluster = \'' + cluster_status + '\',' + \
                   ' time = \'' + str(datetime.now()) + '\'' + \
                   ' WHERE nodename = \'' + node_name + '\''
             LOG.info('Update Status info = ' + sql)
@@ -166,8 +189,8 @@ def push_event(node_name, item, grade, desc, time):
         try:
             requests.post(url, headers=header, data=req_body_json, timeout = 2)
         except:
-            # rest timeout
-            LOG.exception()
+            # Push event does not respond
+            pass
 
 
 def net_check(node):
@@ -187,6 +210,17 @@ def net_check(node):
         else:
             return 'ok'
 
+def check_app(node, type):
+    if type.upper() == 'ONOS':
+        app = onos_app_check(node)
+    elif type.upper() == 'XOS':
+        app = xos_app_check(node)
+    elif type.upper() == 'SWARM':
+        app = swarm_app_check(node)
+    elif type.upper() == 'OPENSTACK':
+        app = openstack_app_check(node)
+
+    return app
 
 def onos_app_check(node):
 
@@ -205,6 +239,81 @@ def onos_app_check(node):
         LOG.error("\'%s\' Application Check Error", node)
         return 'nok'
 
+def check_resource(conn, node_name, user_name, node_ip):
+    try:
+        cpu = str(resource.get_cpu_usage(user_name, node_ip, True))
+        mem = str(resource.get_mem_usage(user_name, node_ip, True))
+        disk = str(resource.get_disk_usage(user_name, node_ip, True))
+
+        try:
+            sql = 'UPDATE ' + DB.RESOURCE_TBL + \
+                  ' SET cpu = \'' + cpu + '\',' + \
+                  ' memory = \'' + mem + '\',' + \
+                  ' disk = \'' + disk + '\'' \
+                                        ' WHERE nodename = \'' + node_name + '\''
+            LOG.info('Update Resource info = ' + sql)
+
+            if DB.sql_execute(sql, conn) != 'SUCCESS':
+                LOG.error('DB Update Fail.')
+        except:
+            LOG.exception()
+
+        return cpu, mem, disk
+    except:
+        LOG.exception()
+        return -1, -1, -1
+
+def onos_conn_check(conn, node_name, node_ip):
+    try:
+        device_rt = SshCommand.onos_ssh_exec(node_ip, 'devices')
+        nodes_rt = SshCommand.onos_ssh_exec(node_ip, 'nodes')
+
+        str_ovsdb = ''
+        str_of = ''
+
+        if device_rt is not None:
+            of_status = 'ok'
+            ovsdb_status = 'ok'
+            for line in device_rt.splitlines():
+                if line.startswith('id=of'):
+                    str_of = str_of + line + '\n'
+                    if not (CONF.onos()['of'] in line):
+                        of_status = 'nok'
+                elif line.startswith('id=ovsdb'):
+                    str_ovsdb = str_ovsdb + line + '\n'
+                    if not (CONF.onos()['ovsdb'] in line):
+                        ovsdb_status = 'nok'
+        else:
+            LOG.error("\'%s\' Connection Check Error", node_ip)
+            of_status = 'fail'
+            ovsdb_status = 'fail'
+
+        if nodes_rt is not None:
+            cluster_status = 'ok'
+            for line in nodes_rt.splitlines():
+                if not (CONF.onos()['cluster'] in line):
+                    cluster_status = 'nok'
+        else:
+            LOG.error("\'%s\' Connection Check Error", node_ip)
+            cluster_status = 'fail'
+
+        try:
+            sql = 'UPDATE ' + DB.CONNECTION_TBL + \
+                  ' SET ovsdb = \'' + str_ovsdb + '\',' + \
+                  ' of = \'' + str_of + '\',' + \
+                  ' cluster = \'' + nodes_rt + '\'' \
+                  ' WHERE nodename = \'' + node_name + '\''
+            LOG.info('Update Resource info = ' + sql)
+
+            if DB.sql_execute(sql, conn) != 'SUCCESS':
+                LOG.error('DB Update Fail.')
+        except:
+            LOG.exception()
+
+        return of_status, ovsdb_status, cluster_status
+    except:
+        LOG.exception()
+        return 'fail', 'fail', 'fail'
 
 # TODO xos app check
 def xos_app_check(node):
@@ -220,4 +329,18 @@ def swarm_app_check(node):
 def openstack_app_check(node):
     return 'nok'
 
+def is_monitor_item(node_type, item_type):
+    conf_dict = CONF_MAP[node_type.upper()]()
 
+    if conf_dict.has_key('alarm_off_list'):
+        for item in (CONF_MAP[node_type.upper()]())['alarm_off_list']:
+
+            if ':' + item_type in item:
+                return False
+
+    return True
+
+CONF_MAP = {'ONOS': CONF.onos,
+            'XOS': CONF.xos,
+            'SWARM': CONF.swarm,
+            'OPENSTACK': CONF.openstack}

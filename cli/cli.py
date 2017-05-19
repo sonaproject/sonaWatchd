@@ -102,21 +102,50 @@ class CLI():
 
     @staticmethod
     def parsingRet(result):
-        sys_info = json.loads(result)
+        try:
+            sys_info = json.loads(result)
 
-        command = sys_info['command']
-        result = sys_info['result']
-        param = sys_info['param']
+            command = sys_info['command']
+            result = sys_info['result']
+            param = sys_info['param']
 
-        if command == 'dis-resource':
-            for sys in result:
-                sys_ret = str(result[sys])
-                if sys_ret.upper().endswith('FAIL'):
-                    sys_ret = 'fail'
+            if (dict)(result).has_key('fail'):
+                print result['fail']
+                return
 
-                print '\t' + sys + '\t' + (str(param)).upper() + '\t' + sys_ret
-        else:
-            print 'content = ' + result
+            sorted_list = sorted((dict)(result).keys())
+
+            try:
+                if command == 'dis-resource':
+                    for sys in sorted_list:
+                        sys_ret = str(result[sys])
+                        if sys_ret.upper().endswith('FAIL'):
+                            sys_ret = 'fail'
+
+                        print '\t' + sys + '\t' + (str(param)).upper() + '\t' + sys_ret
+                elif command == 'dis-connection':
+                    for sys in sorted_list:
+                        sys_ret = str(result[sys])
+
+                        if ', Inc' in sys_ret:
+                            sys_ret = sys_ret.replace(', Inc', '. Inc')
+
+                        print '\t[' + sys + ']'
+
+                        for line in sys_ret.splitlines():
+                            for item in line.split(','):
+                                item = item.strip()
+
+                                if item.startswith('id='):
+                                    print '\t  ' + item + ''
+                                else:
+                                    print '\t     - ' + item
+                        print '\n'
+            except:
+                print '[parser err] return = ' + result
+
+        except:
+            LOG.exception_err_write()
 
     @classmethod
     def send_rest(cls, cmd):

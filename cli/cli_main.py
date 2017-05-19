@@ -55,13 +55,14 @@ def main():
     # Start RESTful server for event
     evt = multiprocessing.Event()
     disconnect_evt = multiprocessing.Event()
+    rest_evt = multiprocessing.Event()
 
     # create listen event thread
     evt_thread = threading.Thread(target=listen_evt, args=(evt,))
     evt_thread.daemon = False
     evt_thread.start()
 
-    conn_evt_thread = threading.Thread(target=listen_disconnect_evt, args=(disconnect_evt,))
+    conn_evt_thread = threading.Thread(target=listen_disconnect_evt, args=(disconnect_evt, rest_evt))
     conn_evt_thread.daemon = False
     conn_evt_thread.start()
 
@@ -93,7 +94,6 @@ def main():
     except:
         print "Cannot connect rest server."
         print 'Processing shutdown...'
-        CLI.send_regi('unregi')
         SYS.set_sys_thr_flag(False)
         conn_evt_thread.join()
         evt_thread.join()
@@ -103,7 +103,8 @@ def main():
         print "Rest server does not respond to the request."
         print "code = " + str(res_code)
         print 'Processing shutdown...'
-        CLI.send_regi('unregi')
+        if not SYS.disconnect_type == 'disconnect':
+            CLI.send_regi('unregi')
         SYS.set_sys_thr_flag(False)
         conn_evt_thread.join()
         evt_thread.join()
@@ -135,7 +136,8 @@ def main():
 
     # exit
     print 'Processing shutdown...'
-    CLI.send_regi('unregi')
+    if not SYS.disconnect_type == 'disconnect':
+        CLI.send_regi('unregi')
     SYS.set_sys_thr_flag(False)
     conn_evt_thread.join()
     evt_thread.join()
@@ -149,7 +151,7 @@ def select_menu():
         SCREEN.set_screen()
 
         SCREEN.draw_system(menu_list)
-        SCREEN.draw_event(SYS.disconnect_flag)
+        SCREEN.draw_event(SYS.disconnect_type)
         SCREEN.draw_menu(menu_list, selected_menu_no)
 
         SYS.set_sys_redraw_flag(True)
@@ -239,7 +241,7 @@ def select_menu():
 
 
             SCREEN.draw_system(menu_list)
-            SCREEN.draw_event(SYS.disconnect_flag)
+            SCREEN.draw_event(SYS.disconnect_type)
             SCREEN.draw_menu(menu_list, selected_menu_no)
             SCREEN.refresh_screen()
 
@@ -251,14 +253,23 @@ def select_menu():
     except:
         LOG.exception_err_write()
 
-def listen_disconnect_evt(evt):
+def listen_disconnect_evt(evt, rest_evt):
     while SYS.get_sys_thr_flag():
         evt.wait(3)
 
         if evt.is_set():
-            SYS.disconnect_flag = True
-            SCREEN.draw_event(SYS.disconnect_flag)
             evt.clear()
+            SYS.disconnect_type = 'disconnect'
+            SCREEN.draw_event(SYS.disconnect_type)
+
+        rest_evt.wait(3)
+
+        if rest_evt.is_set():
+            rest_evt.clear()
+            SYS.disconnect_type = 'rest_warn'
+            SCREEN.draw_event(SYS.disconnect_type)
+
+        time.sleep(1)
 
 def listen_evt(evt):
     while SYS.get_sys_thr_flag():
@@ -269,14 +280,16 @@ def listen_evt(evt):
             # system check
             check_system()
 
+        time.sleep(1)
+
 def check_system():
     try:
         # inquiry onos info
         res_code, sys_info = CLI.req_sys_info()
 
         if res_code != 200:
-            SYS.disconnect_flag = True
-            SCREEN.draw_event(SYS.disconnect_flag)
+            SYS.disconnect_type = 'disconnect'
+            SCREEN.draw_event(SYS.disconnect_type)
             LOG.debug_log(
                 '[SYSTEM_CHECK_THREAD] Rest server does not respond to the request. RES_CODE = ' + str(res_code))
             return
@@ -286,7 +299,7 @@ def check_system():
         if SYS.get_sys_redraw_flag():
             if ret is True:
                 SCREEN.draw_system(menu_list)
-                SCREEN.draw_event(SYS.disconnect_flag)
+                SCREEN.draw_event(SYS.disconnect_type)
             else:
                 SCREEN.draw_refresh_time(menu_list)
     except:

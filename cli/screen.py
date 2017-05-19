@@ -172,7 +172,7 @@ class SCREEN():
         return box_type
 
     @classmethod
-    def draw_event(cls, disconnect = False):
+    def draw_event(cls, type = 'default'):
         try:
             warn_color = curses.color_pair(3)
 
@@ -183,8 +183,10 @@ class SCREEN():
 
             box_event.addstr(0, 22, ' EVENT ', normalText)
 
-            if disconnect:
+            if type == 'disconnect':
                 box_event.addstr(1, 2, '[Server shutdown] check server and restart', warn_color)
+            elif type == 'rest_warn':
+                box_event.addstr(1, 2, '[Rest failure] check client and restart', warn_color)
             else:
                 # if occur event
                 if SYS.abnormal_flag:
@@ -215,16 +217,15 @@ class SCREEN():
     @classmethod
     def display_event(cls):
         try:
-
             sorted_list = sorted(SYS.sys_list.keys())
 
             title = ('   system'.ljust(13))
+            item_list = []
             for sys in sorted_list:
-                item_list = (dict)(SYS.sys_list[sys]).keys()
-
-                for item in item_list:
-                    title = title + item.ljust(10)
-                break
+                for item in (dict)(SYS.sys_list[sys]).keys():
+                    if not item in item_list:
+                        item_list.append(item)
+                        title = title + item.ljust(10)
 
             width = len(title)
 
@@ -237,9 +238,13 @@ class SCREEN():
 
             for sys in sorted_list:
                 line = ('   ' + sys).ljust(13)
-                status_list = (dict)(SYS.sys_list[sys]).values()
-                for status in status_list:
-                    line = line + status.ljust(10)
+
+                LOG.debug_log(str(item_list))
+                for item in item_list:
+                    if (dict)(SYS.sys_list[sys]).has_key(item):
+                        line = line + SYS.sys_list[sys][item].ljust(10)
+                    else:
+                        line = line + ('-').ljust(10)
                 print '|' + line + '|'
 
 
@@ -269,7 +274,7 @@ class SCREEN():
                     if (status == 'none'):
                         str_status = 'loading'
                         break
-                    elif not (status == 'ok' or status == 'normal'):
+                    elif not (status == 'ok' or status == 'normal' or status == '-'):
                         str_status = 'NOK'
                         break
 
@@ -342,7 +347,7 @@ class SCREEN():
                     if (status == 'none'):
                         str_status = 'loading'
                         break
-                    elif not (status == 'ok' or status == 'normal'):
+                    elif not (status == 'ok' or status == 'normal' or status == '-'):
                         str_status = 'NOK'
                         alarm_flag = True
                         break
