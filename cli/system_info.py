@@ -13,7 +13,7 @@ class SYS():
 
     pre_sys_info = ''
 
-    disconnect_flag = False
+    disconnect_type = 'default'
     abnormal_flag = False
 
     @classmethod

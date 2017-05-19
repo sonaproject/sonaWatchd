@@ -189,8 +189,8 @@ def push_event(node_name, item, grade, desc, time):
         try:
             requests.post(url, headers=header, data=req_body_json, timeout = 2)
         except:
-            # rest timeout
-            LOG.exception()
+            # Push event does not respond
+            pass
 
 
 def net_check(node):

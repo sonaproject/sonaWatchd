@@ -172,7 +172,7 @@ class SCREEN():
         return box_type
 
     @classmethod
-    def draw_event(cls, disconnect = False):
+    def draw_event(cls, type = 'default'):
         try:
             warn_color = curses.color_pair(3)
 
@@ -183,8 +183,10 @@ class SCREEN():
 
             box_event.addstr(0, 22, ' EVENT ', normalText)
 
-            if disconnect:
+            if type == 'disconnect':
                 box_event.addstr(1, 2, '[Server shutdown] check server and restart', warn_color)
+            elif type == 'rest_warn':
+                box_event.addstr(1, 2, '[Rest failure] check client and restart', warn_color)
             else:
                 # if occur event
                 if SYS.abnormal_flag:
