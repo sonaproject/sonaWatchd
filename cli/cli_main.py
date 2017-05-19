@@ -55,6 +55,7 @@ def main():
     # Start RESTful server for event
     evt = multiprocessing.Event()
     disconnect_evt = multiprocessing.Event()
+    rest_evt = multiprocessing.Event()
 
     # create listen event thread
     evt_thread = threading.Thread(target=listen_evt, args=(evt,))
@@ -93,7 +94,6 @@ def main():
     except:
         print "Cannot connect rest server."
         print 'Processing shutdown...'
-        CLI.send_regi('unregi')
         SYS.set_sys_thr_flag(False)
         conn_evt_thread.join()
         evt_thread.join()
@@ -103,7 +103,8 @@ def main():
         print "Rest server does not respond to the request."
         print "code = " + str(res_code)
         print 'Processing shutdown...'
-        CLI.send_regi('unregi')
+        if not SYS.disconnect_flag:
+            CLI.send_regi('unregi')
         SYS.set_sys_thr_flag(False)
         conn_evt_thread.join()
         evt_thread.join()
@@ -135,7 +136,8 @@ def main():
 
     # exit
     print 'Processing shutdown...'
-    CLI.send_regi('unregi')
+    if not SYS.disconnect_flag:
+        CLI.send_regi('unregi')
     SYS.set_sys_thr_flag(False)
     conn_evt_thread.join()
     evt_thread.join()
@@ -256,9 +258,9 @@ def listen_disconnect_evt(evt):
         evt.wait(3)
 
         if evt.is_set():
+            evt.clear()
             SYS.disconnect_flag = True
             SCREEN.draw_event(SYS.disconnect_flag)
-            evt.clear()
 
 def listen_evt(evt):
     while SYS.get_sys_thr_flag():

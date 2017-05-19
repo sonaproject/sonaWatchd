@@ -272,7 +272,7 @@ class SCREEN():
                     if (status == 'none'):
                         str_status = 'loading'
                         break
-                    elif not (status == 'ok' or status == 'normal'):
+                    elif not (status == 'ok' or status == 'normal' or status == '-'):
                         str_status = 'NOK'
                         break
 
@@ -345,7 +345,7 @@ class SCREEN():
                     if (status == 'none'):
                         str_status = 'loading'
                         break
-                    elif not (status == 'ok' or status == 'normal'):
+                    elif not (status == 'ok' or status == 'normal' or status == '-'):
                         str_status = 'NOK'
                         alarm_flag = True
                         break

@@ -8,7 +8,6 @@ import sqlite3
 from sona_log import LOG
 from config import CONF
 
-
 class DB(object):
     NODE_INFO_TBL = 't_nodes'
     REGI_SYS_TBL = 't_regi'
@@ -16,6 +15,8 @@ class DB(object):
     STATUS_TBL = 't_status'
     RESOURCE_TBL = 't_resource'
     CONNECTION_TBL = 't_connection'
+
+    item_list = 'ping, app, cpu, memory, disk, ovsdb, of, cluster'
 
     def __init__(self):
         self._conn = self.connection()
@@ -44,7 +45,7 @@ class DB(object):
             init_sql = ['CREATE TABLE ' + cls.NODE_INFO_TBL +
                             '(nodename text primary key, ip_addr, username, type)',
                         'CREATE TABLE ' + cls.STATUS_TBL +
-                        '(nodename text primary key, ping, app, cpu, memory, disk, ovsdb, of, cluster, time)',
+                        '(nodename text primary key, ' + cls.item_list + ', time)',
                         'CREATE TABLE ' + cls.RESOURCE_TBL + '(nodename text primary key, cpu real, memory real, disk real)',
                         'CREATE TABLE ' + cls.REGI_SYS_TBL + '(url text primary key, auth)',
                         'CREATE TABLE ' + cls.CONNECTION_TBL + '(nodename text primary key, ovsdb, of, cluster)',
@@ -68,18 +69,8 @@ class DB(object):
 
             LOG.info('Insert nodes information ...')
             for node_type in CONF.watchdog()['check_system']:
-                if str(node_type).lower() == 'onos':
-                    cls.sql_insert_nodes(CONF.onos()['list'],
-                                         str(CONF.onos()['account']).split(':')[0], node_type)
-                elif str(node_type).lower() == 'xos':
-                    cls.sql_insert_nodes(CONF.xos()['list'],
-                                         str(CONF.xos()['account']).split(':')[0], node_type)
-                elif str(node_type).lower() == 'swarm':
-                    cls.sql_insert_nodes(CONF.swarm()['list'],
-                                         str(CONF.swarm()['account']).split(':')[0], node_type)
-                elif str(node_type).lower() == 'openstack':
-                    cls.sql_insert_nodes(CONF.openstack()['list'],
-                                         str(CONF.openstack()['account']).split(':')[0], node_type)
+                cls.sql_insert_nodes((CONF_MAP[node_type.upper()]())['list'],
+                                     str((CONF_MAP[node_type.upper()]())['account']).split(':')[0], node_type)
         except:
             LOG.exception()
 
@@ -106,6 +97,17 @@ class DB(object):
                 LOG.info(" [STATUS TABLE] Node data insert fail \n%s", sql_rt)
                 sys.exit(1)
 
+            # add Alarm Items
+            for item in cls.item_list.replace(' ', '').split(','):
+                LOG.info('Insert item [%s %s]', name, item)
+                sql = 'INSERT INTO ' + cls.EVENT_TBL + \
+                      ' VALUES (\'' + name + '\',\'' + item + '\',\'none\', \'none\', \'none\')'
+                LOG.info('%s', sql)
+                sql_rt = cls.sql_execute(sql)
+                if sql_rt != 'SUCCESS':
+                    LOG.info(" [ITEM TABLE] Item data insert fail \n%s", sql_rt)
+                    sys.exit(1)
+
             # set resource tbl
             sql = 'INSERT INTO ' + cls.RESOURCE_TBL + ' VALUES (\'' + name + '\', -1, -1, -1)'
             LOG.info('%s', sql)
@@ -114,24 +116,13 @@ class DB(object):
                 LOG.info(" [RESOURCE TABLE] Node data insert fail \n%s", sql_rt)
                 sys.exit(1)
 
+            # set connection tbl
             if type.upper() == 'ONOS':
-                # set connection tbl
                 sql = 'INSERT INTO ' + cls.CONNECTION_TBL + ' VALUES (\'' + name + '\', \'none\', \'none\', \'none\')'
                 LOG.info('%s', sql)
                 sql_rt = cls.sql_execute(sql)
                 if sql_rt != 'SUCCESS':
                     LOG.info(" [CONNECTION TABLE] Node data insert fail \n%s", sql_rt)
-                    sys.exit(1)
-
-            # add Alarm Items
-            for item in CONF.alarm()['item_list']:
-                LOG.info('Insert item [%s %s]', name, item)
-                sql = 'INSERT INTO ' + cls.EVENT_TBL + \
-                      ' VALUES (\'' + name + '\',\'' + item + '\',\'none\', \'none\', \'none\')'
-                LOG.info('%s', sql)
-                sql_rt = cls.sql_execute(sql)
-                if sql_rt != 'SUCCESS':
-                    LOG.info(" [ITEM TABLE] Item data insert fail \n%s", sql_rt)
                     sys.exit(1)
 
     @classmethod
@@ -155,5 +146,9 @@ class DB(object):
             LOG.exception()
             return 'FAIL'
 
-
 DB_CONN = DB().connection()
+
+CONF_MAP = {'ONOS': CONF.onos,
+            'XOS': CONF.xos,
+            'SWARM': CONF.swarm,
+            'OPENSTACK': CONF.openstack}

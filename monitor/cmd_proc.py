@@ -91,7 +91,7 @@ def unregi_url(url):
 
 def proc_dis_system(node, dummy):
     try:
-        nodes_info = get_node_list(node, 'nodename, ping, app, cpu, memory, disk, ovsdb, of, cluster', DB.STATUS_TBL)
+        nodes_info = get_node_list(node, 'nodename, ' + DB.item_list, DB.STATUS_TBL)
 
         result = dict()
 
@@ -109,10 +109,12 @@ def proc_dis_system(node, dummy):
         return {'Result': 'FAIL'}
 
 def proc_dis_resource(node, param):
-    res_result = dict()
-
     nodes_info = get_node_list(node, 'nodename, ' + param, DB.RESOURCE_TBL)
 
+    if len(nodes_info) == 0:
+        return {'fail': 'This is not a command on the target system.'}
+
+    res_result = dict()
     for nodename, value in nodes_info:
         if value < 0:
             res_result[nodename] = 'FAIL'
@@ -151,12 +153,14 @@ def proc_dis_node(system, param):
 
 
 def proc_dis_connection(node, param):
-    res_result = dict()
-
     nodes_info = get_node_list(node, 'nodename, ' + param, DB.CONNECTION_TBL)
 
+    if len(nodes_info) == 0:
+        return {'fail': 'This is not a command on the target system.'}
+
+    res_result = dict()
     for nodename, value in nodes_info:
-        if value < 0:
+        if value == 'none':
             res_result[nodename] = 'FAIL'
         else:
             res_result[nodename] = value

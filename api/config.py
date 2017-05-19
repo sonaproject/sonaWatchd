@@ -80,11 +80,14 @@ class ConfReader:
         value = dict()
         try:
             value['list'] = self.__list_opt(self.conf_map['ONOS']['list'])
-            value['app_list'] = self.__list_opt(self.conf_map['ONOS']['app_list'])
             value['account'] = str(self.conf_map['ONOS']['account'])
+            value['app_list'] = self.__list_opt(self.conf_map['ONOS']['app_list'])
             value['ovsdb'] = str(self.conf_map['ONOS']['ovsdb'])
             value['of'] = str(self.conf_map['ONOS']['of'])
             value['cluster'] = str(self.conf_map['ONOS']['cluster'])
+
+            if self.config.has_option('ONOS', 'alarm_off_list'):
+                value['alarm_off_list'] = self.__list_opt(self.conf_map['ONOS']['alarm_off_list'])
 
             return value
         except KeyError as KE:
@@ -96,6 +99,9 @@ class ConfReader:
             value['list'] = self.__list_opt(self.conf_map['XOS']['list'])
             value['account'] = str(self.conf_map['XOS']['account'])
 
+            if self.config.has_option('XOS', 'alarm_off_list'):
+                value['alarm_off_list'] = self.__list_opt(self.conf_map['XOS']['alarm_off_list'])
+
             return value
         except KeyError as KE:
             return dict({'fail': KE})
@@ -103,8 +109,11 @@ class ConfReader:
     def swarm(self):
         value = dict()
         try:
-            value['list'] = self.__list_opt(self.conf_map['swarm']['list'])
+            value['list'] = self.__list_opt(self.conf_map['SWARM']['list'])
             value['account'] = str(self.conf_map['SWARM']['account'])
+
+            if self.config.has_option('SWARM', 'alarm_off_list'):
+                value['alarm_off_list'] = self.__list_opt(self.conf_map['SWARM']['alarm_off_list'])
 
             return value
         except KeyError as KE:
@@ -116,6 +125,9 @@ class ConfReader:
             value['list'] = self.__list_opt(self.conf_map['OPENSTACK']['list'])
             value['account'] = str(self.conf_map['OPENSTACK']['account'])
 
+            if self.config.has_option('OPENSTACK', 'alarm_off_list'):
+                value['alarm_off_list'] = self.__list_opt(self.conf_map['OPENSTACK']['alarm_off_list'])
+
             return value
         except KeyError as KE:
             return dict({'fail': KE})
@@ -123,7 +135,6 @@ class ConfReader:
     def alarm(self):
         value = dict()
         try:
-            value['item_list'] = self.__list_opt(self.conf_map['ALARM']['item_list'])
             value['cpu'] = self.__list_opt(self.conf_map['ALARM']['cpu'])
             value['memory'] = self.__list_opt(self.conf_map['ALARM']['memory'])
             value['disk'] = self.__list_opt(self.conf_map['ALARM']['disk'])
