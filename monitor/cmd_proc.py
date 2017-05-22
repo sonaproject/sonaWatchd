@@ -1,6 +1,6 @@
 from datetime import datetime
-import monitor.resource as res
 
+from api.sbapi import SshCommand
 from api.sona_log import LOG
 from api.watcherdb import DB
 
@@ -128,8 +128,35 @@ def proc_dis_onos(system, param):
     pass
 
 
-def proc_dis_log(system, param):
-    pass
+def proc_dis_log(node, param):
+    cmd = 'ld'
+
+    LOG.info('@@param = ' + param)
+
+    if param == 'debug':
+        cmd = 'ld -l DEBUG'
+    elif param == 'info':
+        cmd = 'ld -l INFO'
+    elif param == 'error':
+        cmd = 'ld -l ERROR'
+    elif param == 'exception':
+        cmd = 'log:exception-display'
+
+    LOG.info('@@cmd = ' + cmd)
+
+    nodes_info = get_node_list(node, 'nodename, ip_addr, type')
+
+    res_result = dict()
+    for node_name, ip, type in nodes_info:
+        if type.upper() == 'ONOS':
+            log_crt = SshCommand.onos_ssh_exec(ip, cmd)
+
+            if log_crt is not None:
+                res_result[node_name] = log_crt
+            else:
+                res_result[node_name] = 'FAIL'
+
+    return res_result
 
 
 def proc_dis_vrouter(system, param):

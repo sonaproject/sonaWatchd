@@ -123,6 +123,14 @@ class CLI():
                             sys_ret = 'fail'
 
                         print '\t' + sys + '\t' + (str(param)).upper() + '\t' + sys_ret
+                elif command == 'dis-log':
+                    for sys in sorted_list:
+                        sys_ret = str(result[sys])
+                        if sys_ret.upper().endswith('FAIL'):
+                            sys_ret = 'fail'
+
+                        print '[' + sys + ']'
+                        print sys_ret
                 elif command == 'dis-connection':
                     for sys in sorted_list:
                         sys_ret = str(result[sys])

@@ -68,7 +68,7 @@ def main():
 
     try:
         # create rest server process
-        cli_rest.rest_server_start(evt, disconnect_evt)
+        cli_rest.rest_server_start(evt, disconnect_evt, rest_evt)
     except:
         print 'Rest Server failed to start'
         print 'Processing shutdown...'
@@ -253,6 +253,7 @@ def select_menu():
     except:
         LOG.exception_err_write()
 
+
 def listen_disconnect_evt(evt, rest_evt):
     while SYS.get_sys_thr_flag():
         evt.wait(3)
@@ -270,6 +271,7 @@ def listen_disconnect_evt(evt, rest_evt):
             SCREEN.draw_event(SYS.disconnect_type)
 
         time.sleep(1)
+
 
 def listen_evt(evt):
     while SYS.get_sys_thr_flag():
