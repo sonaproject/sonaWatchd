@@ -123,7 +123,7 @@ class CLI():
                             sys_ret = 'fail'
 
                         print '\t' + sys + '\t' + (str(param)).upper() + '\t' + sys_ret
-                elif command == 'dis-log':
+                elif command == 'dis-log' or command == 'dis-onos':
                     for sys in sorted_list:
                         sys_ret = str(result[sys])
                         if sys_ret.upper().endswith('FAIL'):

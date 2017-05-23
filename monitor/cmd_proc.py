@@ -95,11 +95,11 @@ def proc_dis_system(node, dummy):
 
         result = dict()
 
-        for nodename, ping, app, cpu, memory, disk, ovsdb, of, cluster in nodes_info:
+        for nodename, ping, app, web, cpu, memory, disk, ovsdb, of, cluster in nodes_info:
             node_type = get_node_list(nodename, 'type')
 
             if 'ONOS' in str(node_type).upper():
-                result[nodename] = {'ping': ping, 'app': app, 'cpu': cpu, 'memory': memory, 'disk': disk, 'ovsdb': ovsdb, 'of': of, 'cluster': cluster}
+                result[nodename] = {'ping': ping, 'app': app, 'web': web, 'cpu': cpu, 'memory': memory, 'disk': disk, 'ovsdb': ovsdb, 'of': of, 'cluster': cluster}
             else:
                 result[nodename] = {'ping': ping, 'app': app, 'cpu': cpu, 'memory': memory, 'disk': disk}
 
@@ -109,7 +109,7 @@ def proc_dis_system(node, dummy):
         return {'Result': 'FAIL'}
 
 def proc_dis_resource(node, param):
-    nodes_info = get_node_list(node, 'nodename, ' + param, DB.RESOURCE_TBL)
+    nodes_info = get_node_list(node, 'nodename, applist' + param, DB.RESOURCE_TBL)
 
     if len(nodes_info) == 0:
         return {'fail': 'This is not a command on the target system.'}
@@ -124,8 +124,28 @@ def proc_dis_resource(node, param):
     return res_result
 
 
-def proc_dis_onos(system, param):
-    pass
+def proc_dis_onos(node, param):
+    if param == 'app':
+        nodes_info = get_node_list(node, 'nodename, type, applist', DB.APP_TBL)
+
+    if param == 'web':
+        nodes_info = get_node_list(node, 'nodename, type, weblist', DB.APP_TBL)
+
+    is_exist = False
+    res_result = dict()
+    for nodename, type, list in nodes_info:
+        if type.upper() == 'ONOS':
+            if list == 'fail' or list == 'none':
+                res_result[nodename] = 'FAIL'
+            else:
+                res_result[nodename] = list
+
+            is_exist = True
+
+    if is_exist:
+        return res_result
+    else:
+        return {'fail': 'This is not a command on the target system.'}
 
 
 def proc_dis_log(node, param):

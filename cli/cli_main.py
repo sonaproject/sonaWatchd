@@ -261,14 +261,18 @@ def listen_disconnect_evt(evt, rest_evt):
         if evt.is_set():
             evt.clear()
             SYS.disconnect_type = 'disconnect'
-            SCREEN.draw_event(SYS.disconnect_type)
+
+            if SYS.get_sys_redraw_flag():
+                SCREEN.draw_event(SYS.disconnect_type)
 
         rest_evt.wait(3)
 
         if rest_evt.is_set():
             rest_evt.clear()
             SYS.disconnect_type = 'rest_warn'
-            SCREEN.draw_event(SYS.disconnect_type)
+
+            if SYS.get_sys_redraw_flag():
+                SCREEN.draw_event(SYS.disconnect_type)
 
         time.sleep(1)
 

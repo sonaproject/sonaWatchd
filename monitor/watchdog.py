@@ -52,14 +52,18 @@ def periodic(conn):
         of_status = 'fail'
         ovsdb_status = 'fail'
         cluster_status = 'fail'
+        web_status = 'fail'
 
         if ping == 'ok':
             # check app
-            app = check_app(node_ip, type)
+            app = check_app(conn, node_name, node_ip, type)
 
             if type.upper() == 'ONOS':
                 # check connection
                 of_status, ovsdb_status, cluster_status = onos_conn_check(conn, node_name, node_ip)
+
+                # check web
+                web_status = onos_web_check(conn, node_name, node_ip)
 
             # check resource
             cpu, mem, disk = check_resource(conn, node_name, user_name, node_ip)
@@ -108,6 +112,7 @@ def periodic(conn):
                     occur_event(conn, node_name, 'disk', cur_info[node_name]['disk'], disk_grade)
 
         # 4. Connection check (ovsdb, of, cluster) (ONOS)
+        # 5. Web check (ONOS)
         if type.upper() == 'ONOS':
             if not is_monitor_item(type, 'ovsdb'):
                 ovsdb_status = '-'
@@ -124,6 +129,11 @@ def periodic(conn):
             elif cur_info[node_name]['cluster'] != cluster_status:
                 occur_event(conn, node_name, 'cluster', cur_info[node_name]['cluster'], cluster_status)
 
+            if not is_monitor_item(type, 'web'):
+                web_status = '-'
+            elif cur_info[node_name]['web'] != web_status:
+                occur_event(conn, node_name, 'web', cur_info[node_name]['web'], web_status)
+
         try:
             sql = 'UPDATE ' + DB.STATUS_TBL + \
                   ' SET cpu = \'' + cpu_grade + '\',' + \
@@ -131,6 +141,7 @@ def periodic(conn):
                   ' disk = \'' + disk_grade + '\',' + \
                   ' ping = \'' + ping + '\',' + \
                   ' app = \'' + app + '\',' + \
+                  ' web = \'' + web_status + '\',' + \
                   ' ovsdb = \'' + ovsdb_status + '\',' + \
                   ' of = \'' + of_status + '\',' + \
                   ' cluster = \'' + cluster_status + '\',' + \
@@ -210,15 +221,28 @@ def net_check(node):
         else:
             return 'ok'
 
-def check_app(node, type):
+def check_app(conn, node_name, node_ip, type):
+    app_list = ''
+
     if type.upper() == 'ONOS':
-        app = onos_app_check(node)
+        app, app_list = onos_app_check(node_ip)
     elif type.upper() == 'XOS':
-        app = xos_app_check(node)
+        app = xos_app_check(node_ip)
     elif type.upper() == 'SWARM':
-        app = swarm_app_check(node)
+        app = swarm_app_check(node_ip)
     elif type.upper() == 'OPENSTACK':
-        app = openstack_app_check(node)
+        app = openstack_app_check(node_ip)
+
+    try:
+        sql = 'UPDATE ' + DB.APP_TBL + \
+              ' SET applist = \'' + app_list + '\''\
+              ' WHERE nodename = \'' + node_name + '\''
+        LOG.info('Update app info = ' + sql)
+
+        if DB.sql_execute(sql, conn) != 'SUCCESS':
+            LOG.error('DB Update Fail.')
+    except:
+        LOG.exception()
 
     return app
 
@@ -231,13 +255,13 @@ def onos_app_check(node):
         for line in app_rt.splitlines():
             app_active_list.append(line.split(".")[2].split()[0])
         if set(CONF.onos()['app_list']).issubset(app_active_list):
-            return 'ok'
+            return 'ok', app_rt
         else:
             LOG.error("\'%s\' Application Check Error", node)
-            return 'nok'
+            return 'nok', app_rt
     else:
         LOG.error("\'%s\' Application Check Error", node)
-        return 'nok'
+        return 'nok', 'fail'
 
 def check_resource(conn, node_name, user_name, node_ip):
     try:
@@ -314,6 +338,38 @@ def onos_conn_check(conn, node_name, node_ip):
     except:
         LOG.exception()
         return 'fail', 'fail', 'fail'
+
+def onos_web_check(conn, node_name, node_ip):
+    try:
+        web_rt = SshCommand.onos_ssh_exec(node_ip, 'web:list')
+
+        if web_rt is not None:
+            web_status = 'ok'
+            for line in web_rt.splitlines():
+                if line.startswith('ID') or line.startswith('--'):
+                    continue
+
+                if not ('Active' in line and 'Deployed' in line):
+                    web_status = 'nok'
+        else:
+            LOG.error("\'%s\' Web Check Error", node_ip)
+            web_status = 'fail'
+
+        try:
+            sql = 'UPDATE ' + DB.APP_TBL + \
+                  ' SET weblist = \'' + web_rt + '\'' +\
+                  ' WHERE nodename = \'' + node_name + '\''
+            LOG.info('Update Resource info = ' + sql)
+
+            if DB.sql_execute(sql, conn) != 'SUCCESS':
+                LOG.error('DB Update Fail.')
+        except:
+            LOG.exception()
+
+        return web_status
+    except:
+        LOG.exception()
+        return 'fail'
 
 # TODO xos app check
 def xos_app_check(node):
