@@ -56,7 +56,7 @@ def periodic(conn):
 
         if ping == 'ok':
             # check app
-            app = check_app(conn, node_name, node_ip, type)
+            app = check_app(conn, node_name, node_ip, user_name, type)
 
             if type.upper() == 'ONOS':
                 # check connection
@@ -68,6 +68,7 @@ def periodic(conn):
             # check resource
             cpu, mem, disk = check_resource(conn, node_name, user_name, node_ip)
 
+
         # occur event (rest)
         # 1. ping check
         LOG.info(node_name)
@@ -76,11 +77,12 @@ def periodic(conn):
             occur_event(conn, node_name, 'ping', cur_info[node_name]['ping'], ping)
 
         # 2. app check
-        if cur_info[node_name]['app'] != app:
-            if not is_monitor_item(type, 'app'):
-                app = '-'
-            else:
-                occur_event(conn, node_name, 'app', cur_info[node_name]['app'], app)
+        if type.upper() == 'ONOS':
+            if cur_info[node_name]['app'] != app:
+                if not is_monitor_item(type, 'app'):
+                    app = '-'
+                else:
+                    occur_event(conn, node_name, 'app', cur_info[node_name]['app'], app)
 
         # 3. resource check (CPU/MEM/DISK)
         cpu_grade = 'fail'
@@ -221,28 +223,29 @@ def net_check(node):
         else:
             return 'ok'
 
-def check_app(conn, node_name, node_ip, type):
+def check_app(conn, node_name, node_ip, user_name, type):
     app_list = ''
 
     if type.upper() == 'ONOS':
         app, app_list = onos_app_check(node_ip)
+
+        try:
+            sql = 'UPDATE ' + DB.ONOS_TBL + \
+                  ' SET applist = \'' + app_list + '\'' \
+                                                   ' WHERE nodename = \'' + node_name + '\''
+            LOG.info('Update app info = ' + sql)
+
+            if DB.sql_execute(sql, conn) != 'SUCCESS':
+                LOG.error('DB Update Fail.')
+        except:
+            LOG.exception()
+
     elif type.upper() == 'XOS':
         app = xos_app_check(node_ip)
     elif type.upper() == 'SWARM':
-        app = swarm_app_check(node_ip)
+        app = swarm_app_check(conn, node_name, user_name, node_ip)
     elif type.upper() == 'OPENSTACK':
         app = openstack_app_check(node_ip)
-
-    try:
-        sql = 'UPDATE ' + DB.APP_TBL + \
-              ' SET applist = \'' + app_list + '\''\
-              ' WHERE nodename = \'' + node_name + '\''
-        LOG.info('Update app info = ' + sql)
-
-        if DB.sql_execute(sql, conn) != 'SUCCESS':
-            LOG.error('DB Update Fail.')
-    except:
-        LOG.exception()
 
     return app
 
@@ -301,11 +304,11 @@ def onos_conn_check(conn, node_name, node_ip):
             for line in device_rt.splitlines():
                 if line.startswith('id=of'):
                     str_of = str_of + line + '\n'
-                    if not (CONF.onos()['of'] in line):
+                    if not ('available=true' in line):
                         of_status = 'nok'
                 elif line.startswith('id=ovsdb'):
                     str_ovsdb = str_ovsdb + line + '\n'
-                    if not (CONF.onos()['ovsdb'] in line):
+                    if not ('available=true, local-status=connected' in line):
                         ovsdb_status = 'nok'
         else:
             LOG.error("\'%s\' Connection Check Error", node_ip)
@@ -315,7 +318,7 @@ def onos_conn_check(conn, node_name, node_ip):
         if nodes_rt is not None:
             cluster_status = 'ok'
             for line in nodes_rt.splitlines():
-                if not (CONF.onos()['cluster'] in line):
+                if not ('state=READY' in line):
                     cluster_status = 'nok'
         else:
             LOG.error("\'%s\' Connection Check Error", node_ip)
@@ -356,7 +359,7 @@ def onos_web_check(conn, node_name, node_ip):
             web_status = 'fail'
 
         try:
-            sql = 'UPDATE ' + DB.APP_TBL + \
+            sql = 'UPDATE ' + DB.ONOS_TBL + \
                   ' SET weblist = \'' + web_rt + '\'' +\
                   ' WHERE nodename = \'' + node_name + '\''
             LOG.info('Update Resource info = ' + sql)
@@ -377,8 +380,61 @@ def xos_app_check(node):
 
 
 # TODO swarm app check
-def swarm_app_check(node):
-    return 'nok'
+def swarm_app_check(conn, node_name, user_name, node_ip):
+    str_node = ''
+    str_service = ''
+    str_ps = ''
+
+    node_rt = SshCommand.ssh_exec(user_name, node_ip, 'sudo docker node ls')
+
+    if node_rt is not None:
+        for line in node_rt.splitlines():
+            line = line.decode('utf-8')
+            str_node = str_node + line + '\n'
+    else:
+        LOG.error("\'%s\' Swarm Node Check Error", node_ip)
+        str_node = 'fail'
+
+    service_rt = SshCommand.ssh_exec(user_name, node_ip, 'sudo docker service ls')
+
+    if service_rt is not None:
+        for line in service_rt.splitlines():
+            line = line.decode('utf-8')
+            str_service = str_service + line + '\n'
+    else:
+        LOG.error("\'%s\' Swarm Service Check Error", node_ip)
+        str_service = 'fail'
+
+    ps_rt = SshCommand.ssh_exec(user_name, node_ip, 'sudo docker service ps my_web')
+
+    if ps_rt is not None:
+        for line in ps_rt.splitlines():
+            line = line.decode('utf-8')
+            str_ps = str_ps + line + '\n'
+    else:
+        LOG.error("\'%s\' Swarm PS Check Error", node_ip)
+        str_ps = 'fail'
+
+    try:
+        LOG.info(DB.STATUS_TBL)
+        LOG.info(str_node)
+        LOG.info(str_service)
+        LOG.info(str_ps)
+        LOG.info(node_name)
+        sql = 'UPDATE ' + DB.SWARM_TBL + \
+              ' SET node = \'' + str_node + '\',' + \
+              ' service = \'' + str_service + '\',' + \
+              ' ps = \'' + str_ps + '\'' + \
+              ' WHERE nodename = \'' + node_name + '\''
+        LOG.info('Update Swarm info = ' + sql)
+
+        if DB.sql_execute(sql, conn) != 'SUCCESS':
+            LOG.error('DB Update Fail.')
+
+        return 'nok'
+    except:
+        LOG.exception()
+        return 'nok'
 
 
 # TODO openstack app check

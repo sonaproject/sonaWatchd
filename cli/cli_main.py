@@ -265,6 +265,8 @@ def listen_disconnect_evt(evt, rest_evt):
             if SYS.get_sys_redraw_flag():
                 SCREEN.draw_event(SYS.disconnect_type)
 
+        time.sleep(1)
+
         rest_evt.wait(3)
 
         if rest_evt.is_set():
