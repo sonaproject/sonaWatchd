@@ -15,8 +15,9 @@ class DB(object):
     STATUS_TBL = 't_status'
     RESOURCE_TBL = 't_resource'
     CONNECTION_TBL = 't_connection'
+    APP_TBL = 't_app'
 
-    item_list = 'ping, app, cpu, memory, disk, ovsdb, of, cluster'
+    item_list = 'ping, app, web, cpu, memory, disk, ovsdb, of, cluster'
 
     def __init__(self):
         self._conn = self.connection()
@@ -48,6 +49,7 @@ class DB(object):
                         '(nodename text primary key, ' + cls.item_list + ', time)',
                         'CREATE TABLE ' + cls.RESOURCE_TBL + '(nodename text primary key, cpu real, memory real, disk real)',
                         'CREATE TABLE ' + cls.REGI_SYS_TBL + '(url text primary key, auth)',
+                        'CREATE TABLE ' + cls.APP_TBL + '(nodename text primary key, type, applist, weblist)',
                         'CREATE TABLE ' + cls.CONNECTION_TBL + '(nodename text primary key, ovsdb, of, cluster)',
                         'CREATE TABLE ' + cls.EVENT_TBL + '(nodename, item, grade, desc, time, PRIMARY KEY (nodename, item))']
 
@@ -90,7 +92,7 @@ class DB(object):
 
             # set status tbl
             sql = 'INSERT INTO ' + cls.STATUS_TBL + \
-                  ' VALUES (\'' + name + '\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\')'
+                  ' VALUES (\'' + name + '\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\')'
             LOG.info('%s', sql)
             sql_rt = cls.sql_execute(sql)
             if sql_rt != 'SUCCESS':
@@ -124,6 +126,14 @@ class DB(object):
                 if sql_rt != 'SUCCESS':
                     LOG.info(" [CONNECTION TABLE] Node data insert fail \n%s", sql_rt)
                     sys.exit(1)
+
+            # set app tbl
+            sql = 'INSERT INTO ' + cls.APP_TBL + ' VALUES (\'' + name + '\', \'' + type + '\', \'none\', \'none\')'
+            LOG.info('%s', sql)
+            sql_rt = cls.sql_execute(sql)
+            if sql_rt != 'SUCCESS':
+                LOG.info(" [APP TABLE] Node data insert fail \n%s", sql_rt)
+                sys.exit(1)
 
     @classmethod
     def sql_execute(cls, sql, conn = None):

@@ -43,7 +43,7 @@ class RestHandler(BaseHTTPRequestHandler):
 global_evt = None
 global_conn_evt = None
 
-def run(evt, conn_evt):
+def run(evt, conn_evt, rest_evt):
     global global_conn_evt
     global global_evt
     LOG.debug_log("--- REST Server Start --- ")
@@ -57,10 +57,12 @@ def run(evt, conn_evt):
         httpd.serve_forever()
     except:
         LOG.exception_err_write()
+        rest_evt.set()
         # occure rest server err event
 
 
-def rest_server_start(evt, conn_evt):
-    rest_server_daemon = multiprocess.Process(name='cli_rest_svr', target=run, args=(evt, conn_evt))
+
+def rest_server_start(evt, conn_evt, rest_evt):
+    rest_server_daemon = multiprocess.Process(name='cli_rest_svr', target=run, args=(evt, conn_evt, rest_evt))
     rest_server_daemon.daemon = True
     rest_server_daemon.start()

@@ -68,12 +68,18 @@ if __name__ == "__main__":
 
         elif 'stop' == sys.argv[1]:
             print "Stopping ..."
-            watchdog.push_event('sonawatcher', 'disconnect', 'critical', 'sonawatcher server shutdown', str(datetime.now()))
+            try:
+                watchdog.push_event('sonawatcher', 'disconnect', 'critical', 'sonawatcher server shutdown', str(datetime.now()))
+            except:
+                pass
             daemon.stop()
 
         elif 'restart' == sys.argv[1]:
             print "Restaring ..."
-            watchdog.push_event('sonawatcher', 'disconnect', 'critical', 'sonawatcher server shutdown', str(datetime.now()))
+            try:
+                watchdog.push_event('sonawatcher', 'disconnect', 'critical', 'sonawatcher server shutdown', str(datetime.now()))
+            except:
+                pass
             daemon.restart()
 
         elif 'status' == sys.argv[1]:
