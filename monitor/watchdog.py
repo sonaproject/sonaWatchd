@@ -53,6 +53,7 @@ def periodic(conn):
         ovsdb_status = 'fail'
         cluster_status = 'fail'
         web_status = 'fail'
+        node = 'fail'
 
         if ping == 'ok':
             if type.upper() == 'ONOS':
@@ -64,7 +65,7 @@ def periodic(conn):
 
             # check swarm (app/node)
             if type.upper() == 'SWARM':
-                app = swarm_check(conn, node_name, user_name, node_ip)
+                app, node = swarm_check(conn, node_name, user_name, node_ip)
             else:
                 # check app
                 app = check_app(conn, node_name, node_ip, user_name, type)
@@ -80,12 +81,11 @@ def periodic(conn):
             occur_event(conn, node_name, 'ping', cur_info[node_name]['ping'], ping)
 
         # 2. app check
-        if type.upper() == 'ONOS':
-            if cur_info[node_name]['app'] != app:
-                if not is_monitor_item(type, 'app'):
-                    app = '-'
-                else:
-                    occur_event(conn, node_name, 'app', cur_info[node_name]['app'], app)
+        if cur_info[node_name]['app'] != app:
+            if not is_monitor_item(type, 'app'):
+                app = '-'
+            else:
+                occur_event(conn, node_name, 'app', cur_info[node_name]['app'], app)
 
         # 3. resource check (CPU/MEM/DISK)
         cpu_grade = 'fail'
@@ -138,6 +138,12 @@ def periodic(conn):
                 web_status = '-'
             elif cur_info[node_name]['web'] != web_status:
                 occur_event(conn, node_name, 'web', cur_info[node_name]['web'], web_status)
+        # 6. Swarm Check
+        elif type.upper() == 'SWARM':
+            if not is_monitor_item(type, 'node'):
+                node = '-'
+            elif cur_info[node_name]['node'] != node:
+                occur_event(conn, node_name, 'node', cur_info[node_name]['node'], node)
 
         try:
             sql = 'UPDATE ' + DB.STATUS_TBL + \
@@ -150,6 +156,7 @@ def periodic(conn):
                   ' ovsdb = \'' + ovsdb_status + '\',' + \
                   ' of = \'' + of_status + '\',' + \
                   ' cluster = \'' + cluster_status + '\',' + \
+                  ' node = \'' + node + '\',' + \
                   ' time = \'' + str(datetime.now()) + '\'' + \
                   ' WHERE nodename = \'' + node_name + '\''
             LOG.info('Update Status info = ' + sql)
@@ -388,13 +395,39 @@ def swarm_check(conn, node_name, user_name, node_ip):
     str_ps = ''
 
     ret_app = 'ok'
+    ret_node = 'ok'
 
     node_rt = SshCommand.ssh_exec(user_name, node_ip, 'sudo docker node ls')
 
     if node_rt is not None:
-        for line in node_rt.splitlines():
-            line = line.decode('utf-8')
-            str_node = str_node + line + '\n'
+        try:
+            leader_flag = False
+            for line in node_rt.splitlines():
+                line = line.decode('utf-8')
+                str_node = str_node + line + '\n'
+
+                if line.startswith('ID'):
+                    continue
+
+                if 'Leader' in line:
+                    leader_flag = True
+
+                    id, hostname, status, avail, manager, status2 = line.split()
+
+                    if not ('Ready' in line and 'Active' in line):
+                        ret_node = 'nok'
+                        break
+
+                if 'Down' in line:
+                    ret_node = 'nok'
+                    break
+
+            if not leader_flag:
+                ret_node = 'nok'
+        except:
+            LOG.exception()
+            ret_node = 'nok'
+
     else:
         LOG.error("\'%s\' Swarm Node Check Error", node_ip)
         str_node = 'fail'
@@ -460,11 +493,10 @@ def swarm_check(conn, node_name, user_name, node_ip):
 
         if DB.sql_execute(sql, conn) != 'SUCCESS':
             LOG.error('DB Update Fail.')
-
-        return ret_app
     except:
         LOG.exception()
-        return 'nok'
+
+    return ret_app, ret_node
 
 
 # TODO openstack app check

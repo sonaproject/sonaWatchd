@@ -18,7 +18,7 @@ class DB(object):
     ONOS_TBL = 't_onos'
     SWARM_TBL = 't_swarm'
 
-    item_list = 'ping, app, web, cpu, memory, disk, ovsdb, of, cluster'
+    item_list = 'ping, app, web, cpu, memory, disk, ovsdb, of, cluster, node'
 
     def __init__(self):
         self._conn = self.connection()
@@ -94,7 +94,8 @@ class DB(object):
 
             # set status tbl
             sql = 'INSERT INTO ' + cls.STATUS_TBL + \
-                  ' VALUES (\'' + name + '\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\')'
+                  ' VALUES (\'' + name + '\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', ' \
+                                         '\'none\', \'none\',\'none\', \'none\')'
             LOG.info('%s', sql)
             sql_rt = cls.sql_execute(sql)
             if sql_rt != 'SUCCESS':

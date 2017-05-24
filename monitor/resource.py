@@ -7,7 +7,7 @@ from api.sbapi import SshCommand
 
 
 def get_cpu_usage(username, node_ip, only_value = False):
-    cmd = 'grep \'cpu\ \' /proc/stat'
+    cmd = 'sudo grep \'cpu\ \' /proc/stat'
     cmd_rt = SshCommand.ssh_exec(username, node_ip, cmd)
 
     ratio = float()
@@ -39,7 +39,7 @@ def get_cpu_usage(username, node_ip, only_value = False):
 
 def get_mem_usage(username, node_ip, only_value = False):
 
-    cmd = 'free -t -m | grep Mem'
+    cmd = 'sudo free -t -m | grep Mem'
     cmd_rt = SshCommand.ssh_exec(username, node_ip, cmd)
 
     ratio = float()
@@ -70,7 +70,7 @@ def get_mem_usage(username, node_ip, only_value = False):
 
 def get_disk_usage(username, node_ip, only_value = False):
 
-    cmd = 'df -h / | grep -v Filesystem'
+    cmd = 'sudo df -h / | grep -v Filesystem'
     cmd_rt = SshCommand.ssh_exec(username, node_ip, cmd)
 
     ratio = float()
