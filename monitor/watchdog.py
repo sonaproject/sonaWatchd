@@ -55,9 +55,6 @@ def periodic(conn):
         web_status = 'fail'
 
         if ping == 'ok':
-            # check app
-            app = check_app(conn, node_name, node_ip, user_name, type)
-
             if type.upper() == 'ONOS':
                 # check connection
                 of_status, ovsdb_status, cluster_status = onos_conn_check(conn, node_name, node_ip)
@@ -65,9 +62,15 @@ def periodic(conn):
                 # check web
                 web_status = onos_web_check(conn, node_name, node_ip)
 
+            # check swarm (app/node)
+            if type.upper() == 'SWARM':
+                app = swarm_check(conn, node_name, user_name, node_ip)
+            else:
+                # check app
+                app = check_app(conn, node_name, node_ip, user_name, type)
+
             # check resource
             cpu, mem, disk = check_resource(conn, node_name, user_name, node_ip)
-
 
         # occur event (rest)
         # 1. ping check
@@ -224,7 +227,7 @@ def net_check(node):
             return 'ok'
 
 def check_app(conn, node_name, node_ip, user_name, type):
-    app_list = ''
+    app = 'nok'
 
     if type.upper() == 'ONOS':
         app, app_list = onos_app_check(node_ip)
@@ -242,8 +245,6 @@ def check_app(conn, node_name, node_ip, user_name, type):
 
     elif type.upper() == 'XOS':
         app = xos_app_check(node_ip)
-    elif type.upper() == 'SWARM':
-        app = swarm_app_check(conn, node_name, user_name, node_ip)
     elif type.upper() == 'OPENSTACK':
         app = openstack_app_check(node_ip)
 
@@ -257,6 +258,7 @@ def onos_app_check(node):
     if app_rt is not None:
         for line in app_rt.splitlines():
             app_active_list.append(line.split(".")[2].split()[0])
+
         if set(CONF.onos()['app_list']).issubset(app_active_list):
             return 'ok', app_rt
         else:
@@ -380,10 +382,12 @@ def xos_app_check(node):
 
 
 # TODO swarm app check
-def swarm_app_check(conn, node_name, user_name, node_ip):
+def swarm_check(conn, node_name, user_name, node_ip):
     str_node = ''
     str_service = ''
     str_ps = ''
+
+    ret_app = 'ok'
 
     node_rt = SshCommand.ssh_exec(user_name, node_ip, 'sudo docker node ls')
 
@@ -398,12 +402,38 @@ def swarm_app_check(conn, node_name, user_name, node_ip):
     service_rt = SshCommand.ssh_exec(user_name, node_ip, 'sudo docker service ls')
 
     if service_rt is not None:
+        try:
+            for app in CONF.swarm()['app_list']:
+                find_flag = False
+                for line in service_rt.splitlines():
+                    line = line.decode('utf-8')
+
+                    if line.startswith('ID'):
+                        continue
+
+                    id, name, mode, rep, img = line.split()
+
+                    if app == name:
+                        find_flag = True
+                        rep_tmp = rep.split('/')
+
+                        if not (rep_tmp[0] == rep_tmp[1]):
+                            ret_app = 'nok'
+                            break
+
+                if not find_flag:
+                    ret_app = 'nok'
+                    break
+        except:
+            ret_app = 'nok'
+
         for line in service_rt.splitlines():
             line = line.decode('utf-8')
             str_service = str_service + line + '\n'
     else:
         LOG.error("\'%s\' Swarm Service Check Error", node_ip)
         str_service = 'fail'
+        ret_app = 'nok'
 
     ps_rt = SshCommand.ssh_exec(user_name, node_ip, 'sudo docker service ps my_web')
 
@@ -431,7 +461,7 @@ def swarm_app_check(conn, node_name, user_name, node_ip):
         if DB.sql_execute(sql, conn) != 'SUCCESS':
             LOG.error('DB Update Fail.')
 
-        return 'nok'
+        return ret_app
     except:
         LOG.exception()
         return 'nok'

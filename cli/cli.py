@@ -123,9 +123,10 @@ class CLI():
                             sys_ret = 'fail'
 
                         print '\t' + sys + '\t' + (str(param)).upper() + '\t' + sys_ret
-                elif command == 'dis-log' or command == 'dis-onos':
+                elif command in ['dis-log', 'dis-onos', 'dis-swarm']:
+                    print('')
                     for sys in sorted_list:
-                        sys_ret = str(result[sys])
+                        sys_ret = result[sys]
                         if sys_ret.upper().endswith('FAIL'):
                             sys_ret = 'fail'
 
@@ -150,7 +151,8 @@ class CLI():
                                     print '\t     - ' + item
                         print '\n'
             except:
-                print '[parser err] return = ' + result
+                LOG.exception_err_write()
+                print '[parser err] return = ' + str(result)
 
         except:
             LOG.exception_err_write()

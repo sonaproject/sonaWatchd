@@ -108,6 +108,7 @@ class ConfReader:
         try:
             value['list'] = self.__list_opt(self.conf_map['SWARM']['list'])
             value['account'] = str(self.conf_map['SWARM']['account'])
+            value['app_list'] = self.__list_opt(self.conf_map['SWARM']['app_list'])
 
             if self.config.has_option('SWARM', 'alarm_off_list'):
                 value['alarm_off_list'] = self.__list_opt(self.conf_map['SWARM']['alarm_off_list'])
