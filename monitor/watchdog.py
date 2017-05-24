@@ -468,15 +468,20 @@ def swarm_check(conn, node_name, user_name, node_ip):
         str_service = 'fail'
         ret_app = 'nok'
 
-    ps_rt = SshCommand.ssh_exec(user_name, node_ip, 'sudo docker service ps my_web')
+    for app in CONF.swarm()['app_list']:
+        ps_rt = SshCommand.ssh_exec(user_name, node_ip, 'sudo docker service ps ' + app)
 
-    if ps_rt is not None:
-        for line in ps_rt.splitlines():
-            line = line.decode('utf-8')
-            str_ps = str_ps + line + '\n'
-    else:
-        LOG.error("\'%s\' Swarm PS Check Error", node_ip)
-        str_ps = 'fail'
+        str_ps = str_ps + ' * ' + app + '\n\n'
+
+        if ps_rt is not None:
+            for line in ps_rt.splitlines():
+                line = line.decode('utf-8')
+                str_ps = str_ps + line + '\n'
+        else:
+            LOG.error("\'%s\' Swarm PS Check Error", node_ip)
+            str_ps = str_ps + 'Command failure(' + app + ')\n'
+
+        str_ps = str_ps + '\n'
 
     try:
         LOG.info(DB.STATUS_TBL)
