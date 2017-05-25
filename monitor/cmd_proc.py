@@ -95,13 +95,15 @@ def proc_dis_system(node, dummy):
 
         result = dict()
 
-        for nodename, ping, app, web, cpu, memory, disk, ovsdb, of, cluster, node in nodes_info:
+        for nodename, ping, app, web, cpu, memory, disk, ovsdb, of, cluster, node, vrouter in nodes_info:
             node_type = get_node_list(nodename, 'type')
 
             if 'ONOS' in str(node_type).upper():
                 result[nodename] = {'ping': ping, 'app': app, 'web': web, 'cpu': cpu, 'memory': memory, 'disk': disk, 'ovsdb': ovsdb, 'of': of, 'cluster': cluster}
             elif 'SWARM' in str(node_type).upper():
                 result[nodename] = {'ping': ping, 'app': app, 'cpu': cpu, 'memory': memory, 'disk': disk, 'node': node}
+            elif 'OPENSTACK' in str(node_type).upper():
+                result[nodename] = {'ping': ping, 'cpu': cpu, 'memory': memory, 'disk': disk, 'vrouter': vrouter}
             else:
                 result[nodename] = {'ping': ping, 'app': app, 'cpu': cpu, 'memory': memory, 'disk': disk}
 
@@ -111,7 +113,7 @@ def proc_dis_system(node, dummy):
         return {'Result': 'FAIL'}
 
 def proc_dis_resource(node, param):
-    nodes_info = get_node_list(node, 'nodename, applist' + param, DB.RESOURCE_TBL)
+    nodes_info = get_node_list(node, 'nodename, ' + param, DB.RESOURCE_TBL)
 
     if len(nodes_info) == 0:
         return {'fail': 'This is not a command on the target system.'}
@@ -173,8 +175,20 @@ def proc_dis_log(node, param):
     return res_result
 
 
-def proc_dis_vrouter(system, param):
-    pass
+def proc_dis_vrouter(node, param):
+    nodes_info = get_node_list(node, 'nodename, ' + param, DB.VROUTER_TBL)
+
+    if len(nodes_info) == 0:
+        return {'fail': 'This is not a command on the target system.'}
+
+    res_result = dict()
+    for nodename, list in nodes_info:
+        if list == 'fail' or list == 'none':
+            res_result[nodename] = 'FAIL'
+        else:
+            res_result[nodename] = list
+
+    return res_result
 
 
 def proc_dis_swarm(node, param):

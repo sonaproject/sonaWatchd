@@ -2,11 +2,11 @@
 # All Rights Reserved.
 # SONA Monitoring Solutions.
 
-from subprocess import Popen, PIPE
+import pexpect
 
+from subprocess import Popen, PIPE
 from config import CONF
 from sona_log import LOG
-
 
 class SshCommand:
     ssh_options = '-o StrictHostKeyChecking=no ' \
@@ -48,4 +48,46 @@ class SshCommand:
                 return output
         except:
             LOG.exception()
+
+    @classmethod
+    def ssh_pexpect(cls, username, node, command):
+        cmd = 'ssh %s %s@%s' % (cls.ssh_options, username, node)
+
+        try:
+            ssh_conn = pexpect.spawn(cmd)
+
+            while True:
+                rt1 = ssh_conn.expect(['[#\$] ', pexpect.EOF], timeout=CONF.ssh_conn()['ssh_req_timeout'])
+
+                if rt1 == 0:
+                    ssh_conn.sendline('ssh -p 8101 karaf@' + CONF.openstack()['vrouter_ip'] + ' ' + command)
+                    rt2 = ssh_conn.expect('Password:', timeout=CONF.ssh_conn()['ssh_req_timeout'])
+
+                    if rt2 == 0:
+                        ssh_conn.sendline('karaf')
+                        ssh_conn.expect(['[#\$] ', pexpect.EOF], timeout=CONF.ssh_conn()['ssh_req_timeout'])
+
+                        str_output = str(ssh_conn.before)
+
+                        ret = ''
+                        for line in str_output.splitlines():
+                            if (line.strip() == '') or ('#' in line) or ('$' in line) or ('~' in line) or ('@' in line):
+                                continue
+
+                            ret = ret + line + '\n'
+
+                        return ret
+                    else:
+                        return "fail"
+                elif rt1 == 1:
+                    LOG.info("@@ STEP3 - " + ssh_conn.before)
+                    LOG.error(ssh_conn.before)
+                    break
+                elif rt1 == 2:
+                    LOG.error("[ssh_pexpect] connection timeout")
+
+            return "fail"
+        except:
+            LOG.exception()
+            return "fail"
 

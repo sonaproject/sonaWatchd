@@ -17,8 +17,9 @@ class DB(object):
     CONNECTION_TBL = 't_connection'
     ONOS_TBL = 't_onos'
     SWARM_TBL = 't_swarm'
+    VROUTER_TBL = 't_vrouter'
 
-    item_list = 'ping, app, web, cpu, memory, disk, ovsdb, of, cluster, node'
+    item_list = 'ping, app, web, cpu, memory, disk, ovsdb, of, cluster, node, vrouter'
 
     def __init__(self):
         self._conn = self.connection()
@@ -53,8 +54,8 @@ class DB(object):
                         'CREATE TABLE ' + cls.ONOS_TBL + '(nodename text primary key, applist, weblist)',
                         'CREATE TABLE ' + cls.CONNECTION_TBL + '(nodename text primary key, ovsdb, of, cluster)',
                         'CREATE TABLE ' + cls.SWARM_TBL + '(nodename text primary key, node, service, ps)',
+                        'CREATE TABLE ' + cls.VROUTER_TBL + '(nodename text primary key, docker, onosApp, routingTable)',
                         'CREATE TABLE ' + cls.EVENT_TBL + '(nodename, item, grade, desc, time, PRIMARY KEY (nodename, item))']
-
             for sql in init_sql:
                 sql_rt = cls.sql_execute(sql)
 
@@ -95,7 +96,7 @@ class DB(object):
             # set status tbl
             sql = 'INSERT INTO ' + cls.STATUS_TBL + \
                   ' VALUES (\'' + name + '\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', ' \
-                                         '\'none\', \'none\',\'none\', \'none\')'
+                                         '\'none\', \'none\', \'none\', \'none\', \'none\')'
             LOG.info('%s', sql)
             sql_rt = cls.sql_execute(sql)
             if sql_rt != 'SUCCESS':
@@ -146,6 +147,15 @@ class DB(object):
                 sql_rt = cls.sql_execute(sql)
                 if sql_rt != 'SUCCESS':
                     LOG.info(" [SWARM TABLE] Node data insert fail \n%s", sql_rt)
+                    sys.exit(1)
+
+            elif type.upper() == 'OPENSTACK':
+                # set vrouter tbl
+                sql = 'INSERT INTO ' + cls.VROUTER_TBL + ' VALUES (\'' + name + '\', \'none\', \'none\', \'none\')'
+                LOG.info('%s', sql)
+                sql_rt = cls.sql_execute(sql)
+                if sql_rt != 'SUCCESS':
+                    LOG.info(" [VROUTER TABLE] Node data insert fail \n%s", sql_rt)
                     sys.exit(1)
 
     @classmethod

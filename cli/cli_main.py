@@ -205,6 +205,8 @@ def select_menu():
                             SCREEN.display_sys()
                         elif cmd == 'help':
                             SCREEN.display_help()
+                        elif cmd == 'dis-all':
+                            SCREEN.display_event()
                         else:
                             # send command
                             CLI.process_cmd(cmd)

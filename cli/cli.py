@@ -123,7 +123,7 @@ class CLI():
                             sys_ret = 'fail'
 
                         print '\t' + sys + '\t' + (str(param)).upper() + '\t' + sys_ret
-                elif command in ['dis-log', 'dis-onos', 'dis-swarm']:
+                elif command in ['dis-log', 'dis-onos', 'dis-swarm', 'dis-vrouter']:
                     print('')
                     for sys in sorted_list:
                         sys_ret = result[sys]
