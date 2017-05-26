@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 
 from api.sbapi import SshCommand
@@ -222,18 +223,13 @@ def proc_dis_onosha(node, param):
     sql = 'SELECT stats FROM ' + DB.HA_TBL + ' WHERE ha_key = \'HA\''
 
     with DB.connection() as conn:
-        nodes_info = conn.cursor().execute(sql).fetchall()
+        nodes_info = conn.cursor().execute(sql).fetchone()
     conn.close()
 
-    res_result = dict()
     for value in nodes_info:
-        if value == 'none':
-            res_result['ONOS'] = 'FAIL'
-        else:
-            res_result['ONOS'] = value
+        return json.loads(str(value).replace('\'', '\"'))
 
-    return res_result
-
+    return {'HA': 'FAIL'}
 
 def proc_dis_node(system, param):
     pass

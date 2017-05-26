@@ -128,12 +128,7 @@ def onos_ha_check(conn, node_name, user_name, node_ip):
             if row['pxname'].strip() == 'stats' or row['svname'].strip() == 'BACKEND':
                 continue
 
-            dtl_list = dict()
-
-            dtl_list['name'] = row['svname']
-            dtl_list['req_count'] = row['stot']
-            dtl_list['succ_count'] = row['hrsp_2xx']
-            dtl_list['node_sts'] = row['status']
+            dtl_list = {'name': row['svname'], 'req_count': row['stot'], 'succ_count': row['hrsp_2xx'], 'node_sts': row['status']}
 
             if not (row['status'].strip() == 'OPEN' or 'UP' in row['status']):
                 ha_status = 'nok'
@@ -147,9 +142,11 @@ def onos_ha_check(conn, node_name, user_name, node_ip):
                 dic_stat[svc_type].append(dtl_list)
 
         try:
+            str_dic_stat = str(dic_stat)
+
             sql = 'UPDATE ' + DB.HA_TBL + \
-                  ' SET stats = \'' + str(dic_stat).replace('\'', '\"') + '\'' + \
-                  ' WHERE ha_key = \'' + 'HA' + '\''
+                  ' SET stats = \"' + str_dic_stat + '\"' + \
+                  ' WHERE ha_key = \"' + 'HA' + '\"'
             LOG.info('Update HA info = ' + sql)
 
             if DB.sql_execute(sql, conn) != 'SUCCESS':

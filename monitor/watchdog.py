@@ -60,7 +60,7 @@ def periodic(conn):
         web_status = 'fail'
         node = 'fail'
         v_router = 'fail'
-        ha = 'fail'
+        ha_status = 'fail'
 
         if ping == 'ok':
             if type.upper() == 'ONOS':
@@ -75,8 +75,8 @@ def periodic(conn):
                     ha_ret = chk_onos.onos_ha_check(conn, node_name, user_name, node_ip)
                     ha_flag = True
 
-                ha = ha_ret
-                LOG.info("@@ ha = " + ha)
+                ha_status = ha_ret
+                LOG.info("@@ ha = " + ha_status)
 
             # check swarm (app/node)
             if type.upper() == 'SWARM':
@@ -136,6 +136,7 @@ def periodic(conn):
 
         # 4. Connection check (ovsdb, of, cluster) (ONOS)
         # 5. Web check (ONOS)
+        # 8. HA Status (ONOS)
         if type.upper() == 'ONOS':
             if not alarm_event.is_monitor_item(type, 'ovsdb'):
                 ovsdb_status = '-'
@@ -156,6 +157,11 @@ def periodic(conn):
                 web_status = '-'
             elif cur_info[node_name]['web'] != web_status:
                 alarm_event.occur_event(conn, node_name, 'web', cur_info[node_name]['web'], web_status)
+
+            if not alarm_event.is_monitor_item(type, 'ha_status'):
+                ha_status = '-'
+            elif cur_info[node_name]['ha_status'] != ha_status:
+                alarm_event.occur_event(conn, node_name, 'ha_status', cur_info[node_name]['ha_status'], ha_status)
 
         # 6. Swarm Check
         elif type.upper() == 'SWARM':
@@ -184,7 +190,7 @@ def periodic(conn):
                   ' cluster = \'' + cluster_status + '\',' + \
                   ' node = \'' + node + '\',' + \
                   ' vrouter = \'' + v_router + '\',' + \
-                  ' ha_status = \'' + ha + '\',' + \
+                  ' ha_status = \'' + ha_status + '\',' + \
                   ' time = \'' + str(datetime.now()) + '\'' + \
                   ' WHERE nodename = \'' + node_name + '\''
             LOG.info('Update Status info = ' + sql)
