@@ -20,7 +20,7 @@ class DB(object):
     VROUTER_TBL = 't_vrouter'
     HA_TBL = 't_ha'
 
-    item_list = 'ping, app, web, cpu, memory, disk, ovsdb, of, cluster, node, vrouter, ha_status'
+    item_list = 'ping, app, web, cpu, memory, disk, ovsdb, of, cluster, node, vrouter, ha_stats'
 
     def __init__(self):
         self._conn = self.connection()

@@ -113,7 +113,7 @@ def onos_web_check(conn, node_name, node_ip):
         return 'fail'
 
 
-def onos_ha_check(conn, node_name, user_name, node_ip):
+def onos_ha_check(conn):
     try:
         stats_url = 'http://10.10.2.114:8282/haproxy_stats;csv'
         stats_user = 'haproxy'
@@ -121,17 +121,12 @@ def onos_ha_check(conn, node_name, user_name, node_ip):
 
         report_data = get_haproxy_report(stats_url, stats_user, stats_passwd)
 
-        ha_status = 'ok'
-
         dic_stat = dict()
         for row in report_data:
             if row['pxname'].strip() == 'stats' or row['svname'].strip() == 'BACKEND':
                 continue
 
             dtl_list = {'name': row['svname'], 'req_count': row['stot'], 'succ_count': row['hrsp_2xx'], 'node_sts': row['status']}
-
-            if not (row['status'].strip() == 'OPEN' or 'UP' in row['status']):
-                ha_status = 'nok'
 
             svc_type = row['pxname']
 
@@ -154,10 +149,31 @@ def onos_ha_check(conn, node_name, user_name, node_ip):
         except:
             LOG.exception()
 
+        return dic_stat
+    except:
+        LOG.exception()
+        return None
+
+
+def get_ha_stats(ha_dic, node_name):
+    try:
+        ha_status = 'ok'
+
+        for key in dict(ha_dic).keys():
+            for line in ha_dic[key]:
+                host = dict(line)['name']
+
+                if host.lower() == node_name.lower():
+                    status = dict(line)['node_sts']
+
+                    if not 'UP' in status:
+                        ha_status = 'nok'
+
         return ha_status
     except:
         LOG.exception()
-        return 'fail'
+        return 'nok'
+
 
 def get_haproxy_report(url, user=None, password=None):
     auth = None

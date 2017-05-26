@@ -43,8 +43,8 @@ def periodic(conn):
 
         cur_info[nodename][item] = grade
 
-    ha_flag = False
-    ha_ret = 'fail'
+    # check HA, once
+    ha_dic = chk_onos.onos_ha_check(conn)
 
     for node_name, node_ip, user_name, type in node_list:
         # check ping
@@ -60,7 +60,7 @@ def periodic(conn):
         web_status = 'fail'
         node = 'fail'
         v_router = 'fail'
-        ha_status = 'fail'
+        ha_stats = 'fail'
 
         if ping == 'ok':
             if type.upper() == 'ONOS':
@@ -70,13 +70,7 @@ def periodic(conn):
                 # check web
                 web_status = chk_onos.onos_web_check(conn, node_name, node_ip)
 
-                if not ha_flag:
-                    # check HA, once
-                    ha_ret = chk_onos.onos_ha_check(conn, node_name, user_name, node_ip)
-                    ha_flag = True
-
-                ha_status = ha_ret
-                LOG.info("@@ ha = " + ha_status)
+                ha_stats = chk_onos.get_ha_stats(ha_dic, node_name)
 
             # check swarm (app/node)
             if type.upper() == 'SWARM':
@@ -158,10 +152,10 @@ def periodic(conn):
             elif cur_info[node_name]['web'] != web_status:
                 alarm_event.occur_event(conn, node_name, 'web', cur_info[node_name]['web'], web_status)
 
-            if not alarm_event.is_monitor_item(type, 'ha_status'):
-                ha_status = '-'
-            elif cur_info[node_name]['ha_status'] != ha_status:
-                alarm_event.occur_event(conn, node_name, 'ha_status', cur_info[node_name]['ha_status'], ha_status)
+            if not alarm_event.is_monitor_item(type, 'ha_stats'):
+                ha_stats = '-'
+            elif cur_info[node_name]['ha_stats'] != ha_stats:
+                alarm_event.occur_event(conn, node_name, 'ha_stats', cur_info[node_name]['ha_stats'], ha_stats)
 
         # 6. Swarm Check
         elif type.upper() == 'SWARM':
@@ -190,7 +184,7 @@ def periodic(conn):
                   ' cluster = \'' + cluster_status + '\',' + \
                   ' node = \'' + node + '\',' + \
                   ' vrouter = \'' + v_router + '\',' + \
-                  ' ha_status = \'' + ha_status + '\',' + \
+                  ' ha_stats = \'' + ha_stats + '\',' + \
                   ' time = \'' + str(datetime.now()) + '\'' + \
                   ' WHERE nodename = \'' + node_name + '\''
             LOG.info('Update Status info = ' + sql)

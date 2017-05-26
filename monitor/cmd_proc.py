@@ -96,12 +96,12 @@ def proc_dis_system(node, dummy):
 
         result = dict()
 
-        for nodename, ping, app, web, cpu, memory, disk, ovsdb, of, cluster, node, vrouter, ha_status in nodes_info:
+        for nodename, ping, app, web, cpu, memory, disk, ovsdb, of, cluster, node, vrouter, ha_stats in nodes_info:
             node_type = get_node_list(nodename, 'type')
 
             if 'ONOS' in str(node_type).upper():
                 result[nodename] = {'ping': ping, 'app': app, 'web': web, 'cpu': cpu, 'memory': memory, 'disk': disk,
-                                    'ovsdb': ovsdb, 'of': of, 'cluster': cluster, 'ha_status': ha_status}
+                                    'ovsdb': ovsdb, 'of': of, 'cluster': cluster, 'ha_stats': ha_stats}
             elif 'SWARM' in str(node_type).upper():
                 result[nodename] = {'ping': ping, 'app': app, 'cpu': cpu, 'memory': memory, 'disk': disk, 'node': node}
             elif 'OPENSTACK' in str(node_type).upper():

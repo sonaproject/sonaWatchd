@@ -107,14 +107,14 @@ class CLI():
 
             result = sys_info['result']
 
-            if (dict)(result).has_key('fail'):
+            if dict(result).has_key('fail'):
                 print result['fail']
                 return
 
             command = sys_info['command']
             param = sys_info['param']
 
-            sorted_list = sorted((dict)(result).keys())
+            sorted_list = sorted(dict(result).keys())
 
             try:
                 if command == 'dis-resource':
@@ -125,18 +125,37 @@ class CLI():
 
                         print '\t' + sys + '\t' + (str(param)).upper() + '\t' + sys_ret
                 elif command == 'dis-onosha':
-                    print 'dis-onosha test'
+                    print "+----------------------------------------------------------+"
+                    print "|  Proxy Service Name  | Service Host |  Sts |  Req | Succ |"
+                    print "+----------------------------------------------------------+"
 
-                    test = result['ONOS'][0]
+                    for key in dict(result).keys():
+                        for line in result[key]:
+                            host = dict(line)['name']
 
-                    test = test.replace('\"', '\'')
-                    test = json.loads(test)
+                            if host == 'FRONTEND':
+                                print "|%21s |%13s |%5s |%5s |%5s |" % (
+                                    key, host, dict(line)['node_sts'], dict(line)['req_count'],
+                                    dict(line)['succ_count'])
 
-                    for list in test:
-                        print list
+                    for key in dict(result).keys():
+                        first_flag = 1;
+                        for line in result[key]:
+                            host = dict(line)['name']
 
-                        for key in (dict)(list).keys():
-                            print key + ' ' + list[key]
+                            if host == 'FRONTEND':
+                                continue
+
+                            if first_flag == 1:
+                                print "|%21s |%13s |%5s |%5s |%5s |" % (
+                                    key, host, dict(line)['node_sts'], dict(line)['req_count'],
+                                    dict(line)['succ_count'])
+                                first_flag = 0
+                            else:
+                                print "|%21s |%13s |%5s |%5s |%5s |" % (
+                                    '', host, dict(line)['node_sts'], dict(line)['req_count'],
+                                    dict(line)['succ_count'])
+                    print "+-----------------------------------------------------------+"
 
                 elif command in ['dis-log', 'dis-onos', 'dis-swarm', 'dis-vrouter']:
                     print('')
