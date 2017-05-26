@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 
 from api.sbapi import SshCommand
@@ -95,11 +96,16 @@ def proc_dis_system(node, dummy):
 
         result = dict()
 
-        for nodename, ping, app, web, cpu, memory, disk, ovsdb, of, cluster in nodes_info:
+        for nodename, ping, app, web, cpu, memory, disk, ovsdb, of, cluster, node, vrouter, ha_stats in nodes_info:
             node_type = get_node_list(nodename, 'type')
 
             if 'ONOS' in str(node_type).upper():
-                result[nodename] = {'ping': ping, 'app': app, 'web': web, 'cpu': cpu, 'memory': memory, 'disk': disk, 'ovsdb': ovsdb, 'of': of, 'cluster': cluster}
+                result[nodename] = {'ping': ping, 'app': app, 'web': web, 'cpu': cpu, 'memory': memory, 'disk': disk,
+                                    'ovsdb': ovsdb, 'of': of, 'cluster': cluster, 'ha_stats': ha_stats}
+            elif 'SWARM' in str(node_type).upper():
+                result[nodename] = {'ping': ping, 'app': app, 'cpu': cpu, 'memory': memory, 'disk': disk, 'node': node}
+            elif 'OPENSTACK' in str(node_type).upper():
+                result[nodename] = {'ping': ping, 'cpu': cpu, 'memory': memory, 'disk': disk, 'vrouter': vrouter}
             else:
                 result[nodename] = {'ping': ping, 'app': app, 'cpu': cpu, 'memory': memory, 'disk': disk}
 
@@ -109,7 +115,7 @@ def proc_dis_system(node, dummy):
         return {'Result': 'FAIL'}
 
 def proc_dis_resource(node, param):
-    nodes_info = get_node_list(node, 'nodename, applist' + param, DB.RESOURCE_TBL)
+    nodes_info = get_node_list(node, 'nodename, ' + param, DB.RESOURCE_TBL)
 
     if len(nodes_info) == 0:
         return {'fail': 'This is not a command on the target system.'}
@@ -126,32 +132,26 @@ def proc_dis_resource(node, param):
 
 def proc_dis_onos(node, param):
     if param == 'app':
-        nodes_info = get_node_list(node, 'nodename, type, applist', DB.APP_TBL)
+        nodes_info = get_node_list(node, 'nodename, applist', DB.ONOS_TBL)
 
     if param == 'web':
-        nodes_info = get_node_list(node, 'nodename, type, weblist', DB.APP_TBL)
+        nodes_info = get_node_list(node, 'nodename, weblist', DB.ONOS_TBL)
 
-    is_exist = False
-    res_result = dict()
-    for nodename, type, list in nodes_info:
-        if type.upper() == 'ONOS':
-            if list == 'fail' or list == 'none':
-                res_result[nodename] = 'FAIL'
-            else:
-                res_result[nodename] = list
-
-            is_exist = True
-
-    if is_exist:
-        return res_result
-    else:
+    if len(nodes_info) == 0:
         return {'fail': 'This is not a command on the target system.'}
+
+    res_result = dict()
+    for nodename, list in nodes_info:
+        if list == 'fail' or list == 'none':
+            res_result[nodename] = 'FAIL'
+        else:
+            res_result[nodename] = list
+
+    return res_result
 
 
 def proc_dis_log(node, param):
     cmd = 'ld'
-
-    LOG.info('@@param = ' + param)
 
     if param == 'debug':
         cmd = 'ld -l DEBUG'
@@ -161,8 +161,6 @@ def proc_dis_log(node, param):
         cmd = 'ld -l ERROR'
     elif param == 'exception':
         cmd = 'log:exception-display'
-
-    LOG.info('@@cmd = ' + cmd)
 
     nodes_info = get_node_list(node, 'nodename, ip_addr, type')
 
@@ -179,21 +177,59 @@ def proc_dis_log(node, param):
     return res_result
 
 
-def proc_dis_vrouter(system, param):
-    pass
+def proc_dis_vrouter(node, param):
+    nodes_info = get_node_list(node, 'nodename, ' + param, DB.VROUTER_TBL)
+
+    if len(nodes_info) == 0:
+        return {'fail': 'This is not a command on the target system.'}
+
+    res_result = dict()
+    for nodename, list in nodes_info:
+        if list == 'fail' or list == 'none':
+            res_result[nodename] = 'FAIL'
+        else:
+            res_result[nodename] = list
+
+    return res_result
 
 
-def proc_dis_swarm(system, param):
-    pass
+def proc_dis_swarm(node, param):
+    nodes_info = get_node_list(node, 'nodename, ' + param, DB.SWARM_TBL)
+
+    if len(nodes_info) == 0:
+        return {'fail': 'This is not a command on the target system.'}
+
+    res_result = dict()
+    for nodename, list in nodes_info:
+        if list == 'fail' or list == 'none':
+            res_result[nodename] = 'FAIL'
+        else:
+            res_result[nodename] = list
+
+    return res_result
 
 
 def proc_dis_xos(system, param):
     pass
 
 
-def proc_dis_onosha(system, param):
-    pass
+def proc_dis_onosha(node, param):
+    # check onos
+    nodes_info = get_node_list(node, 'nodename', DB.ONOS_TBL)
 
+    if len(nodes_info) == 0:
+        return {'fail': 'This is not a command on the target system.'}
+
+    sql = 'SELECT stats FROM ' + DB.HA_TBL + ' WHERE ha_key = \'HA\''
+
+    with DB.connection() as conn:
+        nodes_info = conn.cursor().execute(sql).fetchone()
+    conn.close()
+
+    for value in nodes_info:
+        return json.loads(str(value).replace('\'', '\"'))
+
+    return {'HA': 'FAIL'}
 
 def proc_dis_node(system, param):
     pass

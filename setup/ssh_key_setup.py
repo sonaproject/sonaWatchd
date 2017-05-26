@@ -138,6 +138,10 @@ def xos():
 def swarm():
     print "\n\n[Setup] Start to copy ssh-key to SWARM systems ......"
 
+    conf = CONF().get('SWARM')
+    for node in str(conf['list']).replace(" ", "").split(","):
+        key_copy(node, conf)
+
 
 def openstack():
     print "\n\n[Setup] Start to copy ssh-key to OpenStack systems ......"

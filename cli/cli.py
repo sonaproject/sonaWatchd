@@ -105,15 +105,16 @@ class CLI():
         try:
             sys_info = json.loads(result)
 
-            command = sys_info['command']
             result = sys_info['result']
-            param = sys_info['param']
 
-            if (dict)(result).has_key('fail'):
+            if dict(result).has_key('fail'):
                 print result['fail']
                 return
 
-            sorted_list = sorted((dict)(result).keys())
+            command = sys_info['command']
+            param = sys_info['param']
+
+            sorted_list = sorted(dict(result).keys())
 
             try:
                 if command == 'dis-resource':
@@ -123,9 +124,43 @@ class CLI():
                             sys_ret = 'fail'
 
                         print '\t' + sys + '\t' + (str(param)).upper() + '\t' + sys_ret
-                elif command == 'dis-log' or command == 'dis-onos':
+                elif command == 'dis-onosha':
+                    print "+----------------------------------------------------------+"
+                    print "|  Proxy Service Name  | Service Host |  Sts |  Req | Succ |"
+                    print "+----------------------------------------------------------+"
+
+                    for key in dict(result).keys():
+                        for line in result[key]:
+                            host = dict(line)['name']
+
+                            if host == 'FRONTEND':
+                                print "|%21s |%13s |%5s |%5s |%5s |" % (
+                                    key, host, dict(line)['node_sts'], dict(line)['req_count'],
+                                    dict(line)['succ_count'])
+
+                    for key in dict(result).keys():
+                        first_flag = 1;
+                        for line in result[key]:
+                            host = dict(line)['name']
+
+                            if host == 'FRONTEND':
+                                continue
+
+                            if first_flag == 1:
+                                print "|%21s |%13s |%5s |%5s |%5s |" % (
+                                    key, host, dict(line)['node_sts'], dict(line)['req_count'],
+                                    dict(line)['succ_count'])
+                                first_flag = 0
+                            else:
+                                print "|%21s |%13s |%5s |%5s |%5s |" % (
+                                    '', host, dict(line)['node_sts'], dict(line)['req_count'],
+                                    dict(line)['succ_count'])
+                    print "+-----------------------------------------------------------+"
+
+                elif command in ['dis-log', 'dis-onos', 'dis-swarm', 'dis-vrouter']:
+                    print('')
                     for sys in sorted_list:
-                        sys_ret = str(result[sys])
+                        sys_ret = result[sys]
                         if sys_ret.upper().endswith('FAIL'):
                             sys_ret = 'fail'
 
@@ -150,7 +185,8 @@ class CLI():
                                     print '\t     - ' + item
                         print '\n'
             except:
-                print '[parser err] return = ' + result
+                LOG.exception_err_write()
+                print '[parser err] return = ' + str(result)
 
         except:
             LOG.exception_err_write()

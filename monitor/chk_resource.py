@@ -4,10 +4,10 @@
 
 from api.sona_log import LOG
 from api.sbapi import SshCommand
-
+from api.watcherdb import DB
 
 def get_cpu_usage(username, node_ip, only_value = False):
-    cmd = 'grep \'cpu\ \' /proc/stat'
+    cmd = 'sudo grep \'cpu\ \' /proc/stat'
     cmd_rt = SshCommand.ssh_exec(username, node_ip, cmd)
 
     ratio = float()
@@ -39,7 +39,7 @@ def get_cpu_usage(username, node_ip, only_value = False):
 
 def get_mem_usage(username, node_ip, only_value = False):
 
-    cmd = 'free -t -m | grep Mem'
+    cmd = 'sudo free -t -m | grep Mem'
     cmd_rt = SshCommand.ssh_exec(username, node_ip, cmd)
 
     ratio = float()
@@ -70,7 +70,7 @@ def get_mem_usage(username, node_ip, only_value = False):
 
 def get_disk_usage(username, node_ip, only_value = False):
 
-    cmd = 'df -h / | grep -v Filesystem'
+    cmd = 'sudo df -h / | grep -v Filesystem'
     cmd_rt = SshCommand.ssh_exec(username, node_ip, cmd)
 
     ratio = float()
@@ -111,6 +111,32 @@ def get_resource_usage(node_list, param):
             res_result[node_name] = 'Net fail'
 
     return res_result
+
+
+def check_resource(conn, node_name, user_name, node_ip):
+    try:
+        cpu = str(get_cpu_usage(user_name, node_ip, True))
+        mem = str(get_mem_usage(user_name, node_ip, True))
+        disk = str(get_disk_usage(user_name, node_ip, True))
+
+        try:
+            sql = 'UPDATE ' + DB.RESOURCE_TBL + \
+                  ' SET cpu = \'' + cpu + '\',' + \
+                  ' memory = \'' + mem + '\',' + \
+                  ' disk = \'' + disk + '\'' \
+                                        ' WHERE nodename = \'' + node_name + '\''
+            LOG.info('Update Resource info = ' + sql)
+
+            if DB.sql_execute(sql, conn) != 'SUCCESS':
+                LOG.error('DB Update Fail.')
+        except:
+            LOG.exception()
+
+        return cpu, mem, disk
+    except:
+        LOG.exception()
+        return -1, -1, -1
+
 
 
 PARAM_MAP = {'cpu': get_cpu_usage,

@@ -205,6 +205,8 @@ def select_menu():
                             SCREEN.display_sys()
                         elif cmd == 'help':
                             SCREEN.display_help()
+                        elif cmd == 'dis-all':
+                            SCREEN.display_event()
                         else:
                             # send command
                             CLI.process_cmd(cmd)
@@ -264,6 +266,8 @@ def listen_disconnect_evt(evt, rest_evt):
 
             if SYS.get_sys_redraw_flag():
                 SCREEN.draw_event(SYS.disconnect_type)
+
+        time.sleep(1)
 
         rest_evt.wait(3)
 

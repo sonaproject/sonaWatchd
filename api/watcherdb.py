@@ -15,9 +15,12 @@ class DB(object):
     STATUS_TBL = 't_status'
     RESOURCE_TBL = 't_resource'
     CONNECTION_TBL = 't_connection'
-    APP_TBL = 't_app'
+    ONOS_TBL = 't_onos'
+    SWARM_TBL = 't_swarm'
+    VROUTER_TBL = 't_vrouter'
+    HA_TBL = 't_ha'
 
-    item_list = 'ping, app, web, cpu, memory, disk, ovsdb, of, cluster'
+    item_list = 'ping, app, web, cpu, memory, disk, ovsdb, of, cluster, node, vrouter, ha_stats'
 
     def __init__(self):
         self._conn = self.connection()
@@ -49,10 +52,12 @@ class DB(object):
                         '(nodename text primary key, ' + cls.item_list + ', time)',
                         'CREATE TABLE ' + cls.RESOURCE_TBL + '(nodename text primary key, cpu real, memory real, disk real)',
                         'CREATE TABLE ' + cls.REGI_SYS_TBL + '(url text primary key, auth)',
-                        'CREATE TABLE ' + cls.APP_TBL + '(nodename text primary key, type, applist, weblist)',
+                        'CREATE TABLE ' + cls.ONOS_TBL + '(nodename text primary key, applist, weblist)',
                         'CREATE TABLE ' + cls.CONNECTION_TBL + '(nodename text primary key, ovsdb, of, cluster)',
+                        'CREATE TABLE ' + cls.SWARM_TBL + '(nodename text primary key, node, service, ps)',
+                        'CREATE TABLE ' + cls.VROUTER_TBL + '(nodename text primary key, docker, onosApp, routingTable)',
+                        'CREATE TABLE ' + cls.HA_TBL + '(ha_key text primary key, stats)',
                         'CREATE TABLE ' + cls.EVENT_TBL + '(nodename, item, grade, desc, time, PRIMARY KEY (nodename, item))']
-
             for sql in init_sql:
                 sql_rt = cls.sql_execute(sql)
 
@@ -73,6 +78,14 @@ class DB(object):
             for node_type in CONF.watchdog()['check_system']:
                 cls.sql_insert_nodes((CONF_MAP[node_type.upper()]())['list'],
                                      str((CONF_MAP[node_type.upper()]())['account']).split(':')[0], node_type)
+
+            # set ha proxy tbl
+            sql = 'INSERT INTO ' + cls.HA_TBL + ' VALUES (\'' + 'HA' + '\', \'none\')'
+            LOG.info('%s', sql)
+            sql_rt = cls.sql_execute(sql)
+            if sql_rt != 'SUCCESS':
+                LOG.info(" [HA PROXY TABLE] Node data insert fail \n%s", sql_rt)
+                sys.exit(1)
         except:
             LOG.exception()
 
@@ -92,7 +105,8 @@ class DB(object):
 
             # set status tbl
             sql = 'INSERT INTO ' + cls.STATUS_TBL + \
-                  ' VALUES (\'' + name + '\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\')'
+                  ' VALUES (\'' + name + '\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', ' \
+                                         '\'none\', \'none\', \'none\', \'none\', \'none\', \'none\')'
             LOG.info('%s', sql)
             sql_rt = cls.sql_execute(sql)
             if sql_rt != 'SUCCESS':
@@ -118,8 +132,8 @@ class DB(object):
                 LOG.info(" [RESOURCE TABLE] Node data insert fail \n%s", sql_rt)
                 sys.exit(1)
 
-            # set connection tbl
             if type.upper() == 'ONOS':
+                # set connection tbl
                 sql = 'INSERT INTO ' + cls.CONNECTION_TBL + ' VALUES (\'' + name + '\', \'none\', \'none\', \'none\')'
                 LOG.info('%s', sql)
                 sql_rt = cls.sql_execute(sql)
@@ -127,13 +141,31 @@ class DB(object):
                     LOG.info(" [CONNECTION TABLE] Node data insert fail \n%s", sql_rt)
                     sys.exit(1)
 
-            # set app tbl
-            sql = 'INSERT INTO ' + cls.APP_TBL + ' VALUES (\'' + name + '\', \'' + type + '\', \'none\', \'none\')'
-            LOG.info('%s', sql)
-            sql_rt = cls.sql_execute(sql)
-            if sql_rt != 'SUCCESS':
-                LOG.info(" [APP TABLE] Node data insert fail \n%s", sql_rt)
-                sys.exit(1)
+                # set app tbl
+                sql = 'INSERT INTO ' + cls.ONOS_TBL + ' VALUES (\'' + name + '\', \'none\', \'none\')'
+                LOG.info('%s', sql)
+                sql_rt = cls.sql_execute(sql)
+                if sql_rt != 'SUCCESS':
+                    LOG.info(" [APP TABLE] Node data insert fail \n%s", sql_rt)
+                    sys.exit(1)
+
+            elif type.upper() == 'SWARM':
+                # set swarm tbl
+                sql = 'INSERT INTO ' + cls.SWARM_TBL + ' VALUES (\'' + name + '\', \'none\', \'none\', \'none\')'
+                LOG.info('%s', sql)
+                sql_rt = cls.sql_execute(sql)
+                if sql_rt != 'SUCCESS':
+                    LOG.info(" [SWARM TABLE] Node data insert fail \n%s", sql_rt)
+                    sys.exit(1)
+
+            elif type.upper() == 'OPENSTACK':
+                # set vrouter tbl
+                sql = 'INSERT INTO ' + cls.VROUTER_TBL + ' VALUES (\'' + name + '\', \'none\', \'none\', \'none\')'
+                LOG.info('%s', sql)
+                sql_rt = cls.sql_execute(sql)
+                if sql_rt != 'SUCCESS':
+                    LOG.info(" [VROUTER TABLE] Node data insert fail \n%s", sql_rt)
+                    sys.exit(1)
 
     @classmethod
     def sql_execute(cls, sql, conn = None):
