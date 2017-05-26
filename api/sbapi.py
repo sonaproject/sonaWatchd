@@ -50,7 +50,7 @@ class SshCommand:
             LOG.exception()
 
     @classmethod
-    def ssh_pexpect(cls, username, node, command):
+    def ssh_pexpect(cls, username, node, onos_ip, command):
         cmd = 'ssh %s %s@%s' % (cls.ssh_options, username, node)
 
         try:
@@ -60,7 +60,7 @@ class SshCommand:
                 rt1 = ssh_conn.expect(['[#\$] ', pexpect.EOF], timeout=CONF.ssh_conn()['ssh_req_timeout'])
 
                 if rt1 == 0:
-                    ssh_conn.sendline('ssh -p 8101 karaf@' + CONF.openstack()['vrouter_ip'] + ' ' + command)
+                    ssh_conn.sendline('ssh -p 8101 karaf@' + onos_ip + ' ' + command)
                     rt2 = ssh_conn.expect('Password:', timeout=CONF.ssh_conn()['ssh_req_timeout'])
 
                     if rt2 == 0:
@@ -80,7 +80,6 @@ class SshCommand:
                     else:
                         return "fail"
                 elif rt1 == 1:
-                    LOG.info("@@ STEP3 - " + ssh_conn.before)
                     LOG.error(ssh_conn.before)
                     break
                 elif rt1 == 2:

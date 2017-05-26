@@ -4,7 +4,7 @@ from log_lib import LOG
 
 class SYS():
     # key = system name
-    # value = info_dic, it contains ip, conn state
+    # value = info_dic
     sys_list = {}
     last_check_time = ''
 

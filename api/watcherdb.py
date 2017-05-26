@@ -18,8 +18,9 @@ class DB(object):
     ONOS_TBL = 't_onos'
     SWARM_TBL = 't_swarm'
     VROUTER_TBL = 't_vrouter'
+    HA_TBL = 't_ha'
 
-    item_list = 'ping, app, web, cpu, memory, disk, ovsdb, of, cluster, node, vrouter'
+    item_list = 'ping, app, web, cpu, memory, disk, ovsdb, of, cluster, node, vrouter, ha_status'
 
     def __init__(self):
         self._conn = self.connection()
@@ -55,6 +56,7 @@ class DB(object):
                         'CREATE TABLE ' + cls.CONNECTION_TBL + '(nodename text primary key, ovsdb, of, cluster)',
                         'CREATE TABLE ' + cls.SWARM_TBL + '(nodename text primary key, node, service, ps)',
                         'CREATE TABLE ' + cls.VROUTER_TBL + '(nodename text primary key, docker, onosApp, routingTable)',
+                        'CREATE TABLE ' + cls.HA_TBL + '(ha_key text primary key, stats)',
                         'CREATE TABLE ' + cls.EVENT_TBL + '(nodename, item, grade, desc, time, PRIMARY KEY (nodename, item))']
             for sql in init_sql:
                 sql_rt = cls.sql_execute(sql)
@@ -76,6 +78,14 @@ class DB(object):
             for node_type in CONF.watchdog()['check_system']:
                 cls.sql_insert_nodes((CONF_MAP[node_type.upper()]())['list'],
                                      str((CONF_MAP[node_type.upper()]())['account']).split(':')[0], node_type)
+
+            # set ha proxy tbl
+            sql = 'INSERT INTO ' + cls.HA_TBL + ' VALUES (\'' + 'HA' + '\', \'none\')'
+            LOG.info('%s', sql)
+            sql_rt = cls.sql_execute(sql)
+            if sql_rt != 'SUCCESS':
+                LOG.info(" [HA PROXY TABLE] Node data insert fail \n%s", sql_rt)
+                sys.exit(1)
         except:
             LOG.exception()
 
@@ -96,7 +106,7 @@ class DB(object):
             # set status tbl
             sql = 'INSERT INTO ' + cls.STATUS_TBL + \
                   ' VALUES (\'' + name + '\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', ' \
-                                         '\'none\', \'none\', \'none\', \'none\', \'none\')'
+                                         '\'none\', \'none\', \'none\', \'none\', \'none\', \'none\')'
             LOG.info('%s', sql)
             sql_rt = cls.sql_execute(sql)
             if sql_rt != 'SUCCESS':
@@ -124,7 +134,6 @@ class DB(object):
 
             if type.upper() == 'ONOS':
                 # set connection tbl
-
                 sql = 'INSERT INTO ' + cls.CONNECTION_TBL + ' VALUES (\'' + name + '\', \'none\', \'none\', \'none\')'
                 LOG.info('%s', sql)
                 sql_rt = cls.sql_execute(sql)

@@ -122,7 +122,6 @@ class ConfReader:
         try:
             value['list'] = self.__list_opt(self.conf_map['OPENSTACK']['list'])
             value['account'] = str(self.conf_map['OPENSTACK']['account'])
-            value['vrouter_ip'] = str(self.conf_map['OPENSTACK']['vrouter_ip'])
 
             if self.config.has_option('OPENSTACK', 'alarm_off_list'):
                 value['alarm_off_list'] = self.__list_opt(self.conf_map['OPENSTACK']['alarm_off_list'])

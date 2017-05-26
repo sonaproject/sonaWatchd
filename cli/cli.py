@@ -105,13 +105,14 @@ class CLI():
         try:
             sys_info = json.loads(result)
 
-            command = sys_info['command']
             result = sys_info['result']
-            param = sys_info['param']
 
             if (dict)(result).has_key('fail'):
                 print result['fail']
                 return
+
+            command = sys_info['command']
+            param = sys_info['param']
 
             sorted_list = sorted((dict)(result).keys())
 
@@ -123,6 +124,20 @@ class CLI():
                             sys_ret = 'fail'
 
                         print '\t' + sys + '\t' + (str(param)).upper() + '\t' + sys_ret
+                elif command == 'dis-onosha':
+                    print 'dis-onosha test'
+
+                    test = result['ONOS'][0]
+
+                    test = test.replace('\"', '\'')
+                    test = json.loads(test)
+
+                    for list in test:
+                        print list
+
+                        for key in (dict)(list).keys():
+                            print key + ' ' + list[key]
+
                 elif command in ['dis-log', 'dis-onos', 'dis-swarm', 'dis-vrouter']:
                     print('')
                     for sys in sorted_list:

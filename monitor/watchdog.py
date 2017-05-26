@@ -43,6 +43,9 @@ def periodic(conn):
 
         cur_info[nodename][item] = grade
 
+    ha_flag = False
+    ha_ret = 'fail'
+
     for node_name, node_ip, user_name, type in node_list:
         # check ping
         ping = net_check(node_ip)
@@ -57,6 +60,7 @@ def periodic(conn):
         web_status = 'fail'
         node = 'fail'
         v_router = 'fail'
+        ha = 'fail'
 
         if ping == 'ok':
             if type.upper() == 'ONOS':
@@ -65,6 +69,14 @@ def periodic(conn):
 
                 # check web
                 web_status = chk_onos.onos_web_check(conn, node_name, node_ip)
+
+                if not ha_flag:
+                    # check HA, once
+                    ha_ret = chk_onos.onos_ha_check(conn, node_name, user_name, node_ip)
+                    ha_flag = True
+
+                ha = ha_ret
+                LOG.info("@@ ha = " + ha)
 
             # check swarm (app/node)
             if type.upper() == 'SWARM':
@@ -172,6 +184,7 @@ def periodic(conn):
                   ' cluster = \'' + cluster_status + '\',' + \
                   ' node = \'' + node + '\',' + \
                   ' vrouter = \'' + v_router + '\',' + \
+                  ' ha_status = \'' + ha + '\',' + \
                   ' time = \'' + str(datetime.now()) + '\'' + \
                   ' WHERE nodename = \'' + node_name + '\''
             LOG.info('Update Status info = ' + sql)

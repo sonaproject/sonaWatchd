@@ -1,3 +1,7 @@
+import requests
+import csv
+from requests.auth import HTTPBasicAuth
+
 from api.sona_log import LOG
 from api.watcherdb import DB
 from api.config import CONF
@@ -107,4 +111,67 @@ def onos_web_check(conn, node_name, node_ip):
     except:
         LOG.exception()
         return 'fail'
+
+
+def onos_ha_check(conn, node_name, user_name, node_ip):
+    try:
+        stats_url = 'http://10.10.2.114:8282/haproxy_stats;csv'
+        stats_user = 'haproxy'
+        stats_passwd = 'telcowr1'
+
+        report_data = get_haproxy_report(stats_url, stats_user, stats_passwd)
+
+        ha_status = 'ok'
+
+        dic_stat = dict()
+        for row in report_data:
+            if row['pxname'].strip() == 'stats' or row['svname'].strip() == 'BACKEND':
+                continue
+
+            dtl_list = dict()
+
+            dtl_list['name'] = row['svname']
+            dtl_list['req_count'] = row['stot']
+            dtl_list['succ_count'] = row['hrsp_2xx']
+            dtl_list['node_sts'] = row['status']
+
+            if not (row['status'].strip() == 'OPEN' or 'UP' in row['status']):
+                ha_status = 'nok'
+
+            svc_type = row['pxname']
+
+            if (dic_stat.has_key(svc_type)):
+                dic_stat[svc_type].append(dtl_list)
+            else:
+                dic_stat[svc_type] = list()
+                dic_stat[svc_type].append(dtl_list)
+
+        try:
+            sql = 'UPDATE ' + DB.HA_TBL + \
+                  ' SET stats = \'' + str(dic_stat).replace('\'', '\"') + '\'' + \
+                  ' WHERE ha_key = \'' + 'HA' + '\''
+            LOG.info('Update HA info = ' + sql)
+
+            if DB.sql_execute(sql, conn) != 'SUCCESS':
+                LOG.error('DB Update Fail.')
+        except:
+            LOG.exception()
+
+        return ha_status
+    except:
+        LOG.exception()
+        return 'fail'
+
+def get_haproxy_report(url, user=None, password=None):
+    auth = None
+    if user:
+        auth = HTTPBasicAuth(user, password)
+    try:
+        r = requests.get(url, auth=auth)
+        r.raise_for_status()
+        data = r.content.lstrip('# ')
+    except:
+       return (-1)
+
+    return csv.DictReader(data.splitlines())
 

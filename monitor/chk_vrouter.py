@@ -4,6 +4,7 @@ from api.sbapi import SshCommand
 
 def vrouter_check(conn, node_name, user_name, node_ip):
     str_docker = ''
+    onos_id = ''
 
     ret_docker = 'ok'
 
@@ -30,6 +31,7 @@ def vrouter_check(conn, node_name, user_name, node_ip):
 
                 elif 'onos' in tmp_line[1]:
                     onos_count = onos_count + 1
+                    onos_id = tmp_line[0]
 
                     if not 'Up' in line:
                         ret_docker = 'nok'
@@ -42,8 +44,25 @@ def vrouter_check(conn, node_name, user_name, node_ip):
         LOG.error("\'%s\' Vrouter Node Check Error", node_ip)
         str_docker = 'fail'
 
-    str_onosapp = SshCommand.ssh_pexpect(user_name, node_ip, 'apps -a -s')
-    str_route = SshCommand.ssh_pexpect(user_name, node_ip, 'routes')
+    str_onosapp = 'fail'
+    str_route = 'fail'
+
+    if onos_count == 1:
+        # get onos container ip
+        onos_rt = SshCommand.ssh_exec(user_name, node_ip, 'sudo docker inspect ' + onos_id + ' | grep IPAddress')
+
+        if onos_rt is not None:
+            for line in onos_rt.splitlines():
+                line = line.strip()
+                if line.startswith('\"IPAddress'):
+                    tmp = line.split(':')
+                    onos_ip = tmp[1].strip().replace('\"', '').replace(',', '')
+                    break
+
+            str_onosapp = SshCommand.ssh_pexpect(user_name, node_ip, onos_ip, 'apps -a -s')
+            str_route = SshCommand.ssh_pexpect(user_name, node_ip, onos_ip, 'routes')
+        else:
+            LOG.info('@@ onos_rt is none')
 
     try:
         sql = 'UPDATE ' + DB.VROUTER_TBL + \

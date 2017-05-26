@@ -70,6 +70,7 @@ def swarm_check(conn, node_name, user_name, node_ip):
                     ret_app = 'nok'
                     break
         except:
+            LOG.exception()
             ret_app = 'nok'
 
         for line in service_rt.splitlines():

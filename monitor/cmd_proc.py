@@ -95,11 +95,12 @@ def proc_dis_system(node, dummy):
 
         result = dict()
 
-        for nodename, ping, app, web, cpu, memory, disk, ovsdb, of, cluster, node, vrouter in nodes_info:
+        for nodename, ping, app, web, cpu, memory, disk, ovsdb, of, cluster, node, vrouter, ha_status in nodes_info:
             node_type = get_node_list(nodename, 'type')
 
             if 'ONOS' in str(node_type).upper():
-                result[nodename] = {'ping': ping, 'app': app, 'web': web, 'cpu': cpu, 'memory': memory, 'disk': disk, 'ovsdb': ovsdb, 'of': of, 'cluster': cluster}
+                result[nodename] = {'ping': ping, 'app': app, 'web': web, 'cpu': cpu, 'memory': memory, 'disk': disk,
+                                    'ovsdb': ovsdb, 'of': of, 'cluster': cluster, 'ha_status': ha_status}
             elif 'SWARM' in str(node_type).upper():
                 result[nodename] = {'ping': ping, 'app': app, 'cpu': cpu, 'memory': memory, 'disk': disk, 'node': node}
             elif 'OPENSTACK' in str(node_type).upper():
@@ -211,8 +212,27 @@ def proc_dis_xos(system, param):
     pass
 
 
-def proc_dis_onosha(system, param):
-    pass
+def proc_dis_onosha(node, param):
+    # check onos
+    nodes_info = get_node_list(node, 'nodename', DB.ONOS_TBL)
+
+    if len(nodes_info) == 0:
+        return {'fail': 'This is not a command on the target system.'}
+
+    sql = 'SELECT stats FROM ' + DB.HA_TBL + ' WHERE ha_key = \'HA\''
+
+    with DB.connection() as conn:
+        nodes_info = conn.cursor().execute(sql).fetchall()
+    conn.close()
+
+    res_result = dict()
+    for value in nodes_info:
+        if value == 'none':
+            res_result['ONOS'] = 'FAIL'
+        else:
+            res_result['ONOS'] = value
+
+    return res_result
 
 
 def proc_dis_node(system, param):
