@@ -20,7 +20,7 @@ class DB(object):
     VROUTER_TBL = 't_vrouter'
     HA_TBL = 't_ha'
 
-    item_list = 'ping, app, web, cpu, memory, disk, ovsdb, of, cluster, node, vrouter, ha_stats'
+    item_list = 'ping, app, web, cpu, memory, disk, ovsdb, of, cluster, node, vrouter, ha_list, ha_ratio'
 
     def __init__(self):
         self._conn = self.connection()
@@ -52,8 +52,7 @@ class DB(object):
                         '(nodename text primary key, ' + cls.item_list + ', time)',
                         'CREATE TABLE ' + cls.RESOURCE_TBL + '(nodename text primary key, cpu real, memory real, disk real)',
                         'CREATE TABLE ' + cls.REGI_SYS_TBL + '(url text primary key, auth)',
-                        'CREATE TABLE ' + cls.ONOS_TBL + '(nodename text primary key, applist, weblist)',
-                        'CREATE TABLE ' + cls.CONNECTION_TBL + '(nodename text primary key, ovsdb, of, cluster)',
+                        'CREATE TABLE ' + cls.ONOS_TBL + '(nodename text primary key, applist, weblist, nodelist, port, haproxy, ovsdb, of, cluster)',
                         'CREATE TABLE ' + cls.SWARM_TBL + '(nodename text primary key, node, service, ps)',
                         'CREATE TABLE ' + cls.VROUTER_TBL + '(nodename text primary key, docker, onosApp, routingTable)',
                         'CREATE TABLE ' + cls.HA_TBL + '(ha_key text primary key, stats)',
@@ -106,7 +105,7 @@ class DB(object):
             # set status tbl
             sql = 'INSERT INTO ' + cls.STATUS_TBL + \
                   ' VALUES (\'' + name + '\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', ' \
-                                         '\'none\', \'none\', \'none\', \'none\', \'none\', \'none\')'
+                                         '\'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\')'
             LOG.info('%s', sql)
             sql_rt = cls.sql_execute(sql)
             if sql_rt != 'SUCCESS':
@@ -133,16 +132,9 @@ class DB(object):
                 sys.exit(1)
 
             if type.upper() == 'ONOS':
-                # set connection tbl
-                sql = 'INSERT INTO ' + cls.CONNECTION_TBL + ' VALUES (\'' + name + '\', \'none\', \'none\', \'none\')'
-                LOG.info('%s', sql)
-                sql_rt = cls.sql_execute(sql)
-                if sql_rt != 'SUCCESS':
-                    LOG.info(" [CONNECTION TABLE] Node data insert fail \n%s", sql_rt)
-                    sys.exit(1)
-
                 # set app tbl
-                sql = 'INSERT INTO ' + cls.ONOS_TBL + ' VALUES (\'' + name + '\', \'none\', \'none\')'
+                sql = 'INSERT INTO ' + cls.ONOS_TBL + ' VALUES (\'' + name + '\', \'none\', \'none\', \'none\', ' \
+                                                                             '\'none\', \'none\', \'none\', \'none\', \'none\')'
                 LOG.info('%s', sql)
                 sql_rt = cls.sql_execute(sql)
                 if sql_rt != 'SUCCESS':

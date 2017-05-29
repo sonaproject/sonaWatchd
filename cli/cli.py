@@ -124,7 +124,7 @@ class CLI():
                             sys_ret = 'fail'
 
                         print '\t' + sys + '\t' + (str(param)).upper() + '\t' + sys_ret
-                elif command == 'dis-onosha':
+                elif command == 'dis-onosha' and param == 'stats':
                     print "+----------------------------------------------------------+"
                     print "|  Proxy Service Name  | Service Host |  Sts |  Req | Succ |"
                     print "+----------------------------------------------------------+"
@@ -157,7 +157,7 @@ class CLI():
                                     dict(line)['succ_count'])
                     print "+-----------------------------------------------------------+"
 
-                elif command in ['dis-log', 'dis-onos', 'dis-swarm', 'dis-vrouter']:
+                elif command in ['dis-log', 'dis-onos', 'dis-swarm', 'dis-vrouter', 'dis-node', 'dis-onosha']:
                     print('')
                     for sys in sorted_list:
                         sys_ret = result[sys]

@@ -62,12 +62,12 @@ def onos_conn_check(conn, node_name, node_ip):
             cluster_status = 'fail'
 
         try:
-            sql = 'UPDATE ' + DB.CONNECTION_TBL + \
+            sql = 'UPDATE ' + DB.ONOS_TBL + \
                   ' SET ovsdb = \'' + str_ovsdb + '\',' + \
                   ' of = \'' + str_of + '\',' + \
                   ' cluster = \'' + nodes_rt + '\'' \
                   ' WHERE nodename = \'' + node_name + '\''
-            LOG.info('Update Resource info = ' + sql)
+            LOG.info('Update Connection info = ' + sql)
 
             if DB.sql_execute(sql, conn) != 'SUCCESS':
                 LOG.error('DB Update Fail.')
@@ -155,9 +155,15 @@ def onos_ha_check(conn):
         return None
 
 
-def get_ha_stats(ha_dic, node_name):
+def get_ha_stats(conn, ha_dic, node_name):
     try:
         ha_status = 'ok'
+        ha_ratio = 'ok'
+
+        str_list = ''
+
+        frontend = 0
+        backend = 0
 
         for key in dict(ha_dic).keys():
             for line in ha_dic[key]:
@@ -169,10 +175,33 @@ def get_ha_stats(ha_dic, node_name):
                     if not 'UP' in status:
                         ha_status = 'nok'
 
-        return ha_status
+                        str_list = str_list + key + ' : ' + status + '\n'
+
+                if host == 'FRONTEND':
+                    frontend = int(dict(line)['req_count'])
+                else:
+                    backend = backend + int(dict(line)['succ_count'])
+
+        ratio = float(backend) * 100 / frontend
+
+        if ratio < float(CONF.alarm()['ha_proxy']):
+            ha_ratio = 'nok'
+
+        try:
+            sql = 'UPDATE ' + DB.ONOS_TBL + \
+                  ' SET haproxy = \'' + str_list + '\'' + \
+                  ' WHERE nodename = \'' + node_name + '\''
+            LOG.info('Update HA info = ' + sql)
+
+            if DB.sql_execute(sql, conn) != 'SUCCESS':
+                LOG.error('DB Update Fail.')
+        except:
+            LOG.exception()
+
+        return ha_status, ha_ratio
     except:
         LOG.exception()
-        return 'nok'
+        return 'fail', 'fail'
 
 
 def get_haproxy_report(url, user=None, password=None):
@@ -187,4 +216,59 @@ def get_haproxy_report(url, user=None, password=None):
        return (-1)
 
     return csv.DictReader(data.splitlines())
+
+
+def onos_node_check(conn, node_name, node_ip):
+    try:
+        node_rt = SshCommand.onos_ssh_exec(node_ip, 'openstack-nodes')
+
+        node_status = 'ok'
+
+        str_port = ''
+
+        if node_rt is not None:
+            for line in node_rt.splitlines():
+                if line.startswith('hostname'):
+
+                    if not 'init=COMPLETE' in line:
+                        node_status = 'nok'
+
+                    host_name = line.split(',')[0].split('=')[1]
+
+                    port_rt = SshCommand.onos_ssh_exec(node_ip, 'openstack-node-check ' + host_name)
+
+                    str_port = str_port + '\n* ' + host_name + '\n'
+
+                    if port_rt is not None:
+                        for port_line in port_rt.splitlines():
+                            str_port = str_port + port_line + '\n'
+
+                            if port_line.startswith('[') or port_line.strip() == '':
+                                continue
+
+                            if not port_line.startswith('OK'):
+                                node_status = 'nok'
+                    else:
+                        node_status = 'nok'
+                        str_port = 'fail'
+        else:
+            LOG.error("\'%s\' ONOS Node Check Error", node_ip)
+            node_rt = 'fail'
+
+        try:
+            sql = 'UPDATE ' + DB.ONOS_TBL + \
+                  ' SET nodelist = \'' + node_rt + '\',' + \
+                  ' port = \'' + str_port + '\'' \
+                  ' WHERE nodename = \'' + node_name + '\''
+            LOG.info('Update Resource info = ' + sql)
+
+            if DB.sql_execute(sql, conn) != 'SUCCESS':
+                LOG.error('DB Update Fail.')
+        except:
+            LOG.exception()
+
+        return node_status
+    except:
+        LOG.exception()
+        return 'fail'
 

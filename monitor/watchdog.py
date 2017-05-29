@@ -60,7 +60,8 @@ def periodic(conn):
         web_status = 'fail'
         node = 'fail'
         v_router = 'fail'
-        ha_stats = 'fail'
+        ha_list = 'fail'
+        ha_ratio = 'fail'
 
         if ping == 'ok':
             if type.upper() == 'ONOS':
@@ -70,7 +71,9 @@ def periodic(conn):
                 # check web
                 web_status = chk_onos.onos_web_check(conn, node_name, node_ip)
 
-                ha_stats = chk_onos.get_ha_stats(ha_dic, node_name)
+                ha_list, ha_ratio = chk_onos.get_ha_stats(conn, ha_dic, node_name)
+
+                node = chk_onos.onos_node_check(conn, node_name, node_ip)
 
             # check swarm (app/node)
             if type.upper() == 'SWARM':
@@ -131,6 +134,7 @@ def periodic(conn):
         # 4. Connection check (ovsdb, of, cluster) (ONOS)
         # 5. Web check (ONOS)
         # 8. HA Status (ONOS)
+        # 9. Node check (ONOS)
         if type.upper() == 'ONOS':
             if not alarm_event.is_monitor_item(type, 'ovsdb'):
                 ovsdb_status = '-'
@@ -152,10 +156,20 @@ def periodic(conn):
             elif cur_info[node_name]['web'] != web_status:
                 alarm_event.occur_event(conn, node_name, 'web', cur_info[node_name]['web'], web_status)
 
-            if not alarm_event.is_monitor_item(type, 'ha_stats'):
-                ha_stats = '-'
-            elif cur_info[node_name]['ha_stats'] != ha_stats:
-                alarm_event.occur_event(conn, node_name, 'ha_stats', cur_info[node_name]['ha_stats'], ha_stats)
+            if not alarm_event.is_monitor_item(type, 'ha_list'):
+                ha_list = '-'
+            elif cur_info[node_name]['ha_list'] != ha_list:
+                alarm_event.occur_event(conn, node_name, 'ha_list', cur_info[node_name]['ha_list'], ha_list)
+
+            if not alarm_event.is_monitor_item(type, 'ha_ratio'):
+                ha_ratio = '-'
+            elif cur_info[node_name]['ha_ratio'] != ha_ratio:
+                alarm_event.occur_event(conn, node_name, 'ha_ratio', cur_info[node_name]['ha_ratio'], ha_ratio)
+
+            if not alarm_event.is_monitor_item(type, 'node'):
+                node = '-'
+            elif cur_info[node_name]['node'] != node:
+                alarm_event.occur_event(conn, node_name, 'node', cur_info[node_name]['node'], node)
 
         # 6. Swarm Check
         elif type.upper() == 'SWARM':
@@ -184,7 +198,8 @@ def periodic(conn):
                   ' cluster = \'' + cluster_status + '\',' + \
                   ' node = \'' + node + '\',' + \
                   ' vrouter = \'' + v_router + '\',' + \
-                  ' ha_stats = \'' + ha_stats + '\',' + \
+                  ' ha_list = \'' + ha_list + '\',' + \
+                  ' ha_ratio = \'' + ha_ratio + '\',' + \
                   ' time = \'' + str(datetime.now()) + '\'' + \
                   ' WHERE nodename = \'' + node_name + '\''
             LOG.info('Update Status info = ' + sql)

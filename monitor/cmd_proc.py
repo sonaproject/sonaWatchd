@@ -96,12 +96,12 @@ def proc_dis_system(node, dummy):
 
         result = dict()
 
-        for nodename, ping, app, web, cpu, memory, disk, ovsdb, of, cluster, node, vrouter, ha_stats in nodes_info:
+        for nodename, ping, app, web, cpu, memory, disk, ovsdb, of, cluster, node, vrouter, ha_stats, ha_ratio in nodes_info:
             node_type = get_node_list(nodename, 'type')
 
             if 'ONOS' in str(node_type).upper():
                 result[nodename] = {'ping': ping, 'app': app, 'web': web, 'cpu': cpu, 'memory': memory, 'disk': disk,
-                                    'ovsdb': ovsdb, 'of': of, 'cluster': cluster, 'ha_stats': ha_stats}
+                                    'ovsdb': ovsdb, 'of': of, 'cluster': cluster, 'ha_list': ha_stats, 'ha_ratio': ha_ratio, 'node': node}
             elif 'SWARM' in str(node_type).upper():
                 result[nodename] = {'ping': ping, 'app': app, 'cpu': cpu, 'memory': memory, 'disk': disk, 'node': node}
             elif 'OPENSTACK' in str(node_type).upper():
@@ -215,28 +215,54 @@ def proc_dis_xos(system, param):
 
 def proc_dis_onosha(node, param):
     # check onos
-    nodes_info = get_node_list(node, 'nodename', DB.ONOS_TBL)
+    nodes_info = get_node_list(node, 'nodename, haproxy', DB.ONOS_TBL)
 
     if len(nodes_info) == 0:
         return {'fail': 'This is not a command on the target system.'}
 
-    sql = 'SELECT stats FROM ' + DB.HA_TBL + ' WHERE ha_key = \'HA\''
+    if param == 'list':
+        res_result = dict()
+        for nodename, haproxy in nodes_info:
+            if haproxy == 'none':
+                res_result[nodename] = 'FAIL'
+            else:
+                res_result[nodename] = haproxy
 
-    with DB.connection() as conn:
-        nodes_info = conn.cursor().execute(sql).fetchone()
-    conn.close()
+        return res_result
 
-    for value in nodes_info:
-        return json.loads(str(value).replace('\'', '\"'))
+    elif param == 'stats':
+        sql = 'SELECT stats FROM ' + DB.HA_TBL + ' WHERE ha_key = \'HA\''
 
-    return {'HA': 'FAIL'}
+        with DB.connection() as conn:
+            nodes_info = conn.cursor().execute(sql).fetchone()
+        conn.close()
 
-def proc_dis_node(system, param):
-    pass
+        for value in nodes_info:
+            return json.loads(str(value).replace('\'', '\"'))
+
+        return {'HA': 'FAIL'}
+
+def proc_dis_node(node, param):
+    if param == 'list':
+        nodes_info = get_node_list(node, 'nodename, nodelist', DB.ONOS_TBL)
+    elif param == 'port':
+        nodes_info = get_node_list(node, 'nodename, port', DB.ONOS_TBL)
+
+    if len(nodes_info) == 0:
+        return {'fail': 'This is not a command on the target system.'}
+
+    res_result = dict()
+    for nodename, value in nodes_info:
+        if value == 'none':
+            res_result[nodename] = 'FAIL'
+        else:
+            res_result[nodename] = value
+
+    return res_result
 
 
 def proc_dis_connection(node, param):
-    nodes_info = get_node_list(node, 'nodename, ' + param, DB.CONNECTION_TBL)
+    nodes_info = get_node_list(node, 'nodename, ' + param, DB.ONOS_TBL)
 
     if len(nodes_info) == 0:
         return {'fail': 'This is not a command on the target system.'}
