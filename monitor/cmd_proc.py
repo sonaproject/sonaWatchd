@@ -262,7 +262,7 @@ def proc_dis_node(node, param):
 
 
 def proc_dis_connection(node, param):
-    nodes_info = get_node_list(node, 'nodename, ' + param, DB.CONNECTION_TBL)
+    nodes_info = get_node_list(node, 'nodename, ' + param, DB.ONOS_TBL)
 
     if len(nodes_info) == 0:
         return {'fail': 'This is not a command on the target system.'}

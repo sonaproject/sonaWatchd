@@ -62,12 +62,12 @@ def onos_conn_check(conn, node_name, node_ip):
             cluster_status = 'fail'
 
         try:
-            sql = 'UPDATE ' + DB.CONNECTION_TBL + \
+            sql = 'UPDATE ' + DB.ONOS_TBL + \
                   ' SET ovsdb = \'' + str_ovsdb + '\',' + \
                   ' of = \'' + str_of + '\',' + \
                   ' cluster = \'' + nodes_rt + '\'' \
                   ' WHERE nodename = \'' + node_name + '\''
-            LOG.info('Update Resource info = ' + sql)
+            LOG.info('Update Connection info = ' + sql)
 
             if DB.sql_execute(sql, conn) != 'SUCCESS':
                 LOG.error('DB Update Fail.')
