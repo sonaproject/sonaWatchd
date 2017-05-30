@@ -137,6 +137,7 @@ class ConfReader:
             value['memory'] = self.__list_opt(self.conf_map['ALARM']['memory'])
             value['disk'] = self.__list_opt(self.conf_map['ALARM']['disk'])
             value['ha_proxy'] = int(self.conf_map['ALARM']['ha_proxy'])
+            value['gw_ratio'] = int(self.conf_map['ALARM']['gw_ratio'])
 
             return value
         except KeyError as KE:
