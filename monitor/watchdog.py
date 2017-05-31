@@ -92,7 +92,7 @@ def periodic(conn):
             # check vrouter, gw_ratio
             elif type.upper() == 'OPENSTACK':
                 v_router = chk_openstack.vrouter_check(conn, node_name, user_name, node_ip)
-                gw_ratio = chk_openstack.get_gw_ratio(gw_dic[node_name], gw_total)
+                gw_ratio = chk_openstack.get_gw_ratio(conn, node_name, gw_dic[node_name], gw_total)
             else:
                 # check app
                 app = check_app(conn, node_name, node_ip, user_name, type)

@@ -53,7 +53,7 @@ class DB(object):
                         'CREATE TABLE ' + cls.REGI_SYS_TBL + '(url text primary key, auth)',
                         'CREATE TABLE ' + cls.ONOS_TBL + '(nodename text primary key, applist, weblist, nodelist, port, haproxy, ovsdb, of, cluster)',
                         'CREATE TABLE ' + cls.SWARM_TBL + '(nodename text primary key, node, service, ps)',
-                        'CREATE TABLE ' + cls.OPENSTACK_TBL + '(nodename text primary key, docker, onosApp, routingTable)',
+                        'CREATE TABLE ' + cls.OPENSTACK_TBL + '(nodename text primary key, docker, onosApp, routingTable, gw_ratio)',
                         'CREATE TABLE ' + cls.HA_TBL + '(ha_key text primary key, stats)',
                         'CREATE TABLE ' + cls.EVENT_TBL + '(nodename, item, grade, desc, time, PRIMARY KEY (nodename, item))']
             for sql in init_sql:
@@ -151,7 +151,7 @@ class DB(object):
 
             elif type.upper() == 'OPENSTACK':
                 # set vrouter tbl
-                sql = 'INSERT INTO ' + cls.OPENSTACK_TBL + ' VALUES (\'' + name + '\', \'none\', \'none\', \'none\')'
+                sql = 'INSERT INTO ' + cls.OPENSTACK_TBL + ' VALUES (\'' + name + '\', \'none\', \'none\', \'none\', \'none\')'
                 LOG.info('%s', sql)
                 sql_rt = cls.sql_execute(sql)
                 if sql_rt != 'SUCCESS':

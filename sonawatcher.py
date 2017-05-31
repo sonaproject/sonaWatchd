@@ -7,6 +7,7 @@
 import sys
 import time
 
+import monitor.alarm_event as alarm_event
 import monitor.watchdog as watchdog
 import api.rest_server as REST_SVR
 from api.config import CONF
@@ -48,7 +49,7 @@ class SonaWatchD(Daemon):
 
                     time.sleep(CONF.watchdog()['interval'])
                 except:
-                    watchdog.push_event('sonawatcher', 'disconnect', 'critical', 'sonawatcher server shutdown', str(datetime.now()))
+                    alarm_event.push_event('sonawatcher', 'disconnect', 'critical', 'sonawatcher server shutdown', str(datetime.now()))
                     conn.close()
                     LOG.exception()
                     sys.exit(1)
@@ -69,7 +70,7 @@ if __name__ == "__main__":
         elif 'stop' == sys.argv[1]:
             print "Stopping ..."
             try:
-                watchdog.push_event('sonawatcher', 'disconnect', 'critical', 'sonawatcher server shutdown', str(datetime.now()))
+                alarm_event.push_event('sonawatcher', 'disconnect', 'critical', 'sonawatcher server shutdown', str(datetime.now()))
             except:
                 pass
             daemon.stop()
@@ -77,7 +78,7 @@ if __name__ == "__main__":
         elif 'restart' == sys.argv[1]:
             print "Restaring ..."
             try:
-                watchdog.push_event('sonawatcher', 'disconnect', 'critical', 'sonawatcher server shutdown', str(datetime.now()))
+                alarm_event.push_event('sonawatcher', 'disconnect', 'critical', 'sonawatcher server shutdown', str(datetime.now()))
             except:
                 pass
             daemon.restart()

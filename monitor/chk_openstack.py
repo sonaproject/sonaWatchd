@@ -81,7 +81,7 @@ def vrouter_check(conn, node_name, user_name, node_ip):
     return ret_docker
 
 
-def get_gw_ratio(cur_val, total_val):
+def get_gw_ratio(conn, node_name, cur_val, total_val):
     try:
         if cur_val == -1 or total_val == 0:
             LOG.info('GW Ratio Fail.')
@@ -91,6 +91,19 @@ def get_gw_ratio(cur_val, total_val):
             ratio = 0
         else:
             ratio = float(cur_val) * 100 / total_val
+
+        strRatio = str(ratio) + ' (' + str(cur_val) + '/' + str(total_val) + ')'
+
+        try:
+            sql = 'UPDATE ' + DB.OPENSTACK_TBL + \
+                  ' SET gw_ratio = \'' + strRatio + '\'' + \
+                  ' WHERE nodename = \'' + node_name + '\''
+            LOG.info('Update GW Ratio info = ' + sql)
+
+            if DB.sql_execute(sql, conn) != 'SUCCESS':
+                LOG.error('DB Update Fail.')
+        except:
+            LOG.exception()
 
         LOG.info('GW Ratio = ' + str(ratio))
         if ratio < float(CONF.alarm()['gw_ratio']):

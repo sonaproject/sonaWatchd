@@ -258,20 +258,23 @@ def select_menu():
 
 def listen_disconnect_evt(evt, rest_evt):
     while SYS.get_sys_thr_flag():
-        evt.wait(3)
+        evt.wait(1)
 
         if evt.is_set():
+            LOG.debug_log('Get disconnect event')
             evt.clear()
             SYS.disconnect_type = 'disconnect'
 
             if SYS.get_sys_redraw_flag():
+                LOG.debug_log('call draw_event')
                 SCREEN.draw_event(SYS.disconnect_type)
 
         time.sleep(1)
 
-        rest_evt.wait(3)
+        rest_evt.wait(1)
 
         if rest_evt.is_set():
+            LOG.debug_log('Get rest error event')
             rest_evt.clear()
             SYS.disconnect_type = 'rest_warn'
 
@@ -283,7 +286,7 @@ def listen_disconnect_evt(evt, rest_evt):
 
 def listen_evt(evt):
     while SYS.get_sys_thr_flag():
-        evt.wait(3)
+        evt.wait(1)
 
         if evt.is_set():
             evt.clear()

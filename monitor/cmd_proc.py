@@ -193,6 +193,22 @@ def proc_dis_vrouter(node, param):
     return res_result
 
 
+def proc_dis_gwratio(node, dummy):
+    nodes_info = get_node_list(node, 'nodename, gw_ratio', DB.OPENSTACK_TBL)
+
+    if len(nodes_info) == 0:
+        return {'fail': 'This is not a command on the target system.'}
+
+    res_result = dict()
+    for nodename, ratio in nodes_info:
+        if list == 'fail' or ratio == 'none':
+            res_result[nodename] = 'FAIL'
+        else:
+            res_result[nodename] = ratio
+
+    return res_result
+
+
 def proc_dis_swarm(node, param):
     nodes_info = get_node_list(node, 'nodename, ' + param, DB.SWARM_TBL)
 
@@ -315,5 +331,7 @@ COMMAND_MAP = {'dis-resource': proc_dis_resource,
                'dis-node': proc_dis_node,
                'dis-connection': proc_dis_connection,
                'dis-all': proc_dis_all,
+               'dis-gwratio': proc_dis_gwratio,
                #internal command
-               'dis-system':proc_dis_system}
+               'dis-system':proc_dis_system
+               }
