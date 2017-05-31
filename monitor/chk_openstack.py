@@ -118,15 +118,18 @@ def get_gw_ratio(conn, node_name, cur_val, total_val):
 def gw_check(user_name, node_ip):
     try:
         port_rt = SshCommand.ssh_exec(user_name, node_ip, 'sudo ovs-ofctl show br-int | grep vxlan')
-        port = int(port_rt.split('(')[0].strip())
 
-        port_rt = SshCommand.ssh_exec(user_name, node_ip, 'sudo ovs-ofctl dump-ports br-int')
+        if port_rt is not None:
+            port = int(str(port_rt).split('(')[0].strip())
 
-        for line in port_rt.splitlines():
-            if line.split(':')[0].replace(' ', '') == 'port' + str(port):
-                packet_cnt = int(line.split(',')[0].split('=')[1])
+            port_rt = SshCommand.ssh_exec(user_name, node_ip, 'sudo ovs-ofctl dump-ports br-int')
 
-                return packet_cnt
+            if port_rt is not None:
+                for line in port_rt.splitlines():
+                    if line.split(':')[0].replace(' ', '') == 'port' + str(port):
+                        packet_cnt = int(line.split(',')[0].split('=')[1])
+
+                        return packet_cnt
     except:
         LOG.exception()
 
