@@ -6,7 +6,7 @@ import sys
 import alarm_event
 import chk_onos
 import chk_swarm
-import chk_vrouter
+import chk_openstack
 import chk_resource
 import cmd_proc
 
@@ -46,6 +46,16 @@ def periodic(conn):
     # check HA, once
     ha_dic = chk_onos.onos_ha_check(conn)
 
+    # check GW ratio
+    gw_total = 0
+    gw_dic = dict()
+    for node_name, node_ip, user_name, type in node_list:
+        if type.upper() == 'OPENSTACK':
+            gw_dic[node_name] = chk_openstack.gw_check(user_name, node_ip)
+
+            if gw_dic[node_name] > 0:
+                gw_total = gw_total + gw_dic[node_name]
+
     for node_name, node_ip, user_name, type in node_list:
         # check ping
         ping = net_check(node_ip)
@@ -62,6 +72,7 @@ def periodic(conn):
         v_router = 'fail'
         ha_list = 'fail'
         ha_ratio = 'fail'
+        gw_ratio = 'fail'
 
         if ping == 'ok':
             if type.upper() == 'ONOS':
@@ -78,12 +89,14 @@ def periodic(conn):
             # check swarm (app/node)
             if type.upper() == 'SWARM':
                 app, node = chk_swarm.swarm_check(conn, node_name, user_name, node_ip)
-            # check vrouter
+            # check vrouter, gw_ratio
             elif type.upper() == 'OPENSTACK':
-                v_router = chk_vrouter.vrouter_check(conn, node_name, user_name, node_ip)
+                v_router = chk_openstack.vrouter_check(conn, node_name, user_name, node_ip)
+                gw_ratio = chk_openstack.get_gw_ratio(conn, node_name, gw_dic[node_name], gw_total)
             else:
                 # check app
                 app = check_app(conn, node_name, node_ip, user_name, type)
+
 
             # check resource
             cpu, mem, disk = chk_resource.check_resource(conn, node_name, user_name, node_ip)
@@ -185,6 +198,11 @@ def periodic(conn):
             elif cur_info[node_name]['vrouter'] != v_router:
                 alarm_event.occur_event(conn, node_name, 'vrouter', cur_info[node_name]['vrouter'], v_router)
 
+            if not alarm_event.is_monitor_item(type, 'gw_ratio'):
+                gw_ratio = '-'
+            elif cur_info[node_name]['gw_ratio'] != gw_ratio:
+                alarm_event.occur_event(conn, node_name, 'gw_ratio', cur_info[node_name]['gw_ratio'], gw_ratio)
+
         try:
             sql = 'UPDATE ' + DB.STATUS_TBL + \
                   ' SET cpu = \'' + cpu_grade + '\',' + \
@@ -200,6 +218,7 @@ def periodic(conn):
                   ' vrouter = \'' + v_router + '\',' + \
                   ' ha_list = \'' + ha_list + '\',' + \
                   ' ha_ratio = \'' + ha_ratio + '\',' + \
+                  ' gw_ratio = \'' + gw_ratio + '\',' + \
                   ' time = \'' + str(datetime.now()) + '\'' + \
                   ' WHERE nodename = \'' + node_name + '\''
             LOG.info('Update Status info = ' + sql)

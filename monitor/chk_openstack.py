@@ -1,4 +1,5 @@
 from api.sona_log import LOG
+from api.config import CONF
 from api.watcherdb import DB
 from api.sbapi import SshCommand
 
@@ -65,7 +66,7 @@ def vrouter_check(conn, node_name, user_name, node_ip):
             LOG.info('@@ onos_rt is none')
 
     try:
-        sql = 'UPDATE ' + DB.VROUTER_TBL + \
+        sql = 'UPDATE ' + DB.OPENSTACK_TBL + \
               ' SET docker = \'' + str_docker + '\',' + \
               ' onosApp = \'' + str_onosapp + '\',' + \
               ' routingTable = \'' + str_route + '\'' + \
@@ -78,3 +79,59 @@ def vrouter_check(conn, node_name, user_name, node_ip):
         LOG.exception()
 
     return ret_docker
+
+
+def get_gw_ratio(conn, node_name, cur_val, total_val):
+    try:
+        if cur_val == -1 or total_val == 0:
+            LOG.info('GW Ratio Fail.')
+            return 'fail'
+
+        if cur_val == 0:
+            ratio = 0
+        else:
+            ratio = float(cur_val) * 100 / total_val
+
+        strRatio = str(ratio) + ' (' + str(cur_val) + '/' + str(total_val) + ')'
+
+        try:
+            sql = 'UPDATE ' + DB.OPENSTACK_TBL + \
+                  ' SET gw_ratio = \'' + strRatio + '\'' + \
+                  ' WHERE nodename = \'' + node_name + '\''
+            LOG.info('Update GW Ratio info = ' + sql)
+
+            if DB.sql_execute(sql, conn) != 'SUCCESS':
+                LOG.error('DB Update Fail.')
+        except:
+            LOG.exception()
+
+        LOG.info('GW Ratio = ' + str(ratio))
+        if ratio < float(CONF.alarm()['gw_ratio']):
+            return 'nok'
+
+        return 'ok'
+    except:
+        LOG.exception()
+        return 'fail'
+
+
+def gw_check(user_name, node_ip):
+    try:
+        port_rt = SshCommand.ssh_exec(user_name, node_ip, 'sudo ovs-ofctl show br-int | grep vxlan')
+        port = int(port_rt.split('(')[0].strip())
+
+        port_rt = SshCommand.ssh_exec(user_name, node_ip, 'sudo ovs-ofctl dump-ports br-int')
+
+        for line in port_rt.splitlines():
+            if line.split(':')[0].replace(' ', '') == 'port' + str(port):
+                packet_cnt = int(line.split(',')[0].split('=')[1])
+
+                return packet_cnt
+    except:
+        LOG.exception()
+
+    return -1
+
+
+
+

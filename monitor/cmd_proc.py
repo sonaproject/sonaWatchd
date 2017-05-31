@@ -96,7 +96,7 @@ def proc_dis_system(node, dummy):
 
         result = dict()
 
-        for nodename, ping, app, web, cpu, memory, disk, ovsdb, of, cluster, node, vrouter, ha_stats, ha_ratio in nodes_info:
+        for nodename, ping, app, web, cpu, memory, disk, ovsdb, of, cluster, node, vrouter, ha_stats, ha_ratio, gw_ratio in nodes_info:
             node_type = get_node_list(nodename, 'type')
 
             if 'ONOS' in str(node_type).upper():
@@ -105,7 +105,7 @@ def proc_dis_system(node, dummy):
             elif 'SWARM' in str(node_type).upper():
                 result[nodename] = {'ping': ping, 'app': app, 'cpu': cpu, 'memory': memory, 'disk': disk, 'node': node}
             elif 'OPENSTACK' in str(node_type).upper():
-                result[nodename] = {'ping': ping, 'cpu': cpu, 'memory': memory, 'disk': disk, 'vrouter': vrouter}
+                result[nodename] = {'ping': ping, 'cpu': cpu, 'memory': memory, 'disk': disk, 'vrouter': vrouter, 'gw_ratio': gw_ratio}
             else:
                 result[nodename] = {'ping': ping, 'app': app, 'cpu': cpu, 'memory': memory, 'disk': disk}
 
@@ -178,7 +178,7 @@ def proc_dis_log(node, param):
 
 
 def proc_dis_vrouter(node, param):
-    nodes_info = get_node_list(node, 'nodename, ' + param, DB.VROUTER_TBL)
+    nodes_info = get_node_list(node, 'nodename, ' + param, DB.OPENSTACK_TBL)
 
     if len(nodes_info) == 0:
         return {'fail': 'This is not a command on the target system.'}
@@ -189,6 +189,22 @@ def proc_dis_vrouter(node, param):
             res_result[nodename] = 'FAIL'
         else:
             res_result[nodename] = list
+
+    return res_result
+
+
+def proc_dis_gwratio(node, dummy):
+    nodes_info = get_node_list(node, 'nodename, gw_ratio', DB.OPENSTACK_TBL)
+
+    if len(nodes_info) == 0:
+        return {'fail': 'This is not a command on the target system.'}
+
+    res_result = dict()
+    for nodename, ratio in nodes_info:
+        if list == 'fail' or ratio == 'none':
+            res_result[nodename] = 'FAIL'
+        else:
+            res_result[nodename] = ratio
 
     return res_result
 
@@ -315,5 +331,7 @@ COMMAND_MAP = {'dis-resource': proc_dis_resource,
                'dis-node': proc_dis_node,
                'dis-connection': proc_dis_connection,
                'dis-all': proc_dis_all,
+               'dis-gwratio': proc_dis_gwratio,
                #internal command
-               'dis-system':proc_dis_system}
+               'dis-system':proc_dis_system
+               }

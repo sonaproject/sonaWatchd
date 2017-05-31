@@ -157,15 +157,6 @@ class CLI():
                                     dict(line)['succ_count'])
                     print "+-----------------------------------------------------------+"
 
-                elif command in ['dis-log', 'dis-onos', 'dis-swarm', 'dis-vrouter', 'dis-node', 'dis-onosha']:
-                    print('')
-                    for sys in sorted_list:
-                        sys_ret = result[sys]
-                        if sys_ret.upper().endswith('FAIL'):
-                            sys_ret = 'fail'
-
-                        print '[' + sys + ']'
-                        print sys_ret
                 elif command == 'dis-connection':
                     for sys in sorted_list:
                         sys_ret = str(result[sys])
@@ -184,6 +175,18 @@ class CLI():
                                 else:
                                     print '\t     - ' + item
                         print '\n'
+                else:
+                    print('')
+                    for sys in sorted_list:
+                        sys_ret = result[sys]
+                        if sys_ret.upper().endswith('FAIL'):
+                            sys_ret = 'fail'
+
+                        print '[' + sys + ']'
+                        print sys_ret
+
+                        if not sys_ret.endswith('\n'):
+                            print('')
             except:
                 LOG.exception_err_write()
                 print '[parser err] return = ' + str(result)
