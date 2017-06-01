@@ -1,3 +1,4 @@
+import cmd_proc
 from api.sona_log import LOG
 from api.config import CONF
 from api.watcherdb import DB
@@ -62,8 +63,6 @@ def vrouter_check(conn, node_name, user_name, node_ip):
 
             str_onosapp = SshCommand.ssh_pexpect(user_name, node_ip, onos_ip, 'apps -a -s')
             str_route = SshCommand.ssh_pexpect(user_name, node_ip, onos_ip, 'routes')
-        else:
-            LOG.info('@@ onos_rt is none')
 
     try:
         sql = 'UPDATE ' + DB.OPENSTACK_TBL + \
@@ -81,8 +80,53 @@ def vrouter_check(conn, node_name, user_name, node_ip):
     return ret_docker
 
 
-def get_gw_ratio(conn, node_name, cur_val, total_val):
+def get_gw_ratio(conn, node_name, node_ip, cur_val, total_val):
     try:
+        sql = 'SELECT ' + DB.ONOS_TBL + '.nodename, nodelist, ip_addr' + ' FROM ' + DB.ONOS_TBL + \
+                ' INNER JOIN ' + DB.NODE_INFO_TBL + ' ON ' + DB.ONOS_TBL + '.nodename = ' + DB.NODE_INFO_TBL + '.nodename'
+
+        nodes_info = conn.cursor().execute(sql).fetchall()
+
+        if len(nodes_info) == 0:
+            LOG.info('Fail to load onos list')
+            return 'fail'
+
+        # search data_ip
+        data_ip = ''
+        manage_ip = ''
+        packet_cnt = 0
+        for nodename, nodelist, ip in nodes_info:
+            if not nodelist == 'none':
+                for line in str(nodelist).splitlines():
+                    if 'managementIp=' + node_ip + ',' in line:
+                        tmp = line.split(',')
+
+                        for col in tmp:
+                            if 'managementIp' in col:
+                                data_ip = col.split('=')[1]
+                                manage_ip = ip
+                                break
+
+                    if not manage_ip == '':
+                        break
+            if not manage_ip == '':
+                break
+
+        if data_ip == '':
+            LOG.info('Can not find data ip')
+            return 'fail'
+
+        group_rt = SshCommand.onos_ssh_exec(manage_ip, 'groups')
+
+        if group_rt is not None:
+            for line in group_rt.splitlines():
+                if '{tunnelDst=' + data_ip + '}' in line:
+                    tmp = line.split(',')
+
+                    for col in tmp:
+                        if 'packets=' in col:
+                            packet_cnt = packet_cnt + int(col.split('=')[1])
+
         if cur_val == -1 or total_val == 0:
             LOG.info('GW Ratio Fail.')
             return 'fail'
@@ -92,7 +136,15 @@ def get_gw_ratio(conn, node_name, cur_val, total_val):
         else:
             ratio = float(cur_val) * 100 / total_val
 
-        strRatio = str(ratio) + ' (' + str(cur_val) + '/' + str(total_val) + ')'
+        strRatio = 'Received packet count = ' + str(cur_val) + '\n'
+        strRatio = strRatio + 'compute nodes -> ' + node_name + ' Packet count = ' + str(packet_cnt) + '\n'
+        strRatio = strRatio + str(ratio) + ' (' + str(cur_val) + ' / ' + str(total_val) + ')'
+
+        if cur_val < packet_cnt:
+            LOG.info('GW Ratio Fail. (Data loss)')
+            strRatio = strRatio + '(packet loss)'
+        else:
+            strRatio = strRatio + '(no packet loss)'
 
         try:
             sql = 'UPDATE ' + DB.OPENSTACK_TBL + \
@@ -106,7 +158,7 @@ def get_gw_ratio(conn, node_name, cur_val, total_val):
             LOG.exception()
 
         LOG.info('GW Ratio = ' + str(ratio))
-        if ratio < float(CONF.alarm()['gw_ratio']):
+        if ratio < float(CONF.alarm()['gw_ratio']) or cur_val < packet_cnt:
             return 'nok'
 
         return 'ok'
