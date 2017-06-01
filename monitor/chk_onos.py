@@ -1,6 +1,5 @@
-import requests
+from subprocess import Popen, PIPE
 import csv
-from requests.auth import HTTPBasicAuth
 
 from api.sona_log import LOG
 from api.watcherdb import DB
@@ -119,7 +118,14 @@ def onos_ha_check(conn):
         stats_user = 'haproxy'
         stats_passwd = 'telcowr1'
 
-        report_data = get_haproxy_report(stats_url, stats_user, stats_passwd)
+        cmd = 'curl --user ' + stats_user + ':' + stats_passwd + ' --header \'Accept: text/html, application/xhtml+xml, image/jxr, */*\' \"' + stats_url + '\"'
+        result = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
+        output, error = result.communicate()
+
+        if result.returncode != 0:
+            LOG.error("SSH_Cmd Fail, cause => %s", error)
+        else:
+            report_data = csv.DictReader(output.lstrip('# ').splitlines())
 
         dic_stat = dict()
         for row in report_data:
@@ -202,20 +208,6 @@ def get_ha_stats(conn, ha_dic, node_name):
     except:
         LOG.exception()
         return 'fail', 'fail'
-
-
-def get_haproxy_report(url, user=None, password=None):
-    auth = None
-    if user:
-        auth = HTTPBasicAuth(user, password)
-    try:
-        r = requests.get(url, auth=auth)
-        r.raise_for_status()
-        data = r.content.lstrip('# ')
-    except:
-       return (-1)
-
-    return csv.DictReader(data.splitlines())
 
 
 def onos_node_check(conn, node_name, node_ip):
