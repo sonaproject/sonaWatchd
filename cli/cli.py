@@ -4,6 +4,8 @@ import json
 import base64
 import readline
 
+from subprocess import Popen, PIPE
+
 from config import CONFIG
 from system_info import SYS
 from log_lib import LOG
@@ -645,6 +647,7 @@ class CLI():
             cls.cli_search_list.append('quit')
             cls.cli_search_list.append('exit')
             cls.cli_search_list.append('sys')
+            cls.cli_search_list.append('onos')
             cls.cli_search_list.append('dis-system')
             cls.cli_search_list.append('help')
 
@@ -716,6 +719,28 @@ class CLI():
                 return cls.complete_cli(text, state, cls.get_cli_search_list())
         except:
             LOG.exception_err_write()
+
+    @staticmethod
+    def onos_ssh_exec(node, command):
+        ssh_options = '-o StrictHostKeyChecking=no ' \
+                      '-o ConnectTimeout=' + str(CONFIG.get_ssh_timeout())
+
+        local_ssh_options = ssh_options + " -p 8101"
+
+        cmd = 'ssh %s %s %s' % (local_ssh_options, node, command)
+
+        try:
+            result = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
+            output, error = result.communicate()
+
+            if result.returncode != 0:
+                LOG.debug_log("ONOS(%s) SSH_Cmd Fail, cause => %s", node, error)
+                return 'fail'
+            else:
+                return output
+        except:
+            LOG.exception_err_write()
+            return 'fail'
 
     @classmethod
     def set_cmd_list(cls):

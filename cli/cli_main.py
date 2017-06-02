@@ -207,6 +207,8 @@ def select_menu():
                             SCREEN.display_help()
                         elif cmd == 'dis-all':
                             SCREEN.display_event()
+                        elif cmd.startswith('onos '):
+                            pass
                         else:
                             # send command
                             CLI.process_cmd(cmd)
@@ -338,37 +340,6 @@ def set_readline_opt():
 
 def complete_dummy(text, state):
     pass
-
-def call_cli():
-    try:
-        SCREEN.display_header('CLI')
-
-        readline.set_completer(CLI.pre_complete_cli)
-
-        while True:
-            # mac OS
-            if 'libedit' in readline.__doc__:
-                CLI.modify_flag = True
-                CLI.save_buffer = readline.get_line_buffer()
-
-            # select_command (handling tab event)
-            cmd = CLI.input_cmd()
-
-            if CLI.is_menu(cmd):
-                SCREEN.cli_flag = False
-                return
-            elif CLI.is_exit(cmd):
-                SCREEN.set_exit()
-                return
-            else:
-                # send command
-                CLI.process_cmd(cmd)
-
-                while not CLI.get_cli_ret_flag():
-                    time.sleep(1)
-    except:
-        LOG.exception_err_write()
-
 
 if __name__ == '__main__':
     try:
