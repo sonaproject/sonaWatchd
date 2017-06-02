@@ -329,7 +329,7 @@ class SCREEN():
             status_text_NOK = curses.color_pair(3)
             normal_text = curses.A_NORMAL
 
-            box_sys.addstr(0, 18, ' CONTROL PLAN ', normal_text)
+            box_sys.addstr(0, 16, ' MONITORING STATUS ', normal_text)
 
             i = 1
 

@@ -17,7 +17,7 @@ from flow_trace import TRACE
 from log_lib import USER_LOG
 from screen import SCREEN
 
-menu_list = ["CLI", "Flow Trace", "Event List"]
+menu_list = ["CLI", "Flow Trace", "Event List", "Quit"]
 
 def main():
     try:
@@ -241,6 +241,8 @@ def select_menu():
                         except ResizeScreenError as e:
                             last_scene = e.scene
 
+                elif menu == 'Quit':
+                    break
 
             SCREEN.draw_system(menu_list)
             SCREEN.draw_event(SYS.disconnect_type)

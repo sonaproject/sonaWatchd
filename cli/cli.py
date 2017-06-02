@@ -100,8 +100,8 @@ class CLI():
         except:
             LOG.exception_err_write()
 
-    @staticmethod
-    def parsingRet(result):
+    @classmethod
+    def parsingRet(cls, result):
         try:
             sys_info = json.loads(result)
 
@@ -118,63 +118,337 @@ class CLI():
 
             try:
                 if command == 'dis-resource':
+                    data = []
+
                     for sys in sorted_list:
                         sys_ret = str(result[sys])
-                        if sys_ret.upper().endswith('FAIL'):
-                            sys_ret = 'fail'
+                        line = []
+                        line.append(sys)
+                        line.append(sys_ret)
+                        data.append(line)
 
-                        print '\t' + sys + '\t' + (str(param)).upper() + '\t' + sys_ret
-                elif command == 'dis-onosha' and param == 'stats':
-                    print "+----------------------------------------------------------+"
-                    print "|  Proxy Service Name  | Service Host |  Sts |  Req | Succ |"
-                    print "+----------------------------------------------------------+"
+                    header = []
 
-                    for key in dict(result).keys():
-                        for line in result[key]:
-                            host = dict(line)['name']
+                    col_sys = dict()
+                    col_sys['title'] = 'System'
+                    col_sys['size'] = '10'
 
-                            if host == 'FRONTEND':
-                                print "|%21s |%13s |%5s |%5s |%5s |" % (
-                                    key, host, dict(line)['node_sts'], dict(line)['req_count'],
-                                    dict(line)['succ_count'])
+                    col_value = dict()
+                    col_value['title'] = str(param)
+                    col_value['size'] = '8'
 
-                    for key in dict(result).keys():
-                        first_flag = 1;
-                        for line in result[key]:
-                            host = dict(line)['name']
+                    header.append(col_sys)
+                    header.append(col_value)
 
-                            if host == 'FRONTEND':
-                                continue
+                    print ''
+                    cls.draw_grid(header, data)
+                    print ''
 
-                            if first_flag == 1:
-                                print "|%21s |%13s |%5s |%5s |%5s |" % (
-                                    key, host, dict(line)['node_sts'], dict(line)['req_count'],
-                                    dict(line)['succ_count'])
-                                first_flag = 0
+                elif command == 'dis-onosha':
+                    if param == 'list':
+                        print('')
+                        for sys in sorted_list:
+                            print '[' + sys + ']'
+
+                            sys_ret = result[sys]
+                            if sys_ret.upper().endswith('FAIL'):
+                                sys_ret = 'fail'
+                                print sys_ret
                             else:
-                                print "|%21s |%13s |%5s |%5s |%5s |" % (
-                                    '', host, dict(line)['node_sts'], dict(line)['req_count'],
-                                    dict(line)['succ_count'])
-                    print "+-----------------------------------------------------------+"
+                                data = []
+
+                                for row in sys_ret.splitlines():
+                                    tmp = row.split(':')
+
+                                    line = []
+                                    line.append(tmp[0].strip())
+                                    line.append(tmp[1].strip())
+                                    data.append(line)
+
+                                header = []
+
+                                col_sys = dict()
+                                col_sys['title'] = 'Proxy Service Name'
+                                col_sys['size'] = '20'
+
+                                col_value = dict()
+                                col_value['title'] = 'STATUS'
+                                col_value['size'] = '8'
+
+                                header.append(col_sys)
+                                header.append(col_value)
+
+                                cls.draw_grid(header, data)
+
+                            print ''
+
+                    elif param == 'stats':
+                        print ''
+                        print "+----------------------------------------------------------+"
+                        print "|  Proxy Service Name  | Service Host |  Sts |  Req | Succ |"
+                        print "+----------------------------------------------------------+"
+
+                        for key in dict(result).keys():
+                            for line in result[key]:
+                                host = dict(line)['name']
+
+                                if host == 'FRONTEND':
+                                    print "|%21s |%13s |%5s |%5s |%5s |" % (
+                                        key, host, dict(line)['node_sts'], dict(line)['req_count'],
+                                        dict(line)['succ_count'])
+
+                        for key in dict(result).keys():
+                            first_flag = 1;
+                            for line in result[key]:
+                                host = dict(line)['name']
+
+                                if host == 'FRONTEND':
+                                    continue
+
+                                if first_flag == 1:
+                                    print "|%21s |%13s |%5s |%5s |%5s |" % (
+                                        key, host, dict(line)['node_sts'], dict(line)['req_count'],
+                                        dict(line)['succ_count'])
+                                    first_flag = 0
+                                else:
+                                    print "|%21s |%13s |%5s |%5s |%5s |" % (
+                                        '', host, dict(line)['node_sts'], dict(line)['req_count'],
+                                        dict(line)['succ_count'])
+                        print "+-----------------------------------------------------------+"
+                        print ''
+
+                elif command == 'dis-node':
+                    if param == 'list':
+                        print('')
+                        for sys in sorted_list:
+                            print '[' + sys + ']'
+
+                            sys_ret = result[sys]
+                            if sys_ret.upper().endswith('FAIL'):
+                                sys_ret = 'fail'
+                                print sys_ret
+                            else:
+                                data = []
+
+                                for row in sys_ret.splitlines():
+                                    if str(row).startswith('Total'):
+                                        continue
+
+                                    line = []
+                                    for col in row.split(' '):
+                                        tmp = col.split('=')
+
+                                        if 'Bridge' in tmp[0]:
+                                            if 'empty' in tmp[1]:
+                                                line.append('empty')
+                                            else:
+                                                line.append('exist')
+                                        else:
+                                            line.append(str(tmp[1]).strip().strip(','))
+                                    data.append(line)
+
+                                header = []
+
+                                col_host = dict()
+                                col_host['title'] = 'Host Name'
+                                col_host['size'] = '12'
+
+                                col_type = dict()
+                                col_type['title'] = 'Type'
+                                col_type['size'] = '8'
+
+                                col_ip1 = dict()
+                                col_ip1['title'] = 'Manage IP'
+                                col_ip1['size'] = '12'
+
+                                col_ip2 = dict()
+                                col_ip2['title'] = 'Data IP'
+                                col_ip2['size'] = '12'
+
+                                col_brint = dict()
+                                col_brint['title'] = 'br-int'
+                                col_brint['size'] = '8'
+
+                                col_brrouter = dict()
+                                col_brrouter['title'] = 'br-router'
+                                col_brrouter['size'] = '10'
+
+                                col_status = dict()
+                                col_status['title'] = 'Status'
+                                col_status['size'] = '10'
+
+                                header.append(col_host)
+                                header.append(col_type)
+                                header.append(col_ip1)
+                                header.append(col_ip2)
+                                header.append(col_brint)
+                                header.append(col_brrouter)
+                                header.append(col_status)
+
+                                cls.draw_grid(header, data)
+
+                            print ''
+                    elif param == 'port':
+                        print('')
+                        for sys in sorted_list:
+                            print '[' + sys + ']'
+
+                            sys_ret = result[sys]
+                            if sys_ret.upper().endswith('FAIL'):
+                                sys_ret = 'fail'
+                                print sys_ret
+                            else:
+                                data = []
+                                line = []
+
+                                for row in sys_ret.splitlines():
+                                    if str(row).strip() == '':
+                                        continue
+
+                                    LOG.debug_log('row = ' + row)
+
+                                    if str(row).startswith('*'):
+                                        line.append(str(row).lstrip('*').strip())
+                                    elif str(row).startswith('['):
+                                        if len(line) == 0:
+                                            line.append('')
+                                        line.append(str(row).lstrip('[').split(' ')[0])
+                                    else:
+                                        tmp = str(row).split(' ')
+                                        if len(line) < 2:
+                                            line.append('')
+                                            line.append('')
+                                        line.append(tmp[1].split('=')[0])
+                                        line.append(tmp[0])
+                                        data.append(line)
+                                        line = []
+
+                                header = []
+
+                                col_host = dict()
+                                col_host['title'] = 'Host Name'
+                                col_host['size'] = '12'
+
+                                col_bridge = dict()
+                                col_bridge['title'] = 'Bridge'
+                                col_bridge['size'] = '14'
+
+                                col_port = dict()
+                                col_port['title'] = 'Port'
+                                col_port['size'] = '14'
+
+                                col_status = dict()
+                                col_status['title'] = 'Status'
+                                col_status['size'] = '6'
+
+                                header.append(col_host)
+                                header.append(col_bridge)
+                                header.append(col_port)
+                                header.append(col_status)
+
+                                cls.draw_grid(header, data)
+
+                            print ''
 
                 elif command == 'dis-connection':
-                    for sys in sorted_list:
-                        sys_ret = str(result[sys])
+                    if param in ['ovsdb', 'of']:
+                        print('')
+                        for sys in sorted_list:
+                            print '[' + sys + ']'
 
-                        if ', Inc' in sys_ret:
-                            sys_ret = sys_ret.replace(', Inc', '. Inc')
+                            sys_ret = result[sys]
+                            if sys_ret.upper().endswith('FAIL'):
+                                sys_ret = 'fail'
+                                print sys_ret
+                            else:
+                                data = []
 
-                        print '\t[' + sys + ']'
+                                for row in sys_ret.splitlines():
+                                    line = []
+                                    for col in row.split(','):
+                                        tmp = col.split('=')
 
-                        for line in sys_ret.splitlines():
-                            for item in line.split(','):
-                                item = item.strip()
+                                        if str(tmp[0]).strip() in ['id', 'available', 'local-status', 'role', 'type']:
+                                            if ' ago' in str(tmp[1]):
+                                                tmp[1] = str(tmp[1]).split(' ')[0]
 
-                                if item.startswith('id='):
-                                    print '\t  ' + item + ''
-                                else:
-                                    print '\t     - ' + item
-                        print '\n'
+                                            line.append(str(tmp[1]).strip())
+                                    data.append(line)
+
+                                header = []
+
+                                col_id = dict()
+                                col_id['title'] = 'ID'
+                                col_id['size'] = '20'
+
+                                col_avail = dict()
+                                col_avail['title'] = 'Available'
+                                col_avail['size'] = '10'
+
+                                col_status = dict()
+                                col_status['title'] = 'Status'
+                                col_status['size'] = '10'
+
+                                col_role = dict()
+                                col_role['title'] = 'Role'
+                                col_role['size'] = '8'
+
+                                col_type = dict()
+                                col_type['title'] = 'Type'
+                                col_type['size'] = '12'
+
+                                header.append(col_id)
+                                header.append(col_avail)
+                                header.append(col_status)
+                                header.append(col_role)
+                                header.append(col_type)
+
+                                cls.draw_grid(header, data)
+
+                            print ''
+
+                    elif param == 'cluster':
+                        print('')
+                        for sys in sorted_list:
+                            print '[' + sys + ']'
+
+                            sys_ret = result[sys]
+                            if sys_ret.upper().endswith('FAIL'):
+                                sys_ret = 'fail'
+                                print sys_ret
+                            else:
+                                data = []
+
+                                for row in sys_ret.splitlines():
+                                    line = []
+                                    for col in row.split(','):
+                                        tmp = col.split('=')
+
+                                        if str(tmp[0]).strip() in ['id', 'address', 'state']:
+                                            line.append(str(tmp[1]).strip())
+                                    data.append(line)
+
+                                header = []
+
+                                col_id = dict()
+                                col_id['title'] = 'ID'
+                                col_id['size'] = '12'
+
+                                col_addr = dict()
+                                col_addr['title'] = 'address'
+                                col_addr['size'] = '16'
+
+                                col_state = dict()
+                                col_state['title'] = 'State'
+                                col_state['size'] = '6'
+
+                                header.append(col_id)
+                                header.append(col_addr)
+                                header.append(col_state)
+
+                                cls.draw_grid(header, data)
+
+                            print ''
                 else:
                     print('')
                     for sys in sorted_list:
@@ -193,6 +467,39 @@ class CLI():
 
         except:
             LOG.exception_err_write()
+
+
+    @staticmethod
+    def draw_grid(header, data):
+        try:
+            width = -1
+
+            for col in header:
+                width = width + int(col['size']) + 2
+
+            print '+%s+' % ('-' * width).ljust(width)
+            print '|',
+            for col in header:
+                cmd = '%' + col['size'] + 's|'
+                title = str(col['title']).center(int(col['size']))
+                print cmd % title,
+            print ''
+
+            print '+%s+' % ('-' * width).ljust(width)
+
+            for line in data:
+                print '|',
+                i = 0
+                for col in line:
+                    cmd = '%' + header[i]['size'] + 's|'
+                    print cmd % col,
+                    i = i + 1
+                print ''
+
+            print '+%s+' % ('-' * width).ljust(width)
+        except:
+            LOG.exception_err_write()
+
 
     @classmethod
     def send_rest(cls, cmd):

@@ -80,6 +80,9 @@ def periodic(conn):
                     # check connection
                     of_status, ovsdb_status, cluster_status = chk_onos.onos_conn_check(conn, node_name, node_ip)
 
+                    # check app
+                    app = check_app(conn, node_name, node_ip, user_name, type)
+
                     # check web
                     web_status = chk_onos.onos_web_check(conn, node_name, node_ip)
 
