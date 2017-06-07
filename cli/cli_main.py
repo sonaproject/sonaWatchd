@@ -201,11 +201,11 @@ def select_menu():
                             break
                         elif CLI.is_exit(cmd):
                             return
-                        elif cmd == 'dis-system':
+                        elif cmd == 'system-status':
                             SCREEN.display_sys()
                         elif cmd == 'help':
                             SCREEN.display_help()
-                        elif cmd == 'dis-all':
+                        elif cmd == 'event-status':
                             SCREEN.display_event()
                         elif cmd.startswith('onos '):
                             sys_name = cmd.split(' ')[1]

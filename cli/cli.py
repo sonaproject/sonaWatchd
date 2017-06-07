@@ -119,7 +119,7 @@ class CLI():
             sorted_list = sorted(dict(result).keys())
 
             try:
-                if command == 'dis-resource':
+                if command == 'resource':
                     data = []
 
                     for sys in sorted_list:
@@ -146,7 +146,7 @@ class CLI():
                     cls.draw_grid(header, data)
                     print ''
 
-                elif command == 'dis-onosha':
+                elif command == 'onos-ha':
                     if param == 'list':
                         print('')
                         for sys in sorted_list:
@@ -219,7 +219,7 @@ class CLI():
                         print "+-----------------------------------------------------------+"
                         print ''
 
-                elif command == 'dis-node':
+                elif command == 'openstack-node':
                     if param == 'list':
                         print('')
                         for sys in sorted_list:
@@ -321,7 +321,11 @@ class CLI():
                                             line.append('')
                                             line.append('')
                                         line.append(tmp[1].split('=')[0])
-                                        line.append(tmp[0])
+                                        status = tmp[0]
+
+                                        if status == 'NO':
+                                            status = '*' + status
+                                        line.append(status)
                                         data.append(line)
                                         line = []
 
@@ -352,7 +356,7 @@ class CLI():
 
                             print ''
 
-                elif command == 'dis-connection':
+                elif command == 'onos-conn':
                     if param in ['ovsdb', 'of']:
                         print('')
                         for sys in sorted_list:
@@ -603,7 +607,7 @@ class CLI():
 
         return auth
 
-    sys_command = 'dis-system info'
+    sys_command = 'system-status info'
     @classmethod
     def req_sys_info(cls):
         try:
@@ -648,7 +652,8 @@ class CLI():
             cls.cli_search_list.append('exit')
             cls.cli_search_list.append('sys')
             cls.cli_search_list.append('onos')
-            cls.cli_search_list.append('dis-system')
+            cls.cli_search_list.append('event-status')
+            cls.cli_search_list.append('system-status')
             cls.cli_search_list.append('help')
 
             onos_list = []

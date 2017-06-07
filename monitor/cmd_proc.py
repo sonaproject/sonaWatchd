@@ -330,17 +330,17 @@ def get_node_list(nodes, param, tbl = DB.NODE_INFO_TBL):
         LOG.exception()
         return None
 
-COMMAND_MAP = {'dis-resource': proc_dis_resource,
-               'dis-onos': proc_dis_onos,
-               'dis-log': proc_dis_log,
-               'dis-vrouter': proc_dis_vrouter,
-               'dis-swarm': proc_dis_swarm,
-               'dis-xos': proc_dis_xos,
-               'dis-onosha': proc_dis_onosha,
-               'dis-node': proc_dis_node,
-               'dis-connection': proc_dis_connection,
-               'dis-all': proc_dis_all,
-               'dis-gwratio': proc_dis_gwratio,
+COMMAND_MAP = {'resource': proc_dis_resource,
+               'onos-svc': proc_dis_onos,
+               'onos-log': proc_dis_log,
+               'vrouter-svc': proc_dis_vrouter,
+               'swarm-svc': proc_dis_swarm,
+               'xos-svc': proc_dis_xos,
+               'onos-ha': proc_dis_onosha,
+               'openstack-node': proc_dis_node,
+               'onos-conn': proc_dis_connection,
+               'event-list': proc_dis_all,
+               'traffic-gw': proc_dis_gwratio,
                #internal command
-               'dis-system':proc_dis_system
+               'system-status':proc_dis_system
                }
