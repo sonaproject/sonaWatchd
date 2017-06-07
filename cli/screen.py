@@ -203,6 +203,7 @@ class SCREEN():
         except:
             LOG.exception_err_write()
 
+
     @classmethod
     def display_header(cls, menu):
         try:
@@ -214,43 +215,78 @@ class SCREEN():
         except:
             LOG.exception_err_write()
 
+
     @classmethod
     def display_event(cls):
+        onos_list = ['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK', 'ONOS_APP', 'ONOS_REST', 'ONOS_OVSDB', 'ONOS_OF',
+                     'ONOS_CLUSTER', 'ONOS_HA_LIST', 'ONOS_HA_RATIO', 'OPENSTACK_NODE']
+        swarm_list = ['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK', 'SWARM_SVC', 'SWARM_NODE']
+        openstack_list = ['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK', 'VROUTER', 'TRAFFIC_GW']
+        xos_list = ['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK']
+
         try:
-            sorted_list = sorted(SYS.sys_list.keys())
-
-            title = ('   system'.ljust(13))
-            item_list = []
-            for sys in sorted_list:
-                for item in (dict)(SYS.sys_list[sys]).keys():
-                    if not item in item_list:
-                        item_list.append(item)
-                        title = title + item.ljust(10)
-
-            width = len(title)
-
-            print BG_WHITE + "|%s|" % ('-' * width).ljust(width) + ENDC
-            print '| SYSTEM INFO | TIME : ' + SYS.last_check_time.split('.')[0] + \
-                  ("{0:>" + str(width - len(SYS.last_check_time.split('.')[0]) - len('SYSTEM INFO | TIME : ')) + "}").format('|') + ENDC
-            print BG_WHITE + "|%s|" % ('-' * width).ljust(width) + ENDC
-            print '|' + title + '|'
-            print BG_WHITE + "|%s|" % ('-' * width).ljust(width) + ENDC
-
-            for sys in sorted_list:
-                line = ('   ' + sys).ljust(13)
-
-                LOG.debug_log(str(item_list))
-                for item in item_list:
-                    if (dict)(SYS.sys_list[sys]).has_key(item):
-                        line = line + SYS.sys_list[sys][item].ljust(10)
-                    else:
-                        line = line + ('-').ljust(10)
-                print '|' + line + '|'
-
-
-            print BG_WHITE + "|%s|" % ('-' * width).ljust(width) + ENDC
+            print ''
+            cls.draw_grid('ONOS', onos_list)
+            cls.draw_grid('SWARM', swarm_list)
+            cls.draw_grid('OPENSTACK', openstack_list)
+            cls.draw_grid('XOS', xos_list)
         except:
             LOG.exception_err_write()
+
+
+    @staticmethod
+    def draw_grid(sys_type, list):
+        print '[' + sys_type + ']'
+        sorted_list = sorted(SYS.sys_list.keys())
+
+        data = []
+        for sys in sorted_list:
+            if not (dict)(SYS.sys_list[sys])['TYPE'] == sys_type:
+                continue
+
+            line = []
+            line.append(sys)
+
+            for item in list:
+                if item in ['TYPE', 'IP']:
+                    continue
+
+                if (dict)(SYS.sys_list[sys]).has_key(item):
+                    line.append(SYS.sys_list[sys][item])
+                else:
+                    line.append('-')
+
+            data.append(line)
+
+        header = []
+
+        col = dict()
+        col['title'] = 'SYSTEM'
+        col['size'] = '6'
+
+        header.append(col)
+
+        for item in list:
+            if item in ['TYPE', 'IP']:
+                continue
+
+            if str(item).startswith(sys_type):
+                item = item[len(sys_type) + 1:]
+
+            col = dict()
+            col['title'] = item
+
+            size = len(item)
+            if size < 6:
+                size = 6
+
+            col['size'] = str(size)
+
+            header.append(col)
+
+        CLI.draw_grid(header, data)
+
+        print ''
 
     @classmethod
     def display_sys(cls, header = False):
@@ -271,7 +307,7 @@ class SCREEN():
 
                 status_list = (dict)(SYS.sys_list[sys]).keys()
                 for key in status_list:
-                    if key == 'type' or key == 'ip':
+                    if str(key).upper() == 'TYPE' or str(key).upper() == 'IP':
                         continue
 
                     value = (dict)(SYS.sys_list[sys])[key]
@@ -348,7 +384,7 @@ class SCREEN():
 
                 status_list = (dict)(SYS.sys_list[sys]).keys()
                 for key in status_list:
-                    if key == 'type' or key == 'ip':
+                    if str(key).upper() == 'TYPE' or str(key).upper() == 'IP':
                         continue
 
                     value = (dict)(SYS.sys_list[sys])[key]

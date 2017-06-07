@@ -108,15 +108,15 @@ def proc_dis_system(node, dummy):
             node_type = get_node_list(nodename, 'type')
             type = str(node_type[0][0]).upper()
 
-            if 'ONOS' in type:
-                result[nodename] = {'type': type, 'ip': ip, 'ping': ping, 'app': app, 'web': web, 'cpu': cpu, 'memory': memory, 'disk': disk,
-                                    'ovsdb': ovsdb, 'of': of, 'cluster': cluster, 'ha_list': ha_stats, 'ha_ratio': ha_ratio, 'node': node}
-            elif 'SWARM' in str(node_type).upper():
-                result[nodename] = {'type': type, 'ip': ip, 'ping': ping, 'app': app, 'cpu': cpu, 'memory': memory, 'disk': disk, 'node': node}
-            elif 'OPENSTACK' in str(node_type).upper():
-                result[nodename] = {'type': type, 'ip': ip, 'ping': ping, 'cpu': cpu, 'memory': memory, 'disk': disk, 'vrouter': vrouter, 'gw_ratio': gw_ratio}
-            else:
-                result[nodename] = {'type': type, 'ip': ip, 'ping': ping, 'app': app, 'cpu': cpu, 'memory': memory, 'disk': disk}
+            if 'ONOS' == type:
+                result[nodename] = {'TYPE': type, 'IP': ip, 'NETWORK': ping, 'ONOS_APP': app, 'ONOS_REST': web, 'CPU': cpu, 'MEMORY': memory, 'DISK': disk,
+                                    'ONOS_OVSDB': ovsdb, 'ONOS_OF': of, 'ONOS_CLUSTER': cluster, 'ONOS_HA_LIST': ha_stats, 'ONOS_HA_RATIO': ha_ratio, 'OPENSTACK_NODE': node}
+            elif 'SWARM' == type:
+                result[nodename] = {'TYPE': type, 'IP': ip, 'NETWORK': ping, 'SWARM_SVC': app, 'CPU': cpu, 'MEMORY': memory, 'DISK': disk, 'SWARM_NODE': node}
+            elif 'OPENSTACK' == type:
+                result[nodename] = {'TYPE': type, 'IP': ip, 'NETWORK': ping, 'CPU': cpu, 'MEMORY': memory, 'DISK': disk, 'VROUTER': vrouter, 'TRAFFIC_GW': gw_ratio}
+            elif 'XOS' == type:
+                result[nodename] = {'TYPE': type, 'IP': ip, 'NETWORK': ping, 'CPU': cpu, 'MEMORY': memory, 'DISK': disk}
 
         return result
     except:
