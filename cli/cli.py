@@ -664,7 +664,7 @@ class CLI():
                 tmp_sys.append(sys_name)
                 cls.cli_validate_list.append('sys ' + sys_name)
 
-                if dict(SYS.sys_list[sys_name])['type'] == 'ONOS':
+                if dict(SYS.sys_list[sys_name])['TYPE'] == 'ONOS':
                     onos_list.append(sys_name)
 
             cls.cli_search_list_sub['sys'] = tmp_sys
@@ -740,7 +740,7 @@ class CLI():
                 print node_name + ' system is not ONOS type'
                 return
 
-            node_ip = dict(SYS.sys_list[node_name])['ip']
+            node_ip = dict(SYS.sys_list[node_name])['IP']
 
             ssh_options = '-o StrictHostKeyChecking=no ' \
                           '-o ConnectTimeout=' + str(CONFIG.get_ssh_timeout())
