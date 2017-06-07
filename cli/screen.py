@@ -181,7 +181,7 @@ class SCREEN():
 
             normalText = curses.A_NORMAL
 
-            box_event.addstr(0, 18, ' SERVER STATUS ', normalText)
+            box_event.addstr(0, 19, ' TOOL STATUS ', normalText)
 
             if type == 'disconnect':
                 box_event.addstr(1, 2, '[Server shutdown] check server and restart', warn_color)
