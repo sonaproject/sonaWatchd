@@ -21,6 +21,13 @@ menu_list = ["CLI", "Flow Trace", "Monitoring Detail", "Quit"]
 
 def main():
     try:
+        from PIL import Image
+    except:
+        print "This program requires the pillow package."
+        print 'Please run \'sudo pip install pillow\' and try again.'
+        return
+
+    try:
         from asciimatics.scene import Scene
     except:
         print "This program requires the asciimatics package."
