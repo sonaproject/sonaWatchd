@@ -17,7 +17,7 @@ from flow_trace import TRACE
 from log_lib import USER_LOG
 from screen import SCREEN
 
-menu_list = ["CLI", "Flow Trace", "Event List", "Quit"]
+menu_list = ["CLI", "Flow Trace", "Monitoring Detail", "Quit"]
 
 def main():
     try:
@@ -178,11 +178,11 @@ def select_menu():
 
                 menu = menu_list[selected_menu_no - 1]
 
-                if menu == 'CLI' or menu == 'Event List':
+                if menu == 'CLI' or menu == 'Monitoring Detail':
                     if menu == 'CLI':
                         SCREEN.display_header(menu_list[selected_menu_no - 1])
                         SCREEN.display_sys(True)
-                    elif menu == 'Event List':
+                    elif menu == 'Monitoring Detail':
                         SCREEN.display_event()
 
                     readline.set_completer(CLI.pre_complete_cli)
