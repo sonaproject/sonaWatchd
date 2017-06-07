@@ -208,7 +208,8 @@ def select_menu():
                         elif cmd == 'dis-all':
                             SCREEN.display_event()
                         elif cmd.startswith('onos '):
-                            pass
+                            sys_name = cmd.split(' ')[1]
+                            CLI.onos_ssh_exec(sys_name, cmd[len('onos ') + len(sys_name) + 1:])
                         else:
                             # send command
                             CLI.process_cmd(cmd)

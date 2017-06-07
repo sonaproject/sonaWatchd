@@ -651,13 +651,19 @@ class CLI():
             cls.cli_search_list.append('dis-system')
             cls.cli_search_list.append('help')
 
+            onos_list = []
             tmp_sys = []
             tmp_sys.append('all')
             cls.cli_validate_list.append('sys all')
-            for onos_name in SYS.get_sys_list():
-                tmp_sys.append(onos_name)
-                cls.cli_validate_list.append('sys ' + onos_name)
+            for sys_name in SYS.get_sys_list():
+                tmp_sys.append(sys_name)
+                cls.cli_validate_list.append('sys ' + sys_name)
+
+                if dict(SYS.sys_list[sys_name])['type'] == 'ONOS':
+                    onos_list.append(sys_name)
+
             cls.cli_search_list_sub['sys'] = tmp_sys
+            cls.cli_search_list_sub['onos'] = onos_list
         except:
             LOG.exception_err_write()
 
@@ -672,6 +678,7 @@ class CLI():
                         state -= 1
         except:
             LOG.exception_err_write()
+
 
     @classmethod
     def pre_complete_cli(cls, text, state):
@@ -720,27 +727,33 @@ class CLI():
         except:
             LOG.exception_err_write()
 
+
     @staticmethod
-    def onos_ssh_exec(node, command):
-        ssh_options = '-o StrictHostKeyChecking=no ' \
-                      '-o ConnectTimeout=' + str(CONFIG.get_ssh_timeout())
-
-        local_ssh_options = ssh_options + " -p 8101"
-
-        cmd = 'ssh %s %s %s' % (local_ssh_options, node, command)
-
+    def onos_ssh_exec(node_name, command):
         try:
+            if not dict(SYS.sys_list).has_key(node_name):
+                print node_name + ' system is not ONOS type'
+                return
+
+            node_ip = dict(SYS.sys_list[node_name])['ip']
+
+            ssh_options = '-o StrictHostKeyChecking=no ' \
+                          '-o ConnectTimeout=' + str(CONFIG.get_ssh_timeout())
+
+            local_ssh_options = ssh_options + " -p 8101"
+
+            cmd = 'ssh %s %s %s' % (local_ssh_options, node_ip, command)
+
             result = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
             output, error = result.communicate()
 
             if result.returncode != 0:
-                LOG.debug_log("ONOS(%s) SSH_Cmd Fail, cause => %s", node, error)
-                return 'fail'
+                LOG.debug_log('ONOS(' + node_ip + ') SSH_Cmd Fail, cause => %s' + str(error))
             else:
-                return output
+                print '\n' + output
         except:
             LOG.exception_err_write()
-            return 'fail'
+
 
     @classmethod
     def set_cmd_list(cls):

@@ -92,7 +92,7 @@ def unregi_url(url):
 
 def proc_dis_system(node, dummy):
     try:
-        sql = 'SELECT ' + DB.STATUS_TBL + '.nodename, ' + DB.item_list + ' FROM ' + DB.STATUS_TBL + \
+        sql = 'SELECT ' + DB.STATUS_TBL + '.nodename, ' + DB.NODE_INFO_TBL + '.ip_addr, ' + DB.item_list + ' FROM ' + DB.STATUS_TBL + \
               ' INNER JOIN ' + DB.NODE_INFO_TBL + ' ON ' + DB.STATUS_TBL + '.nodename = ' + DB.NODE_INFO_TBL + '.nodename'
 
         if not node == 'all':
@@ -104,18 +104,19 @@ def proc_dis_system(node, dummy):
 
         result = dict()
 
-        for nodename, ping, app, web, cpu, memory, disk, ovsdb, of, cluster, node, vrouter, ha_stats, ha_ratio, gw_ratio in nodes_info:
+        for nodename, ip, ping, app, web, cpu, memory, disk, ovsdb, of, cluster, node, vrouter, ha_stats, ha_ratio, gw_ratio in nodes_info:
             node_type = get_node_list(nodename, 'type')
+            type = str(node_type[0][0]).upper()
 
-            if 'ONOS' in str(node_type).upper():
-                result[nodename] = {'ping': ping, 'app': app, 'web': web, 'cpu': cpu, 'memory': memory, 'disk': disk,
+            if 'ONOS' in type:
+                result[nodename] = {'type': type, 'ip': ip, 'ping': ping, 'app': app, 'web': web, 'cpu': cpu, 'memory': memory, 'disk': disk,
                                     'ovsdb': ovsdb, 'of': of, 'cluster': cluster, 'ha_list': ha_stats, 'ha_ratio': ha_ratio, 'node': node}
             elif 'SWARM' in str(node_type).upper():
-                result[nodename] = {'ping': ping, 'app': app, 'cpu': cpu, 'memory': memory, 'disk': disk, 'node': node}
+                result[nodename] = {'type': type, 'ip': ip, 'ping': ping, 'app': app, 'cpu': cpu, 'memory': memory, 'disk': disk, 'node': node}
             elif 'OPENSTACK' in str(node_type).upper():
-                result[nodename] = {'ping': ping, 'cpu': cpu, 'memory': memory, 'disk': disk, 'vrouter': vrouter, 'gw_ratio': gw_ratio}
+                result[nodename] = {'type': type, 'ip': ip, 'ping': ping, 'cpu': cpu, 'memory': memory, 'disk': disk, 'vrouter': vrouter, 'gw_ratio': gw_ratio}
             else:
-                result[nodename] = {'ping': ping, 'app': app, 'cpu': cpu, 'memory': memory, 'disk': disk}
+                result[nodename] = {'type': type, 'ip': ip, 'ping': ping, 'app': app, 'cpu': cpu, 'memory': memory, 'disk': disk}
 
         return result
     except:
