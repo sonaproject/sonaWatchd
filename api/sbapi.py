@@ -54,18 +54,22 @@ class SshCommand:
         cmd = 'ssh %s %s@%s' % (cls.ssh_options, username, node)
 
         try:
+            LOG.info('ssh_pexpect cmd = ' + cmd)
             ssh_conn = pexpect.spawn(cmd)
 
             while True:
-                rt1 = ssh_conn.expect(['[#\$] ', pexpect.EOF], timeout=CONF.ssh_conn()['ssh_req_timeout'])
+                rt1 = ssh_conn.expect(['#', '\$', pexpect.EOF], timeout=CONF.ssh_conn()['ssh_req_timeout'])
 
                 if rt1 == 0:
-                    ssh_conn.sendline('ssh -p 8101 karaf@' + onos_ip + ' ' + command)
-                    rt2 = ssh_conn.expect('Password:', timeout=CONF.ssh_conn()['ssh_req_timeout'])
+                    cmd = 'ssh -p 8101 karaf@' + onos_ip + ' ' + command
+
+                    LOG.info('ssh_pexpect cmd = ' + cmd)
+                    ssh_conn.sendline(cmd)
+                    rt2 = ssh_conn.expect(['Password:', pexpect.EOF], timeout=CONF.ssh_conn()['ssh_req_timeout'])
 
                     if rt2 == 0:
                         ssh_conn.sendline('karaf')
-                        ssh_conn.expect(['[#\$] ', pexpect.EOF], timeout=CONF.ssh_conn()['ssh_req_timeout'])
+                        ssh_conn.expect(['#', '\$', pexpect.EOF], timeout=CONF.ssh_conn()['ssh_req_timeout'])
 
                         str_output = str(ssh_conn.before)
 

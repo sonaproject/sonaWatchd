@@ -181,7 +181,7 @@ class SCREEN():
 
             normalText = curses.A_NORMAL
 
-            box_event.addstr(0, 22, ' EVENT ', normalText)
+            box_event.addstr(0, 18, ' SERVER STATUS ', normalText)
 
             if type == 'disconnect':
                 box_event.addstr(1, 2, '[Server shutdown] check server and restart', warn_color)
@@ -269,17 +269,21 @@ class SCREEN():
             for sys in sorted_list:
                 str_status = 'OK'
 
-                status_list = (dict)(SYS.sys_list[sys]).values()
-                for status in status_list:
-                    if (status == 'none'):
+                status_list = (dict)(SYS.sys_list[sys]).keys()
+                for key in status_list:
+                    if key == 'type' or key == 'ip':
+                        continue
+
+                    value = (dict)(SYS.sys_list[sys])[key]
+                    if (value == 'none'):
                         str_status = 'loading'
                         break
-                    elif not (status == 'ok' or status == 'normal' or status == '-'):
+                    elif not (value == 'ok' or value == 'normal' or value == '-'):
                         str_status = 'NOK'
                         break
 
                 color = GREEN
-                if status is not 'OK':
+                if str_status is not 'OK':
                     color = RED
                 print '| ' + sys.ljust(6) + ' [' + color + str_status + BG_WHITE + ']' + \
                       ("{0:>" + str(width - 6 - len(str_status) - 3) + "}").format('|') + ENDC
@@ -329,7 +333,7 @@ class SCREEN():
             status_text_NOK = curses.color_pair(3)
             normal_text = curses.A_NORMAL
 
-            box_sys.addstr(0, 18, ' CONTROL PLAN ', normal_text)
+            box_sys.addstr(0, 16, ' MONITORING STATUS ', normal_text)
 
             i = 1
 
@@ -342,12 +346,16 @@ class SCREEN():
 
                 str_status = 'OK'
 
-                status_list = (dict)(SYS.sys_list[sys]).values()
-                for status in status_list:
-                    if (status == 'none'):
+                status_list = (dict)(SYS.sys_list[sys]).keys()
+                for key in status_list:
+                    if key == 'type' or key == 'ip':
+                        continue
+
+                    value = (dict)(SYS.sys_list[sys])[key]
+                    if (value == 'none'):
                         str_status = 'loading'
                         break
-                    elif not (status == 'ok' or status == 'normal' or status == '-'):
+                    elif not (value == 'ok' or value == 'normal' or value == '-'):
                         str_status = 'NOK'
                         alarm_flag = True
                         break

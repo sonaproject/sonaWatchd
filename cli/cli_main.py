@@ -17,7 +17,7 @@ from flow_trace import TRACE
 from log_lib import USER_LOG
 from screen import SCREEN
 
-menu_list = ["CLI", "Flow Trace", "Event List"]
+menu_list = ["CLI", "Flow Trace", "Event List", "Quit"]
 
 def main():
     try:
@@ -201,12 +201,15 @@ def select_menu():
                             break
                         elif CLI.is_exit(cmd):
                             return
-                        elif cmd == 'dis-system':
+                        elif cmd == 'system-status':
                             SCREEN.display_sys()
                         elif cmd == 'help':
                             SCREEN.display_help()
-                        elif cmd == 'dis-all':
+                        elif cmd == 'event-status':
                             SCREEN.display_event()
+                        elif cmd.startswith('onos '):
+                            sys_name = cmd.split(' ')[1]
+                            CLI.onos_ssh_exec(sys_name, cmd[len('onos ') + len(sys_name) + 1:])
                         else:
                             # send command
                             CLI.process_cmd(cmd)
@@ -241,6 +244,8 @@ def select_menu():
                         except ResizeScreenError as e:
                             last_scene = e.scene
 
+                elif menu == 'Quit':
+                    break
 
             SCREEN.draw_system(menu_list)
             SCREEN.draw_event(SYS.disconnect_type)
@@ -336,37 +341,6 @@ def set_readline_opt():
 
 def complete_dummy(text, state):
     pass
-
-def call_cli():
-    try:
-        SCREEN.display_header('CLI')
-
-        readline.set_completer(CLI.pre_complete_cli)
-
-        while True:
-            # mac OS
-            if 'libedit' in readline.__doc__:
-                CLI.modify_flag = True
-                CLI.save_buffer = readline.get_line_buffer()
-
-            # select_command (handling tab event)
-            cmd = CLI.input_cmd()
-
-            if CLI.is_menu(cmd):
-                SCREEN.cli_flag = False
-                return
-            elif CLI.is_exit(cmd):
-                SCREEN.set_exit()
-                return
-            else:
-                # send command
-                CLI.process_cmd(cmd)
-
-                while not CLI.get_cli_ret_flag():
-                    time.sleep(1)
-    except:
-        LOG.exception_err_write()
-
 
 if __name__ == '__main__':
     try:

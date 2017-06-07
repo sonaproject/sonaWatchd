@@ -92,22 +92,31 @@ def unregi_url(url):
 
 def proc_dis_system(node, dummy):
     try:
-        nodes_info = get_node_list(node, 'nodename, ' + DB.item_list, DB.STATUS_TBL)
+        sql = 'SELECT ' + DB.STATUS_TBL + '.nodename, ' + DB.NODE_INFO_TBL + '.ip_addr, ' + DB.item_list + ' FROM ' + DB.STATUS_TBL + \
+              ' INNER JOIN ' + DB.NODE_INFO_TBL + ' ON ' + DB.STATUS_TBL + '.nodename = ' + DB.NODE_INFO_TBL + '.nodename'
+
+        if not node == 'all':
+            sql = sql + ' WHERE nodename = \'' + node + '\''
+
+        with DB.connection() as conn:
+            nodes_info = conn.cursor().execute(sql).fetchall()
+        conn.close()
 
         result = dict()
 
-        for nodename, ping, app, web, cpu, memory, disk, ovsdb, of, cluster, node, vrouter, ha_stats, ha_ratio, gw_ratio in nodes_info:
+        for nodename, ip, ping, app, web, cpu, memory, disk, ovsdb, of, cluster, node, vrouter, ha_stats, ha_ratio, gw_ratio in nodes_info:
             node_type = get_node_list(nodename, 'type')
+            type = str(node_type[0][0]).upper()
 
-            if 'ONOS' in str(node_type).upper():
-                result[nodename] = {'ping': ping, 'app': app, 'web': web, 'cpu': cpu, 'memory': memory, 'disk': disk,
+            if 'ONOS' in type:
+                result[nodename] = {'type': type, 'ip': ip, 'ping': ping, 'app': app, 'web': web, 'cpu': cpu, 'memory': memory, 'disk': disk,
                                     'ovsdb': ovsdb, 'of': of, 'cluster': cluster, 'ha_list': ha_stats, 'ha_ratio': ha_ratio, 'node': node}
             elif 'SWARM' in str(node_type).upper():
-                result[nodename] = {'ping': ping, 'app': app, 'cpu': cpu, 'memory': memory, 'disk': disk, 'node': node}
+                result[nodename] = {'type': type, 'ip': ip, 'ping': ping, 'app': app, 'cpu': cpu, 'memory': memory, 'disk': disk, 'node': node}
             elif 'OPENSTACK' in str(node_type).upper():
-                result[nodename] = {'ping': ping, 'cpu': cpu, 'memory': memory, 'disk': disk, 'vrouter': vrouter, 'gw_ratio': gw_ratio}
+                result[nodename] = {'type': type, 'ip': ip, 'ping': ping, 'cpu': cpu, 'memory': memory, 'disk': disk, 'vrouter': vrouter, 'gw_ratio': gw_ratio}
             else:
-                result[nodename] = {'ping': ping, 'app': app, 'cpu': cpu, 'memory': memory, 'disk': disk}
+                result[nodename] = {'type': type, 'ip': ip, 'ping': ping, 'app': app, 'cpu': cpu, 'memory': memory, 'disk': disk}
 
         return result
     except:
@@ -321,17 +330,17 @@ def get_node_list(nodes, param, tbl = DB.NODE_INFO_TBL):
         LOG.exception()
         return None
 
-COMMAND_MAP = {'dis-resource': proc_dis_resource,
-               'dis-onos': proc_dis_onos,
-               'dis-log': proc_dis_log,
-               'dis-vrouter': proc_dis_vrouter,
-               'dis-swarm': proc_dis_swarm,
-               'dis-xos': proc_dis_xos,
-               'dis-onosha': proc_dis_onosha,
-               'dis-node': proc_dis_node,
-               'dis-connection': proc_dis_connection,
-               'dis-all': proc_dis_all,
-               'dis-gwratio': proc_dis_gwratio,
+COMMAND_MAP = {'resource': proc_dis_resource,
+               'onos-svc': proc_dis_onos,
+               'onos-log': proc_dis_log,
+               'vrouter-svc': proc_dis_vrouter,
+               'swarm-svc': proc_dis_swarm,
+               'xos-svc': proc_dis_xos,
+               'onos-ha': proc_dis_onosha,
+               'openstack-node': proc_dis_node,
+               'onos-conn': proc_dis_connection,
+               'event-list': proc_dis_all,
+               'traffic-gw': proc_dis_gwratio,
                #internal command
-               'dis-system':proc_dis_system
+               'system-status':proc_dis_system
                }
