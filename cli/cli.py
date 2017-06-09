@@ -48,6 +48,8 @@ class CLI():
             if len(cmd.strip()) == 0:
                 cls.set_cli_ret_flag(True)
                 return
+            elif (cmd.startswith('onos ') or cmd.startswith('shell ')) and len(cmd.split(' ')) > 2:
+                pass
             elif cmd not in cls.cli_validate_list:
                 if cmd.startswith('sys'):
                     tmp = cmd.split(' ')
@@ -512,13 +514,22 @@ class CLI():
         auth = cls.get_auth()
 
         tmp = cmd.split(' ')
-        cmd = tmp[0]
         param = ''
+        system = ''
 
-        if len(tmp) == 2:
-            param = tmp[1]
+        if cmd.startswith('onos ') or cmd.startswith('shell '):
+            sys_name = tmp[1]
+            param = cmd[len(tmp[0]) + 1 + len(sys_name) + 1:]
+            system = sys_name
+        else:
+            system = cls.selected_sys
 
-        req_body = {'command': cmd, 'system': cls.selected_sys, 'param': param}
+            if len(tmp) == 2:
+                param = tmp[1]
+
+        cmd = tmp[0]
+
+        req_body = {'command': cmd, 'system': system, 'param': param}
         req_body_json = json.dumps(req_body)
 
         header = {'Content-Type': 'application/json', 'Authorization': base64.b64encode(auth)}
@@ -652,23 +663,29 @@ class CLI():
             cls.cli_search_list.append('exit')
             cls.cli_search_list.append('sys')
             cls.cli_search_list.append('onos')
-            cls.cli_search_list.append('event-status')
+            cls.cli_search_list.append('shell')
+            cls.cli_search_list.append('monitoring-details')
             cls.cli_search_list.append('system-status')
             cls.cli_search_list.append('help')
 
             onos_list = []
+            shell_list = []
             tmp_sys = []
             tmp_sys.append('all')
             cls.cli_validate_list.append('sys all')
             for sys_name in SYS.get_sys_list():
                 tmp_sys.append(sys_name)
                 cls.cli_validate_list.append('sys ' + sys_name)
+                cls.cli_validate_list.append('shell ' + sys_name)
 
                 if dict(SYS.sys_list[sys_name])['TYPE'] == 'ONOS':
                     onos_list.append(sys_name)
 
+                shell_list.append(sys_name)
+
             cls.cli_search_list_sub['sys'] = tmp_sys
             cls.cli_search_list_sub['onos'] = onos_list
+            cls.cli_search_list_sub['shell'] = shell_list
         except:
             LOG.exception_err_write()
 
@@ -729,33 +746,6 @@ class CLI():
                     i = i + 1
             else:
                 return cls.complete_cli(text, state, cls.get_cli_search_list())
-        except:
-            LOG.exception_err_write()
-
-
-    @staticmethod
-    def onos_ssh_exec(node_name, command):
-        try:
-            if not dict(SYS.sys_list).has_key(node_name):
-                print node_name + ' system is not ONOS type'
-                return
-
-            node_ip = dict(SYS.sys_list[node_name])['IP']
-
-            ssh_options = '-o StrictHostKeyChecking=no ' \
-                          '-o ConnectTimeout=' + str(CONFIG.get_ssh_timeout())
-
-            local_ssh_options = ssh_options + " -p 8101"
-
-            cmd = 'ssh %s %s %s' % (local_ssh_options, node_ip, command)
-
-            result = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
-            output, error = result.communicate()
-
-            if result.returncode != 0:
-                LOG.debug_log('ONOS(' + node_ip + ') SSH_Cmd Fail, cause => %s' + str(error))
-            else:
-                print '\n' + output
         except:
             LOG.exception_err_write()
 

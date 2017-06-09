@@ -123,6 +123,7 @@ def proc_dis_system(node, dummy):
         LOG.exception()
         return {'Result': 'FAIL'}
 
+
 def proc_dis_resource(node, param):
     nodes_info = get_node_list(node, 'nodename, ' + param, DB.RESOURCE_TBL)
 
@@ -330,6 +331,52 @@ def get_node_list(nodes, param, tbl = DB.NODE_INFO_TBL):
         LOG.exception()
         return None
 
+
+def proc_onos_cmd(node, cmd):
+    try:
+        nodes_info = get_node_list(node, 'ip_addr, type', DB.NODE_INFO_TBL)
+
+        if len(nodes_info) == 0:
+            return {'fail': 'This is not a command on the target system.'}
+
+        for ip, type in nodes_info:
+            if not type == 'ONOS':
+                return {'fail': 'This is not a command on the target system.'}
+            else:
+                res_result = dict()
+                cmd_rt = SshCommand.onos_ssh_exec(ip, cmd)
+
+                if not cmd_rt is None:
+                    res_result[node] = str(cmd_rt)
+                else:
+                    return {'fail': 'Invalid command.'}
+
+                return res_result
+    except:
+        LOG.exception()
+
+
+def proc_shell_cmd(node, cmd):
+    try:
+        nodes_info = get_node_list(node, 'username, ip_addr', DB.NODE_INFO_TBL)
+
+        if len(nodes_info) == 0:
+            return {'fail': 'This is not a command on the target system.'}
+
+        for username, ip in nodes_info:
+            res_result = dict()
+            cmd_rt = SshCommand.ssh_exec(username, ip, cmd)
+
+            if not cmd_rt is None:
+                res_result[node] = str(cmd_rt)
+            else:
+                return {'fail': 'Invalid command.'}
+
+            return res_result
+    except:
+        LOG.exception()
+
+
 COMMAND_MAP = {'resource': proc_dis_resource,
                'onos-svc': proc_dis_onos,
                'onos-log': proc_dis_log,
@@ -342,5 +389,7 @@ COMMAND_MAP = {'resource': proc_dis_resource,
                'event-list': proc_dis_all,
                'traffic-gw': proc_dis_gwratio,
                #internal command
-               'system-status':proc_dis_system
+               'system-status':proc_dis_system,
+               'onos':proc_onos_cmd,
+               'shell':proc_shell_cmd
                }
