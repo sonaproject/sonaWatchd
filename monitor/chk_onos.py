@@ -64,7 +64,7 @@ def onos_conn_check(conn, node_name, node_ip):
             sql = 'UPDATE ' + DB.ONOS_TBL + \
                   ' SET ovsdb = \'' + str_ovsdb + '\',' + \
                   ' of = \'' + str_of + '\',' + \
-                  ' cluster = \'' + nodes_rt + '\'' \
+                  ' cluster = \'' + str(nodes_rt) + '\'' \
                   ' WHERE nodename = \'' + node_name + '\''
             LOG.info('Update Connection info = ' + sql)
 
@@ -97,7 +97,7 @@ def onos_web_check(conn, node_name, node_ip):
 
         try:
             sql = 'UPDATE ' + DB.ONOS_TBL + \
-                  ' SET weblist = \'' + web_rt + '\'' +\
+                  ' SET weblist = \'' + str(web_rt) + '\'' +\
                   ' WHERE nodename = \'' + node_name + '\''
             LOG.info('Update Resource info = ' + sql)
 
@@ -245,11 +245,12 @@ def onos_node_check(conn, node_name, node_ip):
                         str_port = 'fail'
         else:
             LOG.error("\'%s\' ONOS Node Check Error", node_ip)
+            node_status = 'nok'
             node_rt = 'fail'
 
         try:
             sql = 'UPDATE ' + DB.ONOS_TBL + \
-                  ' SET nodelist = \'' + node_rt + '\',' + \
+                  ' SET nodelist = \'' + str(node_rt) + '\',' + \
                   ' port = \'' + str_port + '\'' \
                   ' WHERE nodename = \'' + node_name + '\''
             LOG.info('Update Resource info = ' + sql)
