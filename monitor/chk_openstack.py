@@ -129,22 +129,23 @@ def get_gw_ratio(conn, node_name, node_ip, cur_val, total_val):
 
         if cur_val == -1 or total_val == 0:
             LOG.info('GW Ratio Fail.')
-            return 'fail'
-
-        if cur_val == 0:
+            strRatio = 'fail'
             ratio = 0
         else:
-            ratio = float(cur_val) * 100 / total_val
+            if cur_val == 0:
+                ratio = 0
+            else:
+                ratio = float(cur_val) * 100 / total_val
 
-        strRatio = 'Received packet count = ' + str(cur_val) + '\n'
-        strRatio = strRatio + 'compute nodes -> ' + node_name + ' Packet count = ' + str(packet_cnt) + '\n'
-        strRatio = strRatio + str(ratio) + ' (' + str(cur_val) + ' / ' + str(total_val) + ')'
+            strRatio = 'Received packet count = ' + str(cur_val) + '\n'
+            strRatio = strRatio + 'compute nodes -> ' + node_name + ' Packet count = ' + str(packet_cnt) + '\n'
+            strRatio = strRatio + str(ratio) + ' (' + str(cur_val) + ' / ' + str(total_val) + ')'
 
-        if cur_val < packet_cnt:
-            LOG.info('GW Ratio Fail. (Data loss)')
-            strRatio = strRatio + '(packet loss)'
-        else:
-            strRatio = strRatio + '(no packet loss)'
+            if cur_val < packet_cnt:
+                LOG.info('GW Ratio Fail. (Data loss)')
+                strRatio = strRatio + '(packet loss)'
+            else:
+                strRatio = strRatio + '(no packet loss)'
 
         try:
             sql = 'UPDATE ' + DB.OPENSTACK_TBL + \

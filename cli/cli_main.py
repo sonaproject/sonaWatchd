@@ -17,7 +17,7 @@ from flow_trace import TRACE
 from log_lib import USER_LOG
 from screen import SCREEN
 
-menu_list = ["CLI", "Flow Trace", "Monitoring Detail", "Quit"]
+menu_list = ["CLI", "Flow Trace", "Monitoring Details", "Quit"]
 
 def main():
     try:
@@ -185,11 +185,11 @@ def select_menu():
 
                 menu = menu_list[selected_menu_no - 1]
 
-                if menu == 'CLI' or menu == 'Monitoring Detail':
+                if menu == 'CLI' or menu == 'Monitoring Details':
                     if menu == 'CLI':
                         SCREEN.display_header(menu_list[selected_menu_no - 1])
                         SCREEN.display_sys(True)
-                    elif menu == 'Monitoring Detail':
+                    elif menu == 'Monitoring Details':
                         SCREEN.display_event()
 
                     readline.set_completer(CLI.pre_complete_cli)
@@ -212,11 +212,8 @@ def select_menu():
                             SCREEN.display_sys()
                         elif cmd == 'help':
                             SCREEN.display_help()
-                        elif cmd == 'event-status':
+                        elif cmd == 'monitoring-details':
                             SCREEN.display_event()
-                        elif cmd.startswith('onos '):
-                            sys_name = cmd.split(' ')[1]
-                            CLI.onos_ssh_exec(sys_name, cmd[len('onos ') + len(sys_name) + 1:])
                         else:
                             # send command
                             CLI.process_cmd(cmd)
