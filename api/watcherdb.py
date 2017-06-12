@@ -19,7 +19,8 @@ class DB(object):
     OPENSTACK_TBL = 't_openstack'
     HA_TBL = 't_ha'
 
-    item_list = 'ping, app, web, cpu, memory, disk, ovsdb, of, cluster, node, vrouter, ha_list, ha_ratio, gw_ratio'
+    item_list = 'NETWORK, ONOS_APP, ONOS_REST, CPU, MEMORY, DISK, ONOS_OVSDB, ONOS_OF, ONOS_CLUSTER, ' \
+                'OPENSTACK_NODE, SWARM_NODE, SWARM_SVC, VROUTER, ONOS_HA_LIST, ONOS_HA_RATIO, TRAFFIC_GW'
 
     def __init__(self):
         self._conn = self.connection()
@@ -103,8 +104,8 @@ class DB(object):
 
             # set status tbl
             sql = 'INSERT INTO ' + cls.STATUS_TBL + \
-                  ' VALUES (\'' + name + '\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', ' \
-                                         '\'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\')'
+                  ' VALUES (\'' + name + '\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', ' \
+                                         '\'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\')'
             LOG.info('%s', sql)
             sql_rt = cls.sql_execute(sql)
             if sql_rt != 'SUCCESS':

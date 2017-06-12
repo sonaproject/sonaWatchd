@@ -104,17 +104,18 @@ def proc_dis_system(node, dummy):
 
         result = dict()
 
-        for nodename, ip, ping, app, web, cpu, memory, disk, ovsdb, of, cluster, node, vrouter, ha_stats, ha_ratio, gw_ratio in nodes_info:
+        for nodename, ip, ping, onos_app, onos_rest, cpu, memory, disk, ovsdb, of, cluster, openstack_node, \
+            swarm_node, swarm_svc, vrouter, ha_list, ha_ratio, traffic_gw in nodes_info:
             node_type = get_node_list(nodename, 'type')
             type = str(node_type[0][0]).upper()
 
             if 'ONOS' == type:
-                result[nodename] = {'TYPE': type, 'IP': ip, 'NETWORK': ping, 'ONOS_APP': app, 'ONOS_REST': web, 'CPU': cpu, 'MEMORY': memory, 'DISK': disk,
-                                    'ONOS_OVSDB': ovsdb, 'ONOS_OF': of, 'ONOS_CLUSTER': cluster, 'ONOS_HA_LIST': ha_stats, 'ONOS_HA_RATIO': ha_ratio, 'OPENSTACK_NODE': node}
+                result[nodename] = {'TYPE': type, 'IP': ip, 'NETWORK': ping, 'ONOS_APP': onos_app, 'ONOS_REST': onos_rest, 'CPU': cpu, 'MEMORY': memory, 'DISK': disk,
+                                    'ONOS_OVSDB': ovsdb, 'ONOS_OF': of, 'ONOS_CLUSTER': cluster, 'ONOS_HA_LIST': ha_list, 'ONOS_HA_RATIO': ha_ratio, 'OPENSTACK_NODE': openstack_node}
             elif 'SWARM' == type:
-                result[nodename] = {'TYPE': type, 'IP': ip, 'NETWORK': ping, 'SWARM_SVC': app, 'CPU': cpu, 'MEMORY': memory, 'DISK': disk, 'SWARM_NODE': node}
+                result[nodename] = {'TYPE': type, 'IP': ip, 'NETWORK': ping, 'SWARM_SVC': swarm_svc, 'CPU': cpu, 'MEMORY': memory, 'DISK': disk, 'SWARM_NODE': swarm_node}
             elif 'OPENSTACK' == type:
-                result[nodename] = {'TYPE': type, 'IP': ip, 'NETWORK': ping, 'CPU': cpu, 'MEMORY': memory, 'DISK': disk, 'VROUTER': vrouter, 'TRAFFIC_GW': gw_ratio}
+                result[nodename] = {'TYPE': type, 'IP': ip, 'NETWORK': ping, 'CPU': cpu, 'MEMORY': memory, 'DISK': disk, 'VROUTER': vrouter, 'TRAFFIC_GW': traffic_gw}
             elif 'XOS' == type:
                 result[nodename] = {'TYPE': type, 'IP': ip, 'NETWORK': ping, 'CPU': cpu, 'MEMORY': memory, 'DISK': disk}
 

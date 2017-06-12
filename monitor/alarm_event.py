@@ -11,8 +11,7 @@ def is_monitor_item(node_type, item_type):
 
     if conf_dict.has_key('alarm_off_list'):
         for item in (CONF_MAP[node_type.upper()]())['alarm_off_list']:
-
-            if ':' + item_type in item:
+            if item_type in item:
                 return False
 
     return True
@@ -49,8 +48,15 @@ def occur_event(conn, node_name, item, pre_value, cur_value):
 
     push_event(node_name, item, cur_value, desc, time)
 
+history_log = None
+def set_history_log(log):
+    global history_log
+    history_log = log
 
 def push_event(node_name, item, grade, desc, time):
+    global history_log
+    history_log.write_log('[%s][%s][%s] %s', node_name, item, grade, desc)
+
     sql = 'SELECT * FROM ' + DB.REGI_SYS_TBL
 
     with DB.connection() as conn:

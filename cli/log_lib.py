@@ -87,3 +87,9 @@ class USER_LOG():
                 self.LOG.debug(log)
         except:
             LOG.exception_err_write()
+
+    def write_history(self, log, *args):
+        try:
+            self.LOG.debug(log % args)
+        except:
+            LOG.exception()

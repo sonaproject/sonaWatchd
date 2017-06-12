@@ -18,7 +18,7 @@ from api.sona_log import LOG
 from api.watcherdb import DB
 
 
-def periodic(conn):
+def periodic(conn, history_log):
     try:
         cur_info = {}
         LOG.info("Periodic checking...%s", str(CONF.watchdog()['check_system']))
@@ -59,169 +59,185 @@ def periodic(conn):
 
         for node_name, node_ip, user_name, type in node_list:
             # check ping
-            ping = net_check(node_ip)
+            network = net_check(node_ip)
 
-            app = 'fail'
             cpu = '-1'
-            mem = '-1'
+            memory = '-1'
             disk = '-1'
-            of_status = 'fail'
-            ovsdb_status = 'fail'
-            cluster_status = 'fail'
-            web_status = 'fail'
-            node = 'fail'
-            v_router = 'fail'
-            ha_list = 'fail'
-            ha_ratio = 'fail'
-            gw_ratio = 'fail'
 
-            if ping == 'ok':
+            onos_app = 'fail'
+            onos_rest = 'fail'
+
+            v_router = 'fail'
+
+            swarm_node = 'fail'
+            swarm_svc = 'fail'
+
+            onos_ha_list = 'fail'
+            onos_ha_ratio = 'fail'
+
+            openstack_node = 'fail'
+
+            onos_of = 'fail'
+            onos_ovsdb = 'fail'
+            onos_cluster = 'fail'
+
+            traffic_gw = 'fail'
+
+            if network == 'ok':
                 if type.upper() == 'ONOS':
                     # check connection
-                    of_status, ovsdb_status, cluster_status = chk_onos.onos_conn_check(conn, node_name, node_ip)
+                    onos_of, onos_ovsdb, onos_cluster = chk_onos.onos_conn_check(conn, node_name, node_ip)
 
                     # check app
-                    app = check_app(conn, node_name, node_ip, user_name, type)
+                    onos_app = check_app(conn, node_name, node_ip, user_name, type)
 
                     # check web
-                    web_status = chk_onos.onos_web_check(conn, node_name, node_ip)
+                    onos_rest = chk_onos.onos_web_check(conn, node_name, node_ip)
 
-                    ha_list, ha_ratio = chk_onos.get_ha_stats(conn, ha_dic, node_name)
+                    onos_ha_list, onos_ha_ratio = chk_onos.get_ha_stats(conn, ha_dic, node_name)
 
-                    node = chk_onos.onos_node_check(conn, node_name, node_ip)
+                    openstack_node = chk_onos.onos_node_check(conn, node_name, node_ip)
                 # check swarm (app/node)
                 elif type.upper() == 'SWARM':
-                    app, node = chk_swarm.swarm_check(conn, node_name, user_name, node_ip)
+                    swarm_svc, swarm_node = chk_swarm.swarm_check(conn, node_name, user_name, node_ip)
                 # check vrouter, gw_ratio
                 elif type.upper() == 'OPENSTACK':
                     v_router = chk_openstack.vrouter_check(conn, node_name, user_name, node_ip)
-                    gw_ratio = chk_openstack.get_gw_ratio(conn, node_name, node_ip, gw_dic[node_name], gw_total)
+                    traffic_gw = chk_openstack.get_gw_ratio(conn, node_name, node_ip, gw_dic[node_name], gw_total)
                 else:
                     # check app
-                    app = check_app(conn, node_name, node_ip, user_name, type)
-
+                    onos_app = check_app(conn, node_name, node_ip, user_name, type)
 
                 # check resource
-                cpu, mem, disk = chk_resource.check_resource(conn, node_name, user_name, node_ip)
+                cpu, memory, disk = chk_resource.check_resource(conn, node_name, user_name, node_ip)
 
             # occur event (rest)
             # 1. ping check
             LOG.info(node_name)
             LOG.info(str(cur_info[node_name]))
-            if cur_info[node_name]['ping'] != ping:
-                alarm_event.occur_event(conn, node_name, 'ping', cur_info[node_name]['ping'], ping)
+            if cur_info[node_name]['NETWORK'] != network:
+                alarm_event.occur_event(conn, node_name, 'NETWORK', cur_info[node_name]['NETWORK'], network)
 
-            # 2. app check
-            if cur_info[node_name]['app'] != app:
-                if not alarm_event.is_monitor_item(type, 'app'):
-                    app = '-'
-                else:
-                    alarm_event.occur_event(conn, node_name, 'app', cur_info[node_name]['app'], app)
 
             # 3. resource check (CPU/MEM/DISK)
             cpu_grade = 'fail'
             if CONF.alarm().has_key('cpu'):
-                if not alarm_event.is_monitor_item(type, 'cpu'):
+                if not alarm_event.is_monitor_item(type, 'CPU'):
                     cpu_grade = '-'
                 else:
                     cpu_grade = alarm_event.get_grade('cpu', cpu)
-                    if cur_info[node_name]['cpu'] != cpu_grade:
-                        alarm_event.occur_event(conn, node_name, 'cpu', cur_info[node_name]['cpu'], cpu_grade)
+                    if cur_info[node_name]['CPU'] != cpu_grade:
+                        alarm_event.occur_event(conn, node_name, 'CPU', cur_info[node_name]['CPU'], cpu_grade)
 
 
             mem_grade = 'fail'
             if CONF.alarm().has_key('memory'):
-                if not alarm_event.is_monitor_item(type, 'memory'):
+                if not alarm_event.is_monitor_item(type, 'MEMORY'):
                     mem_grade = '-'
                 else:
-                    mem_grade = alarm_event.get_grade('memory', mem)
-                    if cur_info[node_name]['memory'] != mem_grade:
-                        alarm_event.occur_event(conn, node_name, 'memory', cur_info[node_name]['memory'], mem_grade)
+                    mem_grade = alarm_event.get_grade('memory', memory)
+                    if cur_info[node_name]['MEMORY'] != mem_grade:
+                        alarm_event.occur_event(conn, node_name, 'MEMORY', cur_info[node_name]['MEMORY'], mem_grade)
 
             disk_grade = 'fail'
             if CONF.alarm().has_key('disk'):
-                if not alarm_event.is_monitor_item(type, 'disk'):
+                if not alarm_event.is_monitor_item(type, 'DISK'):
                     disk_grade = '-'
                 else:
                     disk_grade = alarm_event.get_grade('disk', disk)
-                    if cur_info[node_name]['disk'] != disk_grade:
-                        alarm_event.occur_event(conn, node_name, 'disk', cur_info[node_name]['disk'], disk_grade)
+                    if cur_info[node_name]['DISK'] != disk_grade:
+                        alarm_event.occur_event(conn, node_name, 'DISK', cur_info[node_name]['DISK'], disk_grade)
 
             # 4. Connection check (ovsdb, of, cluster) (ONOS)
             # 5. Web check (ONOS)
             # 8. HA Status (ONOS)
             # 9. Node check (ONOS)
             if type.upper() == 'ONOS':
+                # 2. app check
+                if not alarm_event.is_monitor_item(type, 'ONOS_APP'):
+                    onos_app = '-'
+                elif cur_info[node_name]['ONOS_APP'] != onos_app:
+                    alarm_event.occur_event(conn, node_name, 'ONOS_APP', cur_info[node_name]['ONOS_APP'], onos_app)
+
                 if not alarm_event.is_monitor_item(type, 'ovsdb'):
-                    ovsdb_status = '-'
-                elif cur_info[node_name]['ovsdb'] != ovsdb_status:
-                    alarm_event.occur_event(conn, node_name, 'ovsdb', cur_info[node_name]['ovsdb'], ovsdb_status)
+                    onos_ovsdb = '-'
+                elif cur_info[node_name]['ONOS_OVSDB'] != onos_ovsdb:
+                    alarm_event.occur_event(conn, node_name, 'ONOS_OVSDB', cur_info[node_name]['ONOS_OVSDB'], onos_ovsdb)
 
-                if not alarm_event.is_monitor_item(type, 'of'):
-                    of_status = '-'
-                elif cur_info[node_name]['of'] != of_status:
-                    alarm_event.occur_event(conn, node_name, 'of', cur_info[node_name]['of'], of_status)
+                if not alarm_event.is_monitor_item(type, 'ONOS_OF'):
+                    onos_of = '-'
+                elif cur_info[node_name]['ONOS_OF'] != onos_of:
+                    alarm_event.occur_event(conn, node_name, 'ONOS_OF', cur_info[node_name]['ONOS_OF'], onos_of)
 
-                if not alarm_event.is_monitor_item(type, 'cluster'):
-                    cluster_status = '-'
-                elif cur_info[node_name]['cluster'] != cluster_status:
-                    alarm_event.occur_event(conn, node_name, 'cluster', cur_info[node_name]['cluster'], cluster_status)
+                if not alarm_event.is_monitor_item(type, 'ONOS_CLUSTER'):
+                    onos_cluster = '-'
+                elif cur_info[node_name]['ONOS_CLUSTER'] != onos_cluster:
+                    alarm_event.occur_event(conn, node_name, 'ONOS_CLUSTER', cur_info[node_name]['ONOS_CLUSTER'], onos_cluster)
 
-                if not alarm_event.is_monitor_item(type, 'web'):
-                    web_status = '-'
-                elif cur_info[node_name]['web'] != web_status:
-                    alarm_event.occur_event(conn, node_name, 'web', cur_info[node_name]['web'], web_status)
+                if not alarm_event.is_monitor_item(type, 'ONOS_REST'):
+                    onos_rest = '-'
+                elif cur_info[node_name]['ONOS_REST'] != onos_rest:
+                    alarm_event.occur_event(conn, node_name, 'ONOS_REST', cur_info[node_name]['ONOS_REST'], onos_rest)
 
-                if not alarm_event.is_monitor_item(type, 'ha_list'):
-                    ha_list = '-'
-                elif cur_info[node_name]['ha_list'] != ha_list:
-                    alarm_event.occur_event(conn, node_name, 'ha_list', cur_info[node_name]['ha_list'], ha_list)
+                if not alarm_event.is_monitor_item(type, 'ONOS_HA_LIST'):
+                    onos_ha_list = '-'
+                elif cur_info[node_name]['ONOS_HA_LIST'] != onos_ha_list:
+                    alarm_event.occur_event(conn, node_name, 'ONOS_HA_LIST', cur_info[node_name]['ONOS_HA_LIST'], onos_ha_list)
 
-                if not alarm_event.is_monitor_item(type, 'ha_ratio'):
-                    ha_ratio = '-'
-                elif cur_info[node_name]['ha_ratio'] != ha_ratio:
-                    alarm_event.occur_event(conn, node_name, 'ha_ratio', cur_info[node_name]['ha_ratio'], ha_ratio)
+                if not alarm_event.is_monitor_item(type, 'ONOS_HA_RATIO'):
+                    onos_ha_ratio = '-'
+                elif cur_info[node_name]['ONOS_HA_RATIO'] != onos_ha_ratio:
+                    alarm_event.occur_event(conn, node_name, 'ONOS_HA_RATIO', cur_info[node_name]['ONOS_HA_RATIO'], onos_ha_ratio)
 
-                if not alarm_event.is_monitor_item(type, 'node'):
-                    node = '-'
-                elif cur_info[node_name]['node'] != node:
-                    alarm_event.occur_event(conn, node_name, 'node', cur_info[node_name]['node'], node)
+                if not alarm_event.is_monitor_item(type, 'OPENSTACK_NODE'):
+                    openstack_node = '-'
+                elif cur_info[node_name]['OPENSTACK_NODE'] != openstack_node:
+                    alarm_event.occur_event(conn, node_name, 'OPENSTACK_NODE', cur_info[node_name]['OPENSTACK_NODE'], openstack_node)
 
             # 6. Swarm Check
             elif type.upper() == 'SWARM':
-                if not alarm_event.is_monitor_item(type, 'node'):
-                    node = '-'
-                elif cur_info[node_name]['node'] != node:
-                    alarm_event.occur_event(conn, node_name, 'node', cur_info[node_name]['node'], node)
+                # 2. app check
+                if not alarm_event.is_monitor_item(type, 'SWARM_SVC'):
+                    onos_app = '-'
+                elif cur_info[node_name]['SWARM_SVC'] != onos_app:
+                    alarm_event.occur_event(conn, node_name, 'SWARM_SVC', cur_info[node_name]['SWARM_SVC'], onos_app)
+
+                if not alarm_event.is_monitor_item(type, 'SWARM_NODE'):
+                    openstack_node = '-'
+                elif cur_info[node_name]['SWARM_NODE'] != openstack_node:
+                    alarm_event.occur_event(conn, node_name, 'SWARM_NODE', cur_info[node_name]['SWARM_NODE'], openstack_node)
 
             # 7. Vrouter Check
             elif type.upper() == 'OPENSTACK':
-                if not alarm_event.is_monitor_item(type, 'vrouter'):
+                if not alarm_event.is_monitor_item(type, 'VROUTER'):
                     v_router = '-'
-                elif cur_info[node_name]['vrouter'] != v_router:
-                    alarm_event.occur_event(conn, node_name, 'vrouter', cur_info[node_name]['vrouter'], v_router)
+                elif cur_info[node_name]['VROUTER'] != v_router:
+                    alarm_event.occur_event(conn, node_name, 'VROUTER', cur_info[node_name]['VROUTER'], v_router)
 
-                if not alarm_event.is_monitor_item(type, 'gw_ratio'):
-                    gw_ratio = '-'
-                elif cur_info[node_name]['gw_ratio'] != gw_ratio:
-                    alarm_event.occur_event(conn, node_name, 'gw_ratio', cur_info[node_name]['gw_ratio'], gw_ratio)
+                if not alarm_event.is_monitor_item(type, 'TRAFFIC_GW'):
+                    traffic_gw = '-'
+                elif cur_info[node_name]['TRAFFIC_GW'] != traffic_gw:
+                    alarm_event.occur_event(conn, node_name, 'TRAFFIC_GW', cur_info[node_name]['TRAFFIC_GW'], traffic_gw)
 
             try:
                 sql = 'UPDATE ' + DB.STATUS_TBL + \
-                      ' SET cpu = \'' + cpu_grade + '\',' + \
-                      ' memory = \'' + mem_grade + '\',' + \
-                      ' disk = \'' + disk_grade + '\',' + \
-                      ' ping = \'' + ping + '\',' + \
-                      ' app = \'' + app + '\',' + \
-                      ' web = \'' + web_status + '\',' + \
-                      ' ovsdb = \'' + ovsdb_status + '\',' + \
-                      ' of = \'' + of_status + '\',' + \
-                      ' cluster = \'' + cluster_status + '\',' + \
-                      ' node = \'' + node + '\',' + \
-                      ' vrouter = \'' + v_router + '\',' + \
-                      ' ha_list = \'' + ha_list + '\',' + \
-                      ' ha_ratio = \'' + ha_ratio + '\',' + \
-                      ' gw_ratio = \'' + gw_ratio + '\',' + \
+                      ' SET CPU = \'' + cpu_grade + '\',' + \
+                      ' MEMORY = \'' + mem_grade + '\',' + \
+                      ' DISK = \'' + disk_grade + '\',' + \
+                      ' NETWORK = \'' + network + '\',' + \
+                      ' ONOS_APP = \'' + onos_app + '\',' + \
+                      ' ONOS_REST = \'' + onos_rest + '\',' + \
+                      ' ONOS_OVSDB = \'' + onos_ovsdb + '\',' + \
+                      ' ONOS_OF = \'' + onos_of + '\',' + \
+                      ' ONOS_CLUSTER = \'' + onos_cluster + '\',' + \
+                      ' SWARM_NODE = \'' + swarm_node + '\',' + \
+                      ' OPENSTACK_NODE = \'' + openstack_node + '\',' + \
+                      ' SWARM_SVC = \'' + swarm_svc + '\',' + \
+                      ' VROUTER = \'' + v_router + '\',' + \
+                      ' ONOS_HA_LIST = \'' + onos_ha_list + '\',' + \
+                      ' ONOS_HA_RATIO = \'' + onos_ha_ratio + '\',' + \
+                      ' TRAFFIC_GW = \'' + traffic_gw + '\',' + \
                       ' time = \'' + str(datetime.now()) + '\'' + \
                       ' WHERE nodename = \'' + node_name + '\''
                 LOG.info('Update Status info = ' + sql)
