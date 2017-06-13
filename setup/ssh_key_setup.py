@@ -7,8 +7,10 @@ import ConfigParser
 import imp
 import subprocess
 import os
+import sys
+import getopt
 
-CONFIG_FILE = 'setup_config.ini'
+CONFIG_FILE = '../config/config.ini'
 REQUIREMENT_PKG = 'pexpect'
 SSH_TIMEOUT = 3
 HOME_DIR = os.getenv('HOME')
@@ -54,15 +56,25 @@ class CONF:
         self.conf = ConfigParser.ConfigParser()
         self.conf.read(CONFIG_FILE)
 
-    def get(self, session=None):
-        conf_map = dict()
-        for section in self.conf.sections():
-            conf_map[section] = {key: value for key, value in self.conf.items(section)}
-
-        if session is None:
-            return conf_map
+    def get_setup_system(self, section=None):
+        if section is not None:
+            return {key: value for key, value in self.conf.items(section)}['check_system']
         else:
-            return conf_map[session]
+            return None
+
+    def get_system_info(self, system=None):
+        if system is not None:
+            return {key: value for key, value in self.conf.items(system)}
+        else:
+            return None
+
+    def get_auto_passwd_flag(self):
+        item = {key: value for key, value in self.conf.items('SSH_KEY_SETUP')}
+
+        try:
+            return item['auto_password']
+        except:
+            return 'yes'
 
 
 # create ssh public key
@@ -75,17 +87,16 @@ def ssh_keygen():
 
 # ssh key copy to account of target system
 def key_copy(node, conf):
+    username, password = conf['account'].split(":")
     cmd = 'ssh-copy-id -oStrictHostKeyChecking=no -i %s/.ssh/id_rsa.pub %s@%s' \
-          % (HOME_DIR, conf['username'], node)
+          % (HOME_DIR, username, node)
     ssh_conn = pexpect.spawn(cmd)
 
     while True:
         rt = ssh_conn.expect(['password:', pexpect.EOF], timeout=SSH_TIMEOUT)
         if rt == 0:
-            if str(conf['auto_password']).lower() in ['No', 'no', 'NO']:
+            if str(CONF().get_auto_passwd_flag()).lower() == 'no':
                 password = str(raw_input("\n[Setup] Input %s password: " % node))
-            else:
-                password = conf['password']
 
             ssh_conn.sendline(password)
 
@@ -94,6 +105,27 @@ def key_copy(node, conf):
             break
         elif rt == 2:
             print "[Error] I either got key or connection timeout"
+
+    print '[Check] \"%s\" user of sudoer info' % username
+
+    nopw_cmd = 'ssh -oStrictHostKeyChecking=no %s@%s ' \
+               'sudo grep %s /etc/sudoers | grep -v \'\#\''  \
+               % (username, node, username)
+    ssh_conn = pexpect.spawn(nopw_cmd)
+
+    if ssh_conn.expect([pexpect.EOF], timeout=SSH_TIMEOUT) == 0:
+        if 'nopasswd' in str(ssh_conn.before.splitlines()).lower():
+            print '[Check Succ] sudoer set correctly... '
+            return
+        else:
+            print '[Fail Nopasswd] Please Set sudoer config for %s. \n' \
+                  '                Insert \"%s ALL=(ALL) NOPASSWD:ALL\" ' \
+                  'in /etc/sudoers' \
+                  % (username, username)
+    else:
+        ssh_print(node, ssh_conn.before.splitlines())
+
+    print '\n'
 
 
 # ssh key copy to ONOS instance
@@ -107,12 +139,14 @@ def key_copy_2onos(node, conf):
     id_pub_file = file(ID_RAS_FILE, 'r')
     ssh_key = id_pub_file.read().split(" ")[1]
     id_pub_file.close()
+    username, password = conf['account'].split(":")
+
     if ssh_key == '':
         print "[Setup] Read id_ras.pub file Fail ......"
         exit(1)
 
     set_ssh_key_cmd = 'ssh %s@%s %s/bin/onos-user-key %s %s' % \
-                      (conf['username'], node, ONOS_INSTALL_DIR, os.getenv('USER'), ssh_key)
+                      (username, node, ONOS_INSTALL_DIR, os.getenv('USER'), ssh_key)
     subprocess.call(set_ssh_key_cmd, shell=True)
 
 
@@ -125,33 +159,56 @@ def ssh_print(node, lines):
 def onos():
     print "\n\n[Setup] Start to copy ssh-key to ONOS systems ......"
 
-    conf = CONF().get('ONOS')
+    conf = CONF().get_system_info('ONOS')
     for node in str(conf['list']).replace(" ", "").split(","):
-        key_copy(node, conf)
-        key_copy_2onos(node, conf)
+        key_copy(node.split(":")[1], conf)
+        key_copy_2onos(node.split(":")[1], conf)
+        print "-- %s setup finish ------\n" % node
 
 
 def xos():
     print "\n\n[Setup] Start to copy ssh-key to XOS systems ......"
 
+    conf = CONF().get_system_info('XOS')
+    for node in str(conf['list']).replace(" ", "").split(","):
+        key_copy(node.split(":")[1], conf)
+        print "-- %s setup finish ------\n" % node
+
 
 def swarm():
     print "\n\n[Setup] Start to copy ssh-key to SWARM systems ......"
 
-    conf = CONF().get('SWARM')
+    conf = CONF().get_system_info('SWARM')
     for node in str(conf['list']).replace(" ", "").split(","):
-        key_copy(node, conf)
+        key_copy(node.split(":")[1], conf)
+        print "-- %s setup finish ------\n" % node
 
 
 def openstack():
     print "\n\n[Setup] Start to copy ssh-key to OpenStack systems ......"
 
-    conf = CONF().get('OPENSTACK')
+    conf = CONF().get_system_info('OPENSTACK')
     for node in str(conf['list']).replace(" ", "").split(","):
-        key_copy(node, conf)
+        key_copy(node.split(":")[1], conf)
+        print "-- %s setup finish ------\n" % node
 
 
-def main():
+def main(argv):
+    global CONFIG_FILE
+    try:
+        opts, args = getopt.getopt(argv, "h:c:",["config="])
+    except getopt.GetoptError:
+        print "\n[Usage]"
+        print "./ssh_key_setup.py -c <config file>  or  " \
+              "./ssh_key_setup.py --config=<config file>\n\n"
+        sys.exit(2)
+
+    for opt, arg in opts:
+        if opt == '-h':
+            print "[Usage]  ./ssh_key_setup.py -c <config file>"
+        elif opt in ('-c', "--config"):
+            CONFIG_FILE = arg
+
     print "[Setup] ssh-key copy to start ......"
 
     print "[Setup] checking ssh \'id_rsa\' and \'id_rsa.pub\' key files ......"
@@ -160,7 +217,7 @@ def main():
     else:
         print "[Setup] ssh \'id_rsa\' and \'id_rsa.pub\' key files exist ......"
 
-    for node in str(CONF().get('BASE')['key_share_node']).replace(" ", "").split(","):
+    for node in str(CONF().get_setup_system('WATCHDOG')).replace(" ", "").split(","):
         if node.__eq__('ONOS'):
             onos()
         if node.__eq__('XOS'):
@@ -172,7 +229,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])
     pass
 
 
