@@ -123,7 +123,7 @@ def onos_ha_check(conn):
         output, error = result.communicate()
 
         if result.returncode != 0:
-            LOG.error("SSH_Cmd Fail, cause => %s", error)
+            LOG.error("Cmd Fail, cause => %s", error)
         else:
             report_data = csv.DictReader(output.lstrip('# ').splitlines())
 

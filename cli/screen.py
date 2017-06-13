@@ -1,5 +1,6 @@
 import curses
 import platform
+from subprocess import Popen, PIPE
 
 from log_lib import LOG
 from flow_trace import TRACE
@@ -181,7 +182,7 @@ class SCREEN():
 
             normalText = curses.A_NORMAL
 
-            box_event.addstr(0, 19, ' TOOL STATUS ', normalText)
+            box_event.addstr(0, 22, ' EVENT ', normalText)
 
             if type == 'disconnect':
                 box_event.addstr(1, 2, '[Server shutdown] check server and restart', warn_color)
@@ -193,7 +194,7 @@ class SCREEN():
                     str = '[Event occurred]'
 
                     box_event.addstr(1, 2, str, warn_color)
-                    box_event.addstr(1, 2 + len(str), ' Check the event list.', normalText)
+                    box_event.addstr(1, 2 + len(str), ' Check the event history.', normalText)
                 else:
                     str = '[Event] normal'
 
@@ -217,7 +218,7 @@ class SCREEN():
 
 
     @classmethod
-    def display_event(cls):
+    def display_status(cls):
         onos_list = ['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK', 'ONOS_APP', 'ONOS_REST', 'ONOS_OVSDB', 'ONOS_OF',
                      'ONOS_CLUSTER', 'ONOS_HA_LIST', 'ONOS_HA_RATIO', 'OPENSTACK_NODE']
         swarm_list = ['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK', 'SWARM_SVC', 'SWARM_NODE']
@@ -230,6 +231,24 @@ class SCREEN():
             cls.draw_grid('SWARM', swarm_list)
             cls.draw_grid('OPENSTACK', openstack_list)
             cls.draw_grid('XOS', xos_list)
+        except:
+            LOG.exception_err_write()
+
+
+    @classmethod
+    def display_event(cls):
+        try:
+            cmd = 'tail -n 10 log/evt_history.log'
+            result = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
+            output, error = result.communicate()
+
+            if result.returncode != 0:
+                LOG.debug_log("Cmd Fail, cause => %s", error)
+                print 'Failed to load file'
+            else:
+                print '\n * Only the last 10 logs are printed.'
+                print ' * Please refer to the log file for details. (path = log/event_history.log)\n'
+                print output
         except:
             LOG.exception_err_write()
 
