@@ -86,6 +86,9 @@ def periodic(conn, history_log):
 
             if network == 'ok':
                 if type.upper() == 'ONOS':
+                    # check node
+                    openstack_node = chk_onos.onos_node_check(conn, node_name, node_ip)
+
                     # check connection
                     onos_of, onos_ovsdb, onos_cluster = chk_onos.onos_conn_check(conn, node_name, node_ip)
 
@@ -96,8 +99,6 @@ def periodic(conn, history_log):
                     onos_rest = chk_onos.onos_web_check(conn, node_name, node_ip)
 
                     onos_ha_list, onos_ha_ratio = chk_onos.get_ha_stats(conn, ha_dic, node_name)
-
-                    openstack_node = chk_onos.onos_node_check(conn, node_name, node_ip)
                 # check swarm (app/node)
                 elif type.upper() == 'SWARM':
                     swarm_svc, swarm_node = chk_swarm.swarm_check(conn, node_name, user_name, node_ip)

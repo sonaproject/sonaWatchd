@@ -221,11 +221,20 @@ def onos_node_check(conn, node_name, node_ip):
         if node_rt is not None:
             for line in node_rt.splitlines():
                 if line.startswith('hostname'):
-
                     if not 'init=COMPLETE' in line:
                         node_status = 'nok'
 
                     host_name = line.split(',')[0].split('=')[1]
+                    of_id = line.split(',')[4].split('=')[1]
+
+                    try:
+                        sql = 'INSERT INTO ' + DB.OF_TBL + \
+                              ' VALUES (\'' + host_name + '\',\'' + of_id + '\')'
+
+                        if DB.sql_execute(sql, conn) != 'SUCCESS':
+                            LOG.error('DB Update Fail.')
+                    except:
+                        LOG.exception()
 
                     port_rt = SshCommand.onos_ssh_exec(node_ip, 'openstack-node-check ' + host_name)
 

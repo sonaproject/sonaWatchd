@@ -19,6 +19,7 @@ class DB(object):
     SWARM_TBL = 't_swarm'
     OPENSTACK_TBL = 't_openstack'
     HA_TBL = 't_ha'
+    OF_TBL = 't_of'
 
     common_event_list = ['NETWORK', 'CPU', 'MEMORY', 'DISK']
     onos_event_list = ['ONOS_APP', 'ONOS_REST', 'ONOS_OVSDB', 'ONOS_OF', 'ONOS_CLUSTER', 'ONOS_HA_LIST',
@@ -82,6 +83,7 @@ class DB(object):
                         'CREATE TABLE ' + cls.SWARM_TBL + '(nodename text primary key, node, service, ps)',
                         'CREATE TABLE ' + cls.OPENSTACK_TBL + '(nodename text primary key, docker, onosApp, routingTable, gw_ratio)',
                         'CREATE TABLE ' + cls.HA_TBL + '(ha_key text primary key, stats)',
+                        'CREATE TABLE ' + cls.OF_TBL + '(hostname text primary key, of_id)',
                         'CREATE TABLE ' + cls.EVENT_TBL + '(nodename, item, grade, desc, time, PRIMARY KEY (nodename, item))']
             for sql in init_sql:
                 sql_rt = cls.sql_execute(sql)
