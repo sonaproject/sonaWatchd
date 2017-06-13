@@ -46,15 +46,20 @@ def main():
     # set log
     LOG.set_default_log('sonawatched_err.log')
 
+    # set history log
+    history_log = USER_LOG()
+    history_log.set_log('evt_history.log', CONFIG.get_cli_log_rotate(), int(CONFIG.get_cli_log_backup()))
+
     # set cli log
     cli_log = USER_LOG()
     cli_log.set_log('sonawatched_cli.log', CONFIG.get_cli_log_rotate(), int(CONFIG.get_cli_log_backup()))
-    CLI.set_cli_log(cli_log)
+    CLI.set_cli_log(cli_log, history_log)
 
     # set trace log
     trace_log = USER_LOG()
     trace_log.set_log('sonawatched_trace.log', CONFIG.get_trace_log_rotate(), int(CONFIG.get_trace_log_backup()))
     TRACE.set_trace_log(trace_log)
+
 
     # read log option
     LOG.set_log_config()
@@ -75,7 +80,7 @@ def main():
 
     try:
         # create rest server process
-        cli_rest.rest_server_start(evt, disconnect_evt, rest_evt)
+        cli_rest.rest_server_start(evt, disconnect_evt, rest_evt, history_log)
     except:
         print 'Rest Server failed to start'
         print 'Processing shutdown...'

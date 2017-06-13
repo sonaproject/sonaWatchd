@@ -8,7 +8,7 @@ from subprocess import Popen, PIPE
 
 from config import CONFIG
 from system_info import SYS
-from log_lib import LOG
+from log_lib import LOG, USER_LOG
 
 class CLI():
     command_list = []
@@ -20,13 +20,15 @@ class CLI():
     selected_sys = 'all'
 
     CLI_LOG = None
+    HISTORY_LOG = None
 
     modify_flag = False
     save_buffer = ''
 
     @classmethod
-    def set_cli_log(cls, cli_log):
+    def set_cli_log(cls, cli_log, history_log):
         cls.CLI_LOG = cli_log
+        cls.HISTORY_LOG = history_log
 
     @classmethod
     def input_cmd(cls):
@@ -598,9 +600,20 @@ class CLI():
         cls.CLI_LOG.cli_log('RESPONSE CODE = ' + str(myResponse.status_code))
 
         try:
+            res = json.loads(myResponse.content.replace("\'", '"'))
             cls.CLI_LOG.cli_log(
-                'BODY = ' + json.dumps(json.loads(myResponse.content.replace("\'", '"')), sort_keys=True, indent=4))
+                'BODY = ' + json.dumps(res, sort_keys=True, indent=4))
+
+            cls.HISTORY_LOG.write_history("--- Current Event History Start ---")
+
+            for line in res['Event list']:
+                cls.HISTORY_LOG.write_history('[OCCUR_TIME : %s][%s][%s][%s] %s', line['time'], line['system'], line['item'],
+                                          line['grade'], line['desc'])
+
+            cls.HISTORY_LOG.write_history("--- Current Event History END ---")
+
         except:
+
             cls.CLI_LOG.cli_log('BODY = ' + myResponse.content)
 
         result = json.loads(myResponse.content)

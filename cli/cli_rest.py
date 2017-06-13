@@ -3,23 +3,15 @@ import base64
 import multiprocessing as multiprocess
 
 from log_lib import LOG
-from log_lib import USER_LOG
 from cli import CLI
 from config import CONFIG
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 
 class RestHandler(BaseHTTPRequestHandler):
-    # set log
-    CONFIG.init_config(LOG)
-
-    # set history log
-    history_log = USER_LOG()
-    history_log.set_log('evt_history.log', CONFIG.get_cli_log_rotate(), int(CONFIG.get_cli_log_backup()))
-    history_log.write_history("--- Event History Start ---")
-
     def do_POST(self):
         global global_evt
         global global_conn_evt
+        global global_history_log
 
         request_sz = int(self.headers["Content-length"])
         request_str = self.rfile.read(request_sz)
@@ -35,7 +27,7 @@ class RestHandler(BaseHTTPRequestHandler):
             LOG.debug_log('[REST-SERVER] ' + self.path + ' not found')
 
         elif self.auth_pw(self.headers.getheader('Authorization')):
-            self.history_log.write_history('[%s][%s][%s] %s', request_obj['system'], request_obj['item'], request_obj['grade'], request_obj['desc'])
+            global_history_log.write_history('[%s][%s][%s] %s', request_obj['system'], request_obj['item'], request_obj['grade'], request_obj['desc'])
 
             if request_obj['system'] == 'sonawatcher' and request_obj['item'] == 'SONAWATCHER_DISCONNECT':
                 global_conn_evt.set()
@@ -54,15 +46,19 @@ class RestHandler(BaseHTTPRequestHandler):
 
 global_evt = None
 global_conn_evt = None
+global_history_log = None
 
-def run(evt, conn_evt, rest_evt):
+def run(evt, conn_evt, rest_evt, history_log):
+    global global_history_log
     global global_conn_evt
     global global_evt
 
-    LOG.debug_log("--- REST Server Start --- ")
-
+    global_history_log = history_log
     global_evt = evt
     global_conn_evt = conn_evt
+
+    LOG.debug_log("--- REST Server Start --- ")
+    global_history_log.write_history("--- Event History Start ---")
 
     try:
         server_address = ("", CONFIG.get_rest_port())
@@ -75,7 +71,7 @@ def run(evt, conn_evt, rest_evt):
         # occure rest server err event
 
 
-def rest_server_start(evt, conn_evt, rest_evt):
-    rest_server_daemon = multiprocess.Process(name='cli_rest_svr', target=run, args=(evt, conn_evt, rest_evt))
+def rest_server_start(evt, conn_evt, rest_evt, history_log):
+    rest_server_daemon = multiprocess.Process(name='cli_rest_svr', target=run, args=(evt, conn_evt, rest_evt, history_log))
     rest_server_daemon.daemon = True
     rest_server_daemon.start()

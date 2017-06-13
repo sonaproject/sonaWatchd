@@ -4,6 +4,7 @@ from datetime import datetime
 from api.sbapi import SshCommand
 from api.sona_log import LOG
 from api.watcherdb import DB
+from api.config import CONF
 
 def parse_command(req_obj):
     try:
@@ -92,32 +93,31 @@ def unregi_url(url):
 
 def proc_dis_system(node, dummy):
     try:
-        sql = 'SELECT ' + DB.STATUS_TBL + '.nodename, ' + DB.NODE_INFO_TBL + '.ip_addr, ' + DB.item_list + ' FROM ' + DB.STATUS_TBL + \
-              ' INNER JOIN ' + DB.NODE_INFO_TBL + ' ON ' + DB.STATUS_TBL + '.nodename = ' + DB.NODE_INFO_TBL + '.nodename'
-
-        if not node == 'all':
-            sql = sql + ' WHERE nodename = \'' + node + '\''
-
-        with DB.connection() as conn:
-            nodes_info = conn.cursor().execute(sql).fetchall()
-        conn.close()
-
         result = dict()
 
-        for nodename, ip, ping, onos_app, onos_rest, cpu, memory, disk, ovsdb, of, cluster, openstack_node, \
-            swarm_node, swarm_svc, vrouter, ha_list, ha_ratio, traffic_gw in nodes_info:
-            node_type = get_node_list(nodename, 'type')
-            type = str(node_type[0][0]).upper()
+        for sys_type in CONF.watchdog()['check_system']:
+            event_list = DB.get_event_list(sys_type)
 
-            if 'ONOS' == type:
-                result[nodename] = {'TYPE': type, 'IP': ip, 'NETWORK': ping, 'ONOS_APP': onos_app, 'ONOS_REST': onos_rest, 'CPU': cpu, 'MEMORY': memory, 'DISK': disk,
-                                    'ONOS_OVSDB': ovsdb, 'ONOS_OF': of, 'ONOS_CLUSTER': cluster, 'ONOS_HA_LIST': ha_list, 'ONOS_HA_RATIO': ha_ratio, 'OPENSTACK_NODE': openstack_node}
-            elif 'SWARM' == type:
-                result[nodename] = {'TYPE': type, 'IP': ip, 'NETWORK': ping, 'SWARM_SVC': swarm_svc, 'CPU': cpu, 'MEMORY': memory, 'DISK': disk, 'SWARM_NODE': swarm_node}
-            elif 'OPENSTACK' == type:
-                result[nodename] = {'TYPE': type, 'IP': ip, 'NETWORK': ping, 'CPU': cpu, 'MEMORY': memory, 'DISK': disk, 'VROUTER': vrouter, 'TRAFFIC_GW': traffic_gw}
-            elif 'XOS' == type:
-                result[nodename] = {'TYPE': type, 'IP': ip, 'NETWORK': ping, 'CPU': cpu, 'MEMORY': memory, 'DISK': disk}
+            sql = 'SELECT ' + DB.STATUS_TBL + '.nodename, ' + DB.NODE_INFO_TBL + '.ip_addr, ' + ", ".join(event_list) + ' FROM ' + DB.STATUS_TBL + \
+                  ' INNER JOIN ' + DB.NODE_INFO_TBL + ' ON ' + DB.STATUS_TBL + '.nodename = ' + DB.NODE_INFO_TBL + '.nodename WHERE type = \'' + sys_type + '\''
+
+            if not node == 'all':
+                sql = sql + ' and nodename = \'' + node + '\''
+
+            with DB.connection() as conn:
+                nodes_info = conn.cursor().execute(sql).fetchall()
+            conn.close()
+
+            for row in nodes_info:
+                line = dict()
+                line['TYPE'] = sys_type
+                line['IP'] = row[1]
+                i = 2
+                for item in event_list:
+                    line[item] = row[i]
+                    i = i + 1
+
+                result[row[0]] = line
 
         return result
     except:

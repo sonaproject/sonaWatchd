@@ -2,6 +2,7 @@
 # All Rights Reserved.
 # SONA Monitoring Solutions.
 
+import os
 import sys
 import sqlite3
 
@@ -19,8 +20,29 @@ class DB(object):
     OPENSTACK_TBL = 't_openstack'
     HA_TBL = 't_ha'
 
-    item_list = 'NETWORK, ONOS_APP, ONOS_REST, CPU, MEMORY, DISK, ONOS_OVSDB, ONOS_OF, ONOS_CLUSTER, ' \
-                'OPENSTACK_NODE, SWARM_NODE, SWARM_SVC, VROUTER, ONOS_HA_LIST, ONOS_HA_RATIO, TRAFFIC_GW'
+    common_event_list = ['NETWORK', 'CPU', 'MEMORY', 'DISK']
+    onos_event_list = ['ONOS_APP', 'ONOS_REST', 'ONOS_OVSDB', 'ONOS_OF', 'ONOS_CLUSTER', 'ONOS_HA_LIST',
+                       'ONOS_HA_RATIO', 'OPENSTACK_NODE']
+    swarm_event_list = ['SWARM_SVC', 'SWARM_NODE']
+    openstack_event_list = ['VROUTER', 'TRAFFIC_GW']
+    xos_event_list = []
+
+    item_list = ", ".join(common_event_list + onos_event_list + swarm_event_list + openstack_event_list + xos_event_list)
+
+    @staticmethod
+    def get_event_list(sys_type):
+        if sys_type == 'ONOS':
+            event_list = DB.common_event_list + DB.onos_event_list
+        elif sys_type == 'SWARM':
+            event_list = DB.common_event_list + DB.swarm_event_list
+        elif sys_type == 'OPENSTACK':
+            event_list = DB.common_event_list + DB.openstack_event_list
+        elif sys_type == 'XOS':
+            event_list = DB.common_event_list + DB.xos_event_list
+        else:
+            event_list = DB.common_event_list
+
+        return event_list
 
     def __init__(self):
         self._conn = self.connection()
@@ -45,6 +67,10 @@ class DB(object):
     @classmethod
     def db_initiation(cls):
         try:
+            db_path = CONF.base()['db_file']
+            if os.path.isfile(db_path):
+                os.remove(db_path)
+
             LOG.info("--- Initiating SONA DB ---")
             init_sql = ['CREATE TABLE ' + cls.NODE_INFO_TBL +
                             '(nodename text primary key, ip_addr, username, type)',
@@ -113,7 +139,8 @@ class DB(object):
                 sys.exit(1)
 
             # add Alarm Items
-            for item in cls.item_list.replace(' ', '').split(','):
+            evt_list = DB.get_event_list(type)
+            for item in evt_list:
                 LOG.info('Insert item [%s %s]', name, item)
                 sql = 'INSERT INTO ' + cls.EVENT_TBL + \
                       ' VALUES (\'' + name + '\',\'' + item + '\',\'none\', \'none\', \'none\')'
