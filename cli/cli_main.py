@@ -6,6 +6,7 @@ import threading
 import readline
 import curses
 import multiprocessing
+import signal
 
 import cli_rest
 
@@ -17,9 +18,15 @@ from flow_trace import TRACE
 from log_lib import USER_LOG
 from screen import SCREEN
 
-menu_list = ["CLI", "Flow Trace", "Monitoring Details", "Quit"]
+menu_list = ["CLI", "Flow Trace", "Monitoring Details", "Event History", "Quit"]
+
+evt_thread = None
+conn_evt_thread = None
 
 def main():
+    global evt_thread
+    global conn_evt_thread
+
     try:
         from PIL import Image
     except:
@@ -46,10 +53,14 @@ def main():
     # set log
     LOG.set_default_log('sonawatched_err.log')
 
+    # set history log
+    history_log = USER_LOG()
+    history_log.set_log('evt_history.log', CONFIG.get_cli_log_rotate(), int(CONFIG.get_cli_log_backup()))
+
     # set cli log
     cli_log = USER_LOG()
     cli_log.set_log('sonawatched_cli.log', CONFIG.get_cli_log_rotate(), int(CONFIG.get_cli_log_backup()))
-    CLI.set_cli_log(cli_log)
+    CLI.set_cli_log(cli_log, history_log)
 
     # set trace log
     trace_log = USER_LOG()
@@ -75,7 +86,7 @@ def main():
 
     try:
         # create rest server process
-        cli_rest.rest_server_start(evt, disconnect_evt, rest_evt)
+        child_pid = cli_rest.rest_server_start(evt, disconnect_evt, rest_evt, history_log)
     except:
         print 'Rest Server failed to start'
         print 'Processing shutdown...'
@@ -136,15 +147,11 @@ def main():
     # select input menu
     select_menu()
 
-    if (SCREEN.menu_flag):
-        # restart for redrawing
-        python = sys.executable
-        os.execl(python, python, *sys.argv)
-
     # exit
     print 'Processing shutdown...'
     if not SYS.disconnect_type == 'disconnect':
         CLI.send_regi('unregi')
+
     SYS.set_sys_thr_flag(False)
     conn_evt_thread.join()
     evt_thread.join()
@@ -179,17 +186,18 @@ def select_menu():
                 # stop timer
                 SYS.set_sys_redraw_flag(False)
 
-                # ?? is it necessary?
                 SCREEN.refresh_screen()
                 SCREEN.screen_exit()
 
                 menu = menu_list[selected_menu_no - 1]
 
-                if menu == 'CLI' or menu == 'Monitoring Details':
+                if menu in ['CLI', 'Monitoring Details', 'Event History']:
                     if menu == 'CLI':
                         SCREEN.display_header(menu_list[selected_menu_no - 1])
                         SCREEN.display_sys(True)
                     elif menu == 'Monitoring Details':
+                        SCREEN.display_status()
+                    elif menu == 'Event History':
                         SCREEN.display_event()
 
                     readline.set_completer(CLI.pre_complete_cli)
@@ -213,7 +221,7 @@ def select_menu():
                         elif cmd == 'help':
                             SCREEN.display_help()
                         elif cmd == 'monitoring-details':
-                            SCREEN.display_event()
+                            SCREEN.display_status()
                         else:
                             # send command
                             CLI.process_cmd(cmd)
@@ -266,6 +274,8 @@ def select_menu():
 
 
 def listen_disconnect_evt(evt, rest_evt):
+    global evt_thread
+
     while SYS.get_sys_thr_flag():
         evt.wait(1)
 
@@ -275,8 +285,13 @@ def listen_disconnect_evt(evt, rest_evt):
             SYS.disconnect_type = 'disconnect'
 
             if SYS.get_sys_redraw_flag():
-                LOG.debug_log('call draw_event')
                 SCREEN.draw_event(SYS.disconnect_type)
+                SCREEN.get_screen().clear()
+                SCREEN.screen_exit()
+
+            print 'Check monitoring server.'
+            os.killpg(os.getpid(), signal.SIGKILL)
+            #os.kill(os.getpid(), signal.SIGKILL)
 
         time.sleep(1)
 
@@ -289,6 +304,12 @@ def listen_disconnect_evt(evt, rest_evt):
 
             if SYS.get_sys_redraw_flag():
                 SCREEN.draw_event(SYS.disconnect_type)
+                SCREEN.get_screen().clear()
+                SCREEN.screen_exit()
+
+            print 'Check client rest server.'
+            os.killpg(os.getpid(), signal.SIGKILL)
+            #os.kill(os.getpid(), signal.SIGKILL)
 
         time.sleep(1)
 

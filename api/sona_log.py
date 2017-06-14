@@ -19,7 +19,6 @@ from config import CONF
 DEFAULT_LOG_PATH = os.getcwd() + "/log/"
 DEFAULT_LOGGER_NAME = 'sona_logger'
 
-
 class _Log:
     logger = logging.getLogger(DEFAULT_LOGGER_NAME)
 
@@ -55,9 +54,32 @@ class _Log:
         method = '[m:' + traceback.extract_stack(None, 2)[0][2] + ']'
         cls.error("Exception Error %s\n%s", method, ''.join('   | ' + line for line in lines))
 
-
 LOG = _Log(CONF.base()['log_file_name'])
 
-# TODO
-# multiple create Logger point
+class USER_LOG():
+    LOG = None
 
+    def set_log(self, file_name, rotate, backup):
+        self.LOG = logging.getLogger(file_name)
+
+        if not os.path.exists(DEFAULT_LOG_PATH):
+            os.makedirs(DEFAULT_LOG_PATH)
+
+        log_formatter = logging.Formatter('[%(asctime)s] %(message)s')
+
+        file_name = DEFAULT_LOG_PATH + file_name
+
+        file_handler = logging.handlers.TimedRotatingFileHandler(file_name,
+                                                                 when=rotate,
+                                                                 backupCount=backup)
+
+        file_handler.setFormatter(log_formatter)
+
+        self.LOG.addHandler(file_handler)
+        self.LOG.setLevel(logging.DEBUG)
+
+    def write_log(self, log, *args):
+        try:
+            self.LOG.debug(log % args)
+        except:
+            LOG.exception()
