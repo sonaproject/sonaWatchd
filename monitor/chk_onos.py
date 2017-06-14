@@ -39,9 +39,21 @@ def onos_conn_check(conn, node_name, node_ip):
             ovsdb_status = 'ok'
             for line in device_rt.splitlines():
                 if line.startswith('id=of'):
-                    str_of = str_of + line + '\n'
                     if not ('available=true' in line):
                         of_status = 'nok'
+
+                    of_id = line.split(',')[0].split('=')[1]
+
+                    try:
+                        sql = 'SELECT hostname FROM ' + DB.OF_TBL + ' WHERE of_id = \'' + of_id + '\''
+                        node_info = conn.cursor().execute(sql).fetchone()
+
+                        line = line.replace(of_id, node_info[0] + '(' + of_id + ')')
+                    except:
+                        LOG.exception()
+
+                    str_of = str_of + line + '\n'
+
                 elif line.startswith('id=ovsdb'):
                     str_ovsdb = str_ovsdb + line + '\n'
                     if not ('available=true, local-status=connected' in line):
@@ -228,7 +240,7 @@ def onos_node_check(conn, node_name, node_ip):
                     of_id = line.split(',')[4].split('=')[1]
 
                     try:
-                        sql = 'INSERT INTO ' + DB.OF_TBL + \
+                        sql = 'INSERT OR REPLACE INTO ' + DB.OF_TBL + '(hostname, of_id)' + \
                               ' VALUES (\'' + host_name + '\',\'' + of_id + '\')'
 
                         if DB.sql_execute(sql, conn) != 'SUCCESS':

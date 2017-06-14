@@ -389,7 +389,12 @@ class CLI():
 
                                 col_id = dict()
                                 col_id['title'] = 'ID'
-                                col_id['size'] = '20'
+                                if param == 'of':
+                                    col_id['title'] = 'HOSTNAME(ID)'
+                                    col_id['size'] = '31'
+                                else:
+                                    col_id['title'] = 'ID'
+                                    col_id['size'] = '20'
 
                                 col_avail = dict()
                                 col_avail['title'] = 'Available'

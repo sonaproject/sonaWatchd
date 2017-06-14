@@ -86,7 +86,7 @@ def main():
 
     try:
         # create rest server process
-        cli_rest.rest_server_start(evt, disconnect_evt, rest_evt, history_log)
+        child_pid = cli_rest.rest_server_start(evt, disconnect_evt, rest_evt, history_log)
     except:
         print 'Rest Server failed to start'
         print 'Processing shutdown...'
@@ -146,14 +146,6 @@ def main():
 
     # select input menu
     select_menu()
-
-    if (SCREEN.menu_flag):
-        # stop rest server
-        os.kill(cli_rest.get_pid(), signal.SIGKILL)
-
-        # restart for redrawing
-        python = sys.executable
-        os.execl(python, python, *sys.argv)
 
     # exit
     print 'Processing shutdown...'
@@ -299,6 +291,7 @@ def listen_disconnect_evt(evt, rest_evt):
 
             print 'Check monitoring server.'
             os.killpg(os.getpid(), signal.SIGKILL)
+            #os.kill(os.getpid(), signal.SIGKILL)
 
         time.sleep(1)
 
@@ -316,6 +309,7 @@ def listen_disconnect_evt(evt, rest_evt):
 
             print 'Check client rest server.'
             os.killpg(os.getpid(), signal.SIGKILL)
+            #os.kill(os.getpid(), signal.SIGKILL)
 
         time.sleep(1)
 

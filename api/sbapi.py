@@ -57,37 +57,35 @@ class SshCommand:
             LOG.info('ssh_pexpect cmd = ' + cmd)
             ssh_conn = pexpect.spawn(cmd)
 
-            while True:
-                rt1 = ssh_conn.expect(['#', '\$', pexpect.EOF], timeout=CONF.ssh_conn()['ssh_req_timeout'])
+            rt1 = ssh_conn.expect(['#', '\$', pexpect.EOF], timeout=CONF.ssh_conn()['ssh_req_timeout'])
 
-                if rt1 == 0:
-                    cmd = 'ssh -p 8101 karaf@' + onos_ip + ' ' + command
+            if rt1 == 0:
+                cmd = 'ssh -p 8101 karaf@' + onos_ip + ' ' + command
 
-                    LOG.info('ssh_pexpect cmd = ' + cmd)
-                    ssh_conn.sendline(cmd)
-                    rt2 = ssh_conn.expect(['Password:', pexpect.EOF], timeout=CONF.ssh_conn()['ssh_req_timeout'])
+                LOG.info('ssh_pexpect cmd = ' + cmd)
+                ssh_conn.sendline(cmd)
+                rt2 = ssh_conn.expect(['Password:', pexpect.EOF], timeout=CONF.ssh_conn()['ssh_req_timeout'])
 
-                    if rt2 == 0:
-                        ssh_conn.sendline('karaf')
-                        ssh_conn.expect(['#', '\$', pexpect.EOF], timeout=CONF.ssh_conn()['ssh_req_timeout'])
+                if rt2 == 0:
+                    ssh_conn.sendline('karaf')
+                    ssh_conn.expect(['#', '\$', pexpect.EOF], timeout=CONF.ssh_conn()['ssh_req_timeout'])
 
-                        str_output = str(ssh_conn.before)
+                    str_output = str(ssh_conn.before)
 
-                        ret = ''
-                        for line in str_output.splitlines():
-                            if (line.strip() == '') or ('#' in line) or ('$' in line) or ('~' in line) or ('@' in line):
-                                continue
+                    ret = ''
+                    for line in str_output.splitlines():
+                        if (line.strip() == '') or ('#' in line) or ('$' in line) or ('~' in line) or ('@' in line):
+                            continue
 
-                            ret = ret + line + '\n'
+                        ret = ret + line + '\n'
 
-                        return ret
-                    else:
-                        return "fail"
-                elif rt1 == 1:
-                    LOG.error(ssh_conn.before)
-                    break
-                elif rt1 == 2:
-                    LOG.error("[ssh_pexpect] connection timeout")
+                    return ret
+                else:
+                    return "fail"
+            elif rt1 == 1:
+                LOG.error(ssh_conn.before)
+            elif rt1 == 2:
+                LOG.error("[ssh_pexpect] connection timeout")
 
             return "fail"
         except:

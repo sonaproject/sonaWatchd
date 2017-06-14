@@ -53,7 +53,6 @@ def run(evt, conn_evt, rest_evt, history_log):
     global global_history_log
     global global_conn_evt
     global global_evt
-    global global_pid
 
     global_history_log = history_log
     global_evt = evt
@@ -62,8 +61,6 @@ def run(evt, conn_evt, rest_evt, history_log):
     LOG.debug_log("--- REST Server Start --- ")
     global_history_log.write_history("--- Event History Start ---")
 
-    global_pid = os.getpid()
-
     try:
         server_address = ("", CONFIG.get_rest_port())
         httpd = HTTPServer(server_address, RestHandler)
@@ -71,18 +68,15 @@ def run(evt, conn_evt, rest_evt, history_log):
 
     except:
         LOG.exception_err_write()
-        rest_evt.set()
         # occure rest server err event
+        rest_evt.set()
 
 def rest_server_start(evt, conn_evt, rest_evt, history_log):
     rest_server_daemon = multiprocess.Process(name='cli_rest_svr', target=run, args=(evt, conn_evt, rest_evt, history_log))
     rest_server_daemon.daemon = True
     rest_server_daemon.start()
 
-global_pid = -1
-def get_pid():
-    global global_pid
+    return rest_server_daemon.pid
 
-    return global_pid
 
 
