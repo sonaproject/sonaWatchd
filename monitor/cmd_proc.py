@@ -205,7 +205,23 @@ def proc_dis_vrouter(node, param):
 
 
 def proc_dis_gwratio(node, dummy):
-    nodes_info = get_node_list(node, 'nodename, gw_ratio', DB.OPENSTACK_TBL)
+    nodes_info = get_node_list(node, 'nodename, gw_ratio', DB.OPENSTACK_TBL, 'sub_type = \'GATEWAY\'')
+
+    if len(nodes_info) == 0:
+        return {'fail': 'This is not a command on the target system.'}
+
+    res_result = dict()
+    for nodename, ratio in nodes_info:
+        if list == 'fail' or ratio == 'none':
+            res_result[nodename] = 'FAIL'
+        else:
+            res_result[nodename] = ratio
+
+    return res_result
+
+
+def proc_dis_traffic_node(node, dummy):
+    nodes_info = get_node_list(node, 'nodename, vxlan_traffic', DB.OPENSTACK_TBL)
 
     if len(nodes_info) == 0:
         return {'fail': 'This is not a command on the target system.'}
@@ -269,6 +285,7 @@ def proc_dis_onosha(node, param):
 
         return {'HA': 'FAIL'}
 
+
 def proc_dis_node(node, param):
     if param == 'list':
         nodes_info = get_node_list(node, 'nodename, nodelist', DB.ONOS_TBL)
@@ -316,12 +333,18 @@ def exist_command(req):
     return True
 
 
-def get_node_list(nodes, param, tbl = DB.NODE_INFO_TBL):
+def get_node_list(nodes, param, tbl = DB.NODE_INFO_TBL, add_cond = ''):
     try:
         if nodes == 'all':
             sql = 'SELECT ' + param + ' FROM ' + tbl
+
+            if not add_cond == '':
+                sql = sql + ' WHERE ' + add_cond
         else:
             sql = 'SELECT ' + param + ' FROM ' + tbl + ' WHERE nodename = \'' + nodes + '\''
+
+            if not add_cond == '':
+                sql = sql + ' and ' + add_cond
 
         with DB.connection() as conn:
             nodes_info = conn.cursor().execute(sql).fetchall()
@@ -389,6 +412,7 @@ COMMAND_MAP = {'resource': proc_dis_resource,
                'onos-conn': proc_dis_connection,
                'event-list': proc_dis_all,
                'traffic-gw': proc_dis_gwratio,
+               'traffic-node': proc_dis_traffic_node,
                #internal command
                'system-status':proc_dis_system,
                'onos':proc_onos_cmd,

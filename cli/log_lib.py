@@ -92,4 +92,4 @@ class USER_LOG():
         try:
             self.LOG.debug(log % args)
         except:
-            LOG.exception()
+            LOG.exception_err_write()
