@@ -289,7 +289,7 @@ def listen_disconnect_evt(evt, rest_evt):
                 SCREEN.get_screen().clear()
                 SCREEN.screen_exit()
 
-            print 'Check monitoring server.'
+            print '\nCheck monitoring server.'
             os.killpg(os.getpid(), signal.SIGKILL)
             #os.kill(os.getpid(), signal.SIGKILL)
 
@@ -307,7 +307,7 @@ def listen_disconnect_evt(evt, rest_evt):
                 SCREEN.get_screen().clear()
                 SCREEN.screen_exit()
 
-            print 'Check client rest server.'
+            print '\nCheck client rest server.'
             os.killpg(os.getpid(), signal.SIGKILL)
             #os.kill(os.getpid(), signal.SIGKILL)
 

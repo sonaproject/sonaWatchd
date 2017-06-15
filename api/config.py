@@ -120,7 +120,8 @@ class ConfReader:
     def openstack(self):
         value = dict()
         try:
-            value['list'] = self.__list_opt(self.conf_map['OPENSTACK']['list'])
+            value['gateway_list'] = self.__list_opt(self.conf_map['OPENSTACK']['gateway_list'])
+            value['compute_list'] = self.__list_opt(self.conf_map['OPENSTACK']['compute_list'])
             value['account'] = str(self.conf_map['OPENSTACK']['account'])
 
             if self.config.has_option('OPENSTACK', 'alarm_off_list'):
@@ -138,6 +139,7 @@ class ConfReader:
             value['disk'] = self.__list_opt(self.conf_map['ALARM']['disk'])
             value['ha_proxy'] = int(self.conf_map['ALARM']['ha_proxy'])
             value['gw_ratio'] = int(self.conf_map['ALARM']['gw_ratio'])
+            value['node_traffic_ratio'] = int(self.conf_map['ALARM']['node_traffic_ratio'])
 
             return value
         except KeyError as KE:

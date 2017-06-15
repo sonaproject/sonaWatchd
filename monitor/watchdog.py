@@ -24,7 +24,7 @@ def periodic(conn, history_log):
         LOG.info("Periodic checking...%s", str(CONF.watchdog()['check_system']))
 
         try:
-            node_list = cmd_proc.get_node_list('all', 'nodename, ip_addr, username, type')
+            node_list = cmd_proc.get_node_list('all', 'nodename, ip_addr, username, type, sub_type')
 
             if not node_list:
                 LOG.info("Not Exist Node data ...")
@@ -32,6 +32,8 @@ def periodic(conn, history_log):
         except:
             LOG.exception()
             return
+
+        LOG.info("####" + str(node_list))
 
         # Read cur alarm status
         sql = 'SELECT nodename, item, grade FROM ' + DB.EVENT_TBL
@@ -49,15 +51,31 @@ def periodic(conn, history_log):
 
         # check GW ratio
         gw_total = 0
-        gw_dic = dict()
-        for node_name, node_ip, user_name, type in node_list:
+
+        # check node traffic
+        rx_total = 0
+        tx_total = 0
+
+        openstack_rx_dic = dict()
+        openstack_tx_dic = dict()
+        for node_name, node_ip, user_name, type, sub_type in node_list:
             if type.upper() == 'OPENSTACK':
-                gw_dic[node_name] = chk_openstack.gw_check(user_name, node_ip)
+                openstack_rx_dic[node_name], openstack_tx_dic[node_name] = chk_openstack.rx_tx_check(user_name, node_ip)
 
-                if gw_dic[node_name] > 0:
-                    gw_total = gw_total + gw_dic[node_name]
+                if openstack_rx_dic[node_name] > 0:
+                    rx_total = rx_total + openstack_rx_dic[node_name]
 
-        for node_name, node_ip, user_name, type in node_list:
+                if openstack_tx_dic[node_name] > 0:
+                    tx_total = tx_total + openstack_tx_dic[node_name]
+
+                if sub_type == 'GATEWAY':
+                    if openstack_rx_dic[node_name] > 0:
+                        gw_total = gw_total + openstack_rx_dic[node_name]
+
+        # calc node traffic rate
+        node_ratio  = chk_openstack.calc_node_traffic_ratio(rx_total, tx_total)
+
+        for node_name, node_ip, user_name, type, sub_type in node_list:
             # check ping
             network = net_check(node_ip)
 
@@ -83,6 +101,7 @@ def periodic(conn, history_log):
             onos_cluster = 'fail'
 
             traffic_gw = 'fail'
+            traffic_node = 'fail'
 
             if network == 'ok':
                 if type.upper() == 'ONOS':
@@ -104,8 +123,11 @@ def periodic(conn, history_log):
                     swarm_svc, swarm_node = chk_swarm.swarm_check(conn, node_name, user_name, node_ip)
                 # check vrouter, gw_ratio
                 elif type.upper() == 'OPENSTACK':
-                    v_router = chk_openstack.vrouter_check(conn, node_name, user_name, node_ip)
-                    traffic_gw = chk_openstack.get_gw_ratio(conn, node_name, node_ip, gw_dic[node_name], gw_total)
+                    traffic_node = chk_openstack.get_node_traffic(conn, node_name, node_ratio, openstack_rx_dic,
+                                                                  openstack_tx_dic, rx_total, tx_total)
+                    if sub_type.upper() == 'GATEWAY':
+                        v_router = chk_openstack.vrouter_check(conn, node_name, user_name, node_ip)
+                        traffic_gw = chk_openstack.get_gw_ratio(conn, node_name, node_ip, openstack_rx_dic[node_name], gw_total)
                 else:
                     # check app
                     onos_app = check_app(conn, node_name, node_ip, user_name, type)
@@ -201,25 +223,34 @@ def periodic(conn, history_log):
                 # 2. app check
                 if not alarm_event.is_monitor_item(type, 'SWARM_SVC'):
                     onos_app = '-'
-                elif cur_info[node_name]['SWARM_SVC'] != onos_app:
-                    alarm_event.occur_event(conn, node_name, 'SWARM_SVC', cur_info[node_name]['SWARM_SVC'], onos_app)
+                elif cur_info[node_name]['SWARM_SVC'] != swarm_svc:
+                    alarm_event.occur_event(conn, node_name, 'SWARM_SVC', cur_info[node_name]['SWARM_SVC'], swarm_svc)
 
                 if not alarm_event.is_monitor_item(type, 'SWARM_NODE'):
                     openstack_node = '-'
-                elif cur_info[node_name]['SWARM_NODE'] != openstack_node:
-                    alarm_event.occur_event(conn, node_name, 'SWARM_NODE', cur_info[node_name]['SWARM_NODE'], openstack_node)
+                elif cur_info[node_name]['SWARM_NODE'] != swarm_node:
+                    alarm_event.occur_event(conn, node_name, 'SWARM_NODE', cur_info[node_name]['SWARM_NODE'], swarm_node)
 
             # 7. Vrouter Check
             elif type.upper() == 'OPENSTACK':
-                if not alarm_event.is_monitor_item(type, 'VROUTER'):
-                    v_router = '-'
-                elif cur_info[node_name]['VROUTER'] != v_router:
-                    alarm_event.occur_event(conn, node_name, 'VROUTER', cur_info[node_name]['VROUTER'], v_router)
+                if sub_type.upper() == 'GATEWAY':
+                    if not alarm_event.is_monitor_item(type, 'VROUTER'):
+                        v_router = '-'
+                    elif cur_info[node_name]['VROUTER'] != v_router:
+                        alarm_event.occur_event(conn, node_name, 'VROUTER', cur_info[node_name]['VROUTER'], v_router)
 
-                if not alarm_event.is_monitor_item(type, 'TRAFFIC_GW'):
+                    if not alarm_event.is_monitor_item(type, 'TRAFFIC_GW'):
+                        traffic_gw = '-'
+                    elif cur_info[node_name]['TRAFFIC_GW'] != traffic_gw:
+                        alarm_event.occur_event(conn, node_name, 'TRAFFIC_GW', cur_info[node_name]['TRAFFIC_GW'], traffic_gw)
+                elif sub_type.upper() == 'COMPUTE':
+                    v_router = '-'
                     traffic_gw = '-'
-                elif cur_info[node_name]['TRAFFIC_GW'] != traffic_gw:
-                    alarm_event.occur_event(conn, node_name, 'TRAFFIC_GW', cur_info[node_name]['TRAFFIC_GW'], traffic_gw)
+
+                if not alarm_event.is_monitor_item(type, 'TRAFFIC_NODE'):
+                    traffic_node = '-'
+                elif cur_info[node_name]['TRAFFIC_NODE'] != traffic_node:
+                    alarm_event.occur_event(conn, node_name, 'TRAFFIC_NODE', cur_info[node_name]['TRAFFIC_NODE'], traffic_node)
 
             try:
                 sql = 'UPDATE ' + DB.STATUS_TBL + \
@@ -239,6 +270,7 @@ def periodic(conn, history_log):
                       ' ONOS_HA_LIST = \'' + onos_ha_list + '\',' + \
                       ' ONOS_HA_RATIO = \'' + onos_ha_ratio + '\',' + \
                       ' TRAFFIC_GW = \'' + traffic_gw + '\',' + \
+                      ' TRAFFIC_NODE = \'' + traffic_node + '\',' + \
                       ' time = \'' + str(datetime.now()) + '\'' + \
                       ' WHERE nodename = \'' + node_name + '\''
                 LOG.info('Update Status info = ' + sql)

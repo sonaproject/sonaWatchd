@@ -168,7 +168,7 @@ def get_gw_ratio(conn, node_name, node_ip, cur_val, total_val):
         return 'fail'
 
 
-def gw_check(user_name, node_ip):
+def rx_tx_check(user_name, node_ip):
     try:
         port_rt = SshCommand.ssh_exec(user_name, node_ip, 'sudo ovs-ofctl show br-int | grep vxlan')
 
@@ -178,15 +178,66 @@ def gw_check(user_name, node_ip):
             port_rt = SshCommand.ssh_exec(user_name, node_ip, 'sudo ovs-ofctl dump-ports br-int')
 
             if port_rt is not None:
+                i = 0
                 for line in port_rt.splitlines():
+                    i = i + 1
                     if line.split(':')[0].replace(' ', '') == 'port' + str(port):
-                        packet_cnt = int(line.split(',')[0].split('=')[1])
+                        rx_packet_cnt = int(line.split(',')[0].split('=')[1])
+                        break
 
-                        return packet_cnt
+                tx_packet_cnt = int(port_rt.splitlines()[i].split(',')[0].split('=')[1])
+
+                return rx_packet_cnt, tx_packet_cnt
     except:
         LOG.exception()
 
-    return -1
+    return -1, -1
+
+
+def calc_node_traffic_ratio(total_rx, total_tx):
+    try:
+        if total_tx == 0:
+            LOG.info('Node Traffic Ratio Fail.')
+            ratio = 0
+        else:
+            if total_rx == 0:
+                ratio = 0
+            else:
+                ratio = float(total_rx) * 100 / total_tx
+
+
+        LOG.info('Node Traffic Ratio = ' + str(ratio))
+        return ratio
+    except:
+        LOG.exception()
+        return -1
+
+
+def get_node_traffic(conn, node_name, ratio, rx_dic, tx_dic, rx_total, tx_total):
+    try:
+        strRatio = '(VXLAN) Received packet count = ' + str(rx_dic[node_name]) + '\n'
+        strRatio = strRatio + '(VXLAN) Sent packet count = ' + str(tx_dic[node_name]) + '\n'
+        strRatio = strRatio + 'Ratio of success for all nodes = ' + str(ratio)  + ' (' + str(rx_total) + ' / ' + str(tx_total) + ')'
+
+        try:
+            sql = 'UPDATE ' + DB.OPENSTACK_TBL + \
+                  ' SET vxlan_traffic = \'' + strRatio + '\'' + \
+                  ' WHERE nodename = \'' + node_name + '\''
+            LOG.info('Update Node Traffic Ratio info = ' + sql)
+
+            if DB.sql_execute(sql, conn) != 'SUCCESS':
+                LOG.error('DB Update Fail.')
+        except:
+            LOG.exception()
+
+        LOG.info('GW Ratio = ' + str(ratio))
+        if ratio < float(CONF.alarm()['node_traffic_ratio']):
+            return 'nok'
+
+        return 'ok'
+    except:
+        LOG.exception()
+        return 'fail'
 
 
 

@@ -25,7 +25,7 @@ class DB(object):
     onos_event_list = ['ONOS_APP', 'ONOS_REST', 'ONOS_OVSDB', 'ONOS_OF', 'ONOS_CLUSTER', 'ONOS_HA_LIST',
                        'ONOS_HA_RATIO', 'OPENSTACK_NODE']
     swarm_event_list = ['SWARM_SVC', 'SWARM_NODE']
-    openstack_event_list = ['VROUTER', 'TRAFFIC_GW']
+    openstack_event_list = ['VROUTER', 'TRAFFIC_GW', 'TRAFFIC_NODE']
     xos_event_list = []
 
     item_list = ", ".join(common_event_list + onos_event_list + swarm_event_list + openstack_event_list + xos_event_list)
@@ -74,14 +74,14 @@ class DB(object):
 
             LOG.info("--- Initiating SONA DB ---")
             init_sql = ['CREATE TABLE ' + cls.NODE_INFO_TBL +
-                            '(nodename text primary key, ip_addr, username, type)',
+                            '(nodename text primary key, ip_addr, username, type, sub_type)',
                         'CREATE TABLE ' + cls.STATUS_TBL +
                         '(nodename text primary key, ' + cls.item_list + ', time)',
                         'CREATE TABLE ' + cls.RESOURCE_TBL + '(nodename text primary key, cpu real, memory real, disk real)',
                         'CREATE TABLE ' + cls.REGI_SYS_TBL + '(url text primary key, auth)',
                         'CREATE TABLE ' + cls.ONOS_TBL + '(nodename text primary key, applist, weblist, nodelist, port, haproxy, ovsdb, of, cluster)',
                         'CREATE TABLE ' + cls.SWARM_TBL + '(nodename text primary key, node, service, ps)',
-                        'CREATE TABLE ' + cls.OPENSTACK_TBL + '(nodename text primary key, docker, onosApp, routingTable, gw_ratio)',
+                        'CREATE TABLE ' + cls.OPENSTACK_TBL + '(nodename text primary key, sub_type, docker, onosApp, routingTable, gw_ratio, vxlan_traffic)',
                         'CREATE TABLE ' + cls.HA_TBL + '(ha_key text primary key, stats)',
                         'CREATE TABLE ' + cls.OF_TBL + '(hostname text primary key, of_id)',
                         'CREATE TABLE ' + cls.EVENT_TBL + '(nodename, item, grade, desc, time, PRIMARY KEY (nodename, item))']
@@ -103,7 +103,14 @@ class DB(object):
 
             LOG.info('Insert nodes information ...')
             for node_type in CONF.watchdog()['check_system']:
-                cls.sql_insert_nodes((CONF_MAP[node_type.upper()]())['list'],
+                if node_type == 'OPENSTACK':
+                    cls.sql_insert_nodes((CONF_MAP[node_type.upper()]())['gateway_list'],
+                                         str((CONF_MAP[node_type.upper()]())['account']).split(':')[0], node_type, 'GATEWAY')
+                    cls.sql_insert_nodes((CONF_MAP[node_type.upper()]())['compute_list'],
+                                         str((CONF_MAP[node_type.upper()]())['account']).split(':')[0], node_type,
+                                         'COMPUTE')
+                else:
+                    cls.sql_insert_nodes((CONF_MAP[node_type.upper()]())['list'],
                                      str((CONF_MAP[node_type.upper()]())['account']).split(':')[0], node_type)
 
             # set ha proxy tbl
@@ -118,12 +125,12 @@ class DB(object):
 
 
     @classmethod
-    def sql_insert_nodes(cls, node_list, username, type):
+    def sql_insert_nodes(cls, node_list, username, type, sub_type = 'none'):
         for node in node_list:
             name, ip = str(node).split(':')
             LOG.info('Insert node [%s %s %s %s]', name, ip, username, type)
             sql = 'INSERT INTO ' + cls.NODE_INFO_TBL + \
-                  ' VALUES (\'' + name + '\', \'' + ip + '\', \'' + username + '\', \'' + type.upper() + '\')'
+                  ' VALUES (\'' + name + '\', \'' + ip + '\', \'' + username + '\', \'' + type.upper() + '\', \'' + sub_type.upper() + '\')'
             LOG.info('%s', sql)
             sql_rt = cls.sql_execute(sql)
             if sql_rt != 'SUCCESS':
@@ -133,7 +140,7 @@ class DB(object):
             # set status tbl
             sql = 'INSERT INTO ' + cls.STATUS_TBL + \
                   ' VALUES (\'' + name + '\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', ' \
-                                         '\'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\')'
+                                         '\'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\')'
             LOG.info('%s', sql)
             sql_rt = cls.sql_execute(sql)
             if sql_rt != 'SUCCESS':
@@ -181,7 +188,8 @@ class DB(object):
 
             elif type.upper() == 'OPENSTACK':
                 # set vrouter tbl
-                sql = 'INSERT INTO ' + cls.OPENSTACK_TBL + ' VALUES (\'' + name + '\', \'none\', \'none\', \'none\', \'none\')'
+                sql = 'INSERT INTO ' + cls.OPENSTACK_TBL + \
+                      ' VALUES (\'' + name + '\', \'' + sub_type + '\', \'none\', \'none\', \'none\', \'none\', \'none\')'
                 LOG.info('%s', sql)
                 sql_rt = cls.sql_execute(sql)
                 if sql_rt != 'SUCCESS':
