@@ -602,7 +602,7 @@ class FlowTraceView(Frame):
 
         self._list_view.value = len(self.trace_history)
 
-        cmd_rt = TRACE.ssh_exec(TRACE.compute_id, TRACE.compute_list[self.data['COMPUTE'].strip()], real_data)
+        cmd_rt = TRACE.exec_trace(TRACE.compute_id, TRACE.compute_list[self.data['COMPUTE'].strip()], real_data)
 
         self._trace_result.value = cmd_rt
 
