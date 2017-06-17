@@ -126,11 +126,10 @@ def onos_web_check(conn, node_name, node_ip):
 
 def onos_ha_check(conn):
     try:
-        stats_url = 'http://10.10.2.114:8282/haproxy_stats;csv'
-        stats_user = 'haproxy'
-        stats_passwd = 'telcowr1'
+        stats_url = CONF.onos()['ha_proxy_server']
+        account = CONF.onos()['ha_proxy_account']
 
-        cmd = 'curl --user ' + stats_user + ':' + stats_passwd + ' --header \'Accept: text/html, application/xhtml+xml, image/jxr, */*\' \"' + stats_url + '\"'
+        cmd = 'curl --user ' + account + ' --header \'Accept: text/html, application/xhtml+xml, image/jxr, */*\' \"' + stats_url + '\"'
         result = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
         output, error = result.communicate()
 
