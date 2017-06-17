@@ -10,6 +10,8 @@ class TRACE():
     compute_id = ''
     compute_list = {}
 
+    cookie_list = []
+
     @classmethod
     def set_trace_log(cls, trace_log):
         cls.TRACE_LOG = trace_log
@@ -55,40 +57,84 @@ class TRACE():
             LOG.exception_err_write()
             return False
 
+
     ssh_options = '-o StrictHostKeyChecking=no ' \
                   '-o ConnectTimeout=' + str(CONFIG.get_ssh_timeout())
     @classmethod
-    def ssh_exec(cls, username, node, command):
-        command = 'ovs-appctl ofproto/trace br-int \'' + command + '\''
+    def exec_trace(cls, username, node, command):
+        command = 'sudo ovs-appctl ofproto/trace br-int \'' + command + '\''
 
         cls.TRACE_LOG.trace_log('START TRACE | username = ' + username + ', ip = ' + node + ', condition = ' + command)
 
         cmd = 'ssh %s %s@%s %s' % (cls.ssh_options, username, node, command)
         cls.TRACE_LOG.trace_log('Command: ' + cmd)
 
+        cls.get_cookie_list(username, node)
+
+        return cls.parsing(cls.ssh_exec(cmd))
+
+
+    @classmethod
+    def get_cookie_list(cls, username, node):
+        command = 'ovs-ofctl -O OpenFlow13 dump-flows br-int'
+
+        cls.TRACE_LOG.trace_log('GET COOKIES | username = ' + username + ', ip = ' + node + ', condition = ' + command)
+
+        cmd = 'ssh %s %s@%s %s' % (cls.ssh_options, username, node, command)
+        cls.TRACE_LOG.trace_log('Command: ' + cmd)
+
+        result = cls.ssh_exec(cmd)
+
+        for cookie in cls.cookie_list:
+            cls.cookie_list.remove(cookie)
+
+        for line in result.splitlines():
+            if 'cookie' in line:
+                cookie = line.split(',')[0].split('=')[1].strip()
+                LOG.debug_log('insert cookie = ' + cookie)
+                cls.cookie_list.append(cookie)
+
+
+    @classmethod
+    def ssh_exec(cls, cmd):
         try:
             result = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
             output, error = result.communicate()
 
             if result.returncode != 0:
                 cls.TRACE_LOG.trace_log("SSH_Cmd Fail, cause => " + error)
-                return 'SSH FAIL\nCOMMAND = ' + command + '\nREASON = ' + error
+                return 'SSH FAIL\nCOMMAND = ' + cmd + '\nREASON = ' + error
             else:
                 cls.TRACE_LOG.trace_log("ssh command execute successful\n" + output)
-                return cls.parsing(output)
+                return output
         except:
             LOG.exception_err_write()
+            return 'error'
 
-    @staticmethod
-    def parsing(output):
+
+    @classmethod
+    def parsing(cls, output):
         try:
             result_flow = ''
             lines = output.splitlines()
 
+            is_br_int = False
             for line in lines:
                 line = line.strip()
 
                 if line.startswith('Rule:'):
+                    cookie = line.split(' ')[2].split('=')[1].strip()
+
+                    if not cookie == '0':
+                        if cookie in cls.cookie_list:
+                            if not is_br_int:
+                                result_flow = result_flow + '-------------------------------- br-int --------------------------------\n'
+                            is_br_int = True
+                        else:
+                            if is_br_int:
+                                result_flow = result_flow + '----------------------------- other bridge -----------------------------\n'
+                            is_br_int = False
+
                     result_flow = result_flow + line + '\n'
                 elif line.startswith('OpenFlow actions='):
                     result_flow = result_flow + line + '\n\n'
