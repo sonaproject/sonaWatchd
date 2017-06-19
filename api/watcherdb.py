@@ -23,7 +23,7 @@ class DB(object):
 
     common_event_list = ['NETWORK', 'CPU', 'MEMORY', 'DISK']
     onos_event_list = ['ONOS_APP', 'ONOS_REST', 'ONOS_OVSDB', 'ONOS_OF', 'ONOS_CLUSTER', 'ONOS_HA_LIST',
-                       'ONOS_HA_RATIO', 'OPENSTACK_NODE']
+                       'ONOS_HA_RATIO', 'OPENSTACK_NODE', 'TRAFFIC_CONTROLLER']
     swarm_event_list = ['SWARM_SVC', 'SWARM_NODE']
     openstack_event_list = ['VROUTER', 'TRAFFIC_GW', 'TRAFFIC_NODE']
     xos_event_list = []
@@ -79,7 +79,7 @@ class DB(object):
                         '(nodename text primary key, ' + cls.item_list + ', time)',
                         'CREATE TABLE ' + cls.RESOURCE_TBL + '(nodename text primary key, cpu real, memory real, disk real)',
                         'CREATE TABLE ' + cls.REGI_SYS_TBL + '(url text primary key, auth)',
-                        'CREATE TABLE ' + cls.ONOS_TBL + '(nodename text primary key, applist, weblist, nodelist, port, haproxy, ovsdb, of, cluster)',
+                        'CREATE TABLE ' + cls.ONOS_TBL + '(nodename text primary key, applist, weblist, nodelist, port, haproxy, ovsdb, of, cluster, traffic_stat)',
                         'CREATE TABLE ' + cls.SWARM_TBL + '(nodename text primary key, node, service, ps)',
                         'CREATE TABLE ' + cls.OPENSTACK_TBL + '(nodename text primary key, sub_type, docker, onosApp, routingTable, gw_ratio, vxlan_traffic)',
                         'CREATE TABLE ' + cls.HA_TBL + '(ha_key text primary key, stats)',
@@ -139,7 +139,7 @@ class DB(object):
 
             # set status tbl
             sql = 'INSERT INTO ' + cls.STATUS_TBL + \
-                  ' VALUES (\'' + name + '\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', ' \
+                  ' VALUES (\'' + name + '\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', ' \
                                          '\'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\')'
             LOG.info('%s', sql)
             sql_rt = cls.sql_execute(sql)
@@ -169,7 +169,7 @@ class DB(object):
 
             if type.upper() == 'ONOS':
                 # set app tbl
-                sql = 'INSERT INTO ' + cls.ONOS_TBL + ' VALUES (\'' + name + '\', \'none\', \'none\', \'none\', ' \
+                sql = 'INSERT INTO ' + cls.ONOS_TBL + ' VALUES (\'' + name + '\', \'none\', \'none\', \'none\', \'none\', ' \
                                                                              '\'none\', \'none\', \'none\', \'none\', \'none\')'
                 LOG.info('%s', sql)
                 sql_rt = cls.sql_execute(sql)

@@ -220,7 +220,7 @@ class SCREEN():
     @classmethod
     def display_status(cls):
         onos_list = ['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK', 'ONOS_APP', 'ONOS_REST', 'ONOS_OVSDB', 'ONOS_OF',
-                     'ONOS_CLUSTER', 'ONOS_HA_LIST', 'ONOS_HA_RATIO', 'OPENSTACK_NODE']
+                     'ONOS_CLUSTER', 'ONOS_HA_LIST', 'ONOS_HA_RATIO', 'OPENSTACK_NODE', 'TRAFFIC_CONTROLLER']
         swarm_list = ['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK', 'SWARM_SVC', 'SWARM_NODE']
         openstack_list = ['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK', 'VROUTER', 'TRAFFIC_GW', 'TRAFFIC_NODE']
         xos_list = ['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK']

@@ -223,6 +223,73 @@ class CLI():
                         print "+-----------------------------------------------------------+"
                         print ''
 
+                elif command == 'traffic-controller':
+                    print('')
+                    for sys in sorted_list:
+                        print '[' + sys + ']'
+
+                        sys_ret = result[sys]
+                        if sys_ret.upper().endswith('FAIL'):
+                            sys_ret = 'fail'
+                            print sys_ret
+                        else:
+                            data = []
+
+                            for row in sys_ret.splitlines():
+                                line = []
+                                for col in row.split(', '):
+                                    tmp = col.split('=')
+                                    line.append(tmp[1])
+
+                                data.append(line)
+
+                            header = []
+
+                            col_host = dict()
+                            col_host['title'] = 'Host Name'
+                            col_host['size'] = '12'
+
+                            col_id = dict()
+                            col_id['title'] = 'Switch ID'
+                            col_id['size'] = '20'
+
+                            col_in = dict()
+                            col_in['title'] = 'INBOUND'
+                            col_in['size'] = '8'
+
+                            col_out = dict()
+                            col_out['title'] = 'OUTBOUND'
+                            col_out['size'] = '8'
+
+                            col_mod = dict()
+                            col_mod['title'] = 'MOD'
+                            col_mod['size'] = '8'
+
+                            col_remove = dict()
+                            col_remove['title'] = 'REMOVE'
+                            col_remove['size'] = '8'
+
+                            col_req = dict()
+                            col_req['title'] = 'REQUEST'
+                            col_req['size'] = '8'
+
+                            col_reply = dict()
+                            col_reply['title'] = 'REPLY'
+                            col_reply['size'] = '8'
+
+                            header.append(col_host)
+                            header.append(col_id)
+                            header.append(col_in)
+                            header.append(col_out)
+                            header.append(col_mod)
+                            header.append(col_remove)
+                            header.append(col_req)
+                            header.append(col_reply)
+
+                            cls.draw_grid(header, data)
+
+                        print ''
+
                 elif command == 'openstack-node':
                     if param == 'list':
                         print('')
