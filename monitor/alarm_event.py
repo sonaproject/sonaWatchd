@@ -6,6 +6,13 @@ from api.sona_log import LOG
 from api.watcherdb import DB
 from api.config import CONF
 
+
+def process_event(conn, node_name, type, id, pre_value, cur_value):
+    if not is_monitor_item(type, id):
+        return '-'
+    elif pre_value != cur_value:
+        occur_event(conn, node_name, id, pre_value, cur_value)
+
 def is_monitor_item(node_type, item_type):
     conf_dict = CONF_MAP[node_type.upper()]()
 

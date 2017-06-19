@@ -236,6 +236,22 @@ def proc_dis_traffic_node(node, dummy):
     return res_result
 
 
+def proc_dis_traffic_controller(node, dummy):
+    nodes_info = get_node_list(node, 'nodename, traffic_stat', DB.ONOS_TBL)
+
+    if len(nodes_info) == 0:
+        return {'fail': 'This is not a command on the target system.'}
+
+    res_result = dict()
+    for nodename, stat in nodes_info:
+        if list == 'fail' or stat == 'none':
+            res_result[nodename] = 'FAIL'
+        else:
+            res_result[nodename] = stat
+
+    return res_result
+
+
 def proc_dis_swarm(node, param):
     nodes_info = get_node_list(node, 'nodename, ' + param, DB.SWARM_TBL)
 
@@ -413,6 +429,7 @@ COMMAND_MAP = {'resource': proc_dis_resource,
                'event-list': proc_dis_all,
                'traffic-gw': proc_dis_gwratio,
                'traffic-node': proc_dis_traffic_node,
+               'traffic-controller': proc_dis_traffic_controller,
                #internal command
                'system-status':proc_dis_system,
                'onos':proc_onos_cmd,

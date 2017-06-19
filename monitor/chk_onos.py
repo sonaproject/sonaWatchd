@@ -8,13 +8,19 @@ from api.sbapi import SshCommand
 
 
 def onos_app_check(node):
-
     app_rt = SshCommand.onos_ssh_exec(node, 'apps -a -s')
+
+    exist_cpman = False
 
     app_active_list = list()
     if app_rt is not None:
         for line in app_rt.splitlines():
             app_active_list.append(line.split(".")[2].split()[0])
+
+        if not 'cpman' in app_active_list:
+            # activate cpman
+            LOG.info('Cpman does not exist. Activate cpman')
+            SshCommand.onos_ssh_exec(node, 'app activate org.onosproject.cpman')
 
         if set(CONF.onos()['app_list']).issubset(app_active_list):
             return 'ok', app_rt
@@ -285,3 +291,67 @@ def onos_node_check(conn, node_name, node_ip):
         LOG.exception()
         return 'fail'
 
+
+def controller_traffic_check(conn, node_name, node_ip):
+    try:
+        summary_rt = SshCommand.onos_ssh_exec(node_ip, 'summary')
+
+        in_packet = 0
+        out_packet = 0
+        str_info = ''
+        controller_traffic = 'ok'
+
+        if summary_rt is not None:
+            data_ip = str(summary_rt).split(',')[0].split('=')[1]
+
+            try:
+                sql = 'SELECT hostname, of_id FROM ' + DB.OF_TBL
+                nodes_info = conn.cursor().execute(sql).fetchall()
+
+                str_info = ''
+
+                for hostname, of_id in nodes_info:
+                    cmd = 'cpman-stats-list ' + data_ip + ' control_message ' + of_id
+
+                    stat_rt = SshCommand.onos_ssh_exec(node_ip, cmd)
+
+                    if stat_rt is not None:
+                        str_info = str_info + 'HOST_NAME=' + hostname + ', SWITCH_ID=' + of_id
+
+                        if not str(stat_rt).startswith('Failed'):
+                            for line in stat_rt.splitlines():
+                                type = line.split(',')[0].split('=')[1]
+                                avg_cnt = int(line.split(',')[2].split('=')[1])
+
+                                str_info = str_info  + ', ' + type + '=' + str(avg_cnt)
+
+                                if type == 'INBOUND_PACKET':
+                                    in_packet = in_packet + avg_cnt
+                                elif type == 'OUTBOUND_PACKET':
+                                    out_packet = out_packet + avg_cnt
+
+                            str_info = str_info + '\n'
+
+                if not out_packet == in_packet:
+                    controller_traffic = 'nok'
+            except:
+                LOG.exception()
+                controller_traffic = 'nok'
+        else:
+            controller_traffic = 'nok'
+
+        try:
+            sql = 'UPDATE ' + DB.ONOS_TBL + \
+                  ' SET traffic_stat = \'' + str_info.rstrip('\n') + '\'' + \
+                  ' WHERE nodename = \'' + node_name + '\''
+            LOG.info('Update Controller Traffic info = ' + sql)
+
+            if DB.sql_execute(sql, conn) != 'SUCCESS':
+                LOG.error('DB Update Fail.')
+        except:
+            LOG.exception()
+
+        return controller_traffic
+    except:
+        LOG.exception()
+        return 'fail'

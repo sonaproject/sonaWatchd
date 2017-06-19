@@ -33,8 +33,6 @@ def periodic(conn, history_log):
             LOG.exception()
             return
 
-        LOG.info("####" + str(node_list))
-
         # Read cur alarm status
         sql = 'SELECT nodename, item, grade FROM ' + DB.EVENT_TBL
         LOG.info(sql)
@@ -102,22 +100,27 @@ def periodic(conn, history_log):
 
             traffic_gw = 'fail'
             traffic_node = 'fail'
+            traffic_controller = 'fail'
 
             if network == 'ok':
                 if type.upper() == 'ONOS':
                     # check node
                     openstack_node = chk_onos.onos_node_check(conn, node_name, node_ip)
 
-                    # check connection
-                    onos_of, onos_ovsdb, onos_cluster = chk_onos.onos_conn_check(conn, node_name, node_ip)
-
                     # check app
                     onos_app = check_app(conn, node_name, node_ip, user_name, type)
+
+                    # check connection
+                    onos_of, onos_ovsdb, onos_cluster = chk_onos.onos_conn_check(conn, node_name, node_ip)
 
                     # check web
                     onos_rest = chk_onos.onos_web_check(conn, node_name, node_ip)
 
                     onos_ha_list, onos_ha_ratio = chk_onos.get_ha_stats(conn, ha_dic, node_name)
+
+                    # check controller traffic
+                    traffic_controller = chk_onos.controller_traffic_check(conn, node_name, node_ip)
+
                 # check swarm (app/node)
                 elif type.upper() == 'SWARM':
                     swarm_svc, swarm_node = chk_swarm.swarm_check(conn, node_name, user_name, node_ip)
@@ -218,6 +221,11 @@ def periodic(conn, history_log):
                 elif cur_info[node_name]['OPENSTACK_NODE'] != openstack_node:
                     alarm_event.occur_event(conn, node_name, 'OPENSTACK_NODE', cur_info[node_name]['OPENSTACK_NODE'], openstack_node)
 
+                if not alarm_event.is_monitor_item(type, 'TRAFFIC_CONTROLLER'):
+                    traffic_controller = '-'
+                elif cur_info[node_name]['TRAFFIC_CONTROLLER'] != traffic_controller:
+                    alarm_event.occur_event(conn, node_name, 'TRAFFIC_CONTROLLER', cur_info[node_name]['TRAFFIC_CONTROLLER'], traffic_node)
+
             # 6. Swarm Check
             elif type.upper() == 'SWARM':
                 # 2. app check
@@ -271,6 +279,7 @@ def periodic(conn, history_log):
                       ' ONOS_HA_RATIO = \'' + onos_ha_ratio + '\',' + \
                       ' TRAFFIC_GW = \'' + traffic_gw + '\',' + \
                       ' TRAFFIC_NODE = \'' + traffic_node + '\',' + \
+                      ' TRAFFIC_CONTROLLER = \'' + traffic_controller + '\',' + \
                       ' time = \'' + str(datetime.now()) + '\'' + \
                       ' WHERE nodename = \'' + node_name + '\''
                 LOG.info('Update Status info = ' + sql)
