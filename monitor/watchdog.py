@@ -18,7 +18,7 @@ from api.sona_log import LOG
 from api.watcherdb import DB
 
 
-def periodic(conn, history_log):
+def periodic(conn):
     try:
         cur_info = {}
         LOG.info("Periodic checking...%s", str(CONF.watchdog()['check_system']))
@@ -142,6 +142,7 @@ def periodic(conn, history_log):
             # 1. ping check
             LOG.info(node_name)
             LOG.info(str(cur_info[node_name]))
+
             network = alarm_event.process_event(conn, node_name, type, 'NETWORK', cur_info[node_name]['NETWORK'], network)
 
             # 3. resource check (CPU/MEM/DISK)
