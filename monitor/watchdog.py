@@ -142,9 +142,7 @@ def periodic(conn, history_log):
             # 1. ping check
             LOG.info(node_name)
             LOG.info(str(cur_info[node_name]))
-            if cur_info[node_name]['NETWORK'] != network:
-                alarm_event.occur_event(conn, node_name, 'NETWORK', cur_info[node_name]['NETWORK'], network)
-
+            network = alarm_event.process_event(conn, node_name, type, 'NETWORK', cur_info[node_name]['NETWORK'], network)
 
             # 3. resource check (CPU/MEM/DISK)
             cpu_grade = 'fail'
@@ -175,90 +173,38 @@ def periodic(conn, history_log):
                     if cur_info[node_name]['DISK'] != disk_grade:
                         alarm_event.occur_event(conn, node_name, 'DISK', cur_info[node_name]['DISK'], disk_grade)
 
+            # 2. app check
             # 4. Connection check (ovsdb, of, cluster) (ONOS)
             # 5. Web check (ONOS)
             # 8. HA Status (ONOS)
             # 9. Node check (ONOS)
             if type.upper() == 'ONOS':
-                # 2. app check
-                if not alarm_event.is_monitor_item(type, 'ONOS_APP'):
-                    onos_app = '-'
-                elif cur_info[node_name]['ONOS_APP'] != onos_app:
-                    alarm_event.occur_event(conn, node_name, 'ONOS_APP', cur_info[node_name]['ONOS_APP'], onos_app)
-
-                if not alarm_event.is_monitor_item(type, 'ovsdb'):
-                    onos_ovsdb = '-'
-                elif cur_info[node_name]['ONOS_OVSDB'] != onos_ovsdb:
-                    alarm_event.occur_event(conn, node_name, 'ONOS_OVSDB', cur_info[node_name]['ONOS_OVSDB'], onos_ovsdb)
-
-                if not alarm_event.is_monitor_item(type, 'ONOS_OF'):
-                    onos_of = '-'
-                elif cur_info[node_name]['ONOS_OF'] != onos_of:
-                    alarm_event.occur_event(conn, node_name, 'ONOS_OF', cur_info[node_name]['ONOS_OF'], onos_of)
-
-                if not alarm_event.is_monitor_item(type, 'ONOS_CLUSTER'):
-                    onos_cluster = '-'
-                elif cur_info[node_name]['ONOS_CLUSTER'] != onos_cluster:
-                    alarm_event.occur_event(conn, node_name, 'ONOS_CLUSTER', cur_info[node_name]['ONOS_CLUSTER'], onos_cluster)
-
-                if not alarm_event.is_monitor_item(type, 'ONOS_REST'):
-                    onos_rest = '-'
-                elif cur_info[node_name]['ONOS_REST'] != onos_rest:
-                    alarm_event.occur_event(conn, node_name, 'ONOS_REST', cur_info[node_name]['ONOS_REST'], onos_rest)
-
-                if not alarm_event.is_monitor_item(type, 'ONOS_HA_LIST'):
-                    onos_ha_list = '-'
-                elif cur_info[node_name]['ONOS_HA_LIST'] != onos_ha_list:
-                    alarm_event.occur_event(conn, node_name, 'ONOS_HA_LIST', cur_info[node_name]['ONOS_HA_LIST'], onos_ha_list)
-
-                if not alarm_event.is_monitor_item(type, 'ONOS_HA_RATIO'):
-                    onos_ha_ratio = '-'
-                elif cur_info[node_name]['ONOS_HA_RATIO'] != onos_ha_ratio:
-                    alarm_event.occur_event(conn, node_name, 'ONOS_HA_RATIO', cur_info[node_name]['ONOS_HA_RATIO'], onos_ha_ratio)
-
-                if not alarm_event.is_monitor_item(type, 'OPENSTACK_NODE'):
-                    openstack_node = '-'
-                elif cur_info[node_name]['OPENSTACK_NODE'] != openstack_node:
-                    alarm_event.occur_event(conn, node_name, 'OPENSTACK_NODE', cur_info[node_name]['OPENSTACK_NODE'], openstack_node)
-
-                if not alarm_event.is_monitor_item(type, 'TRAFFIC_CONTROLLER'):
-                    traffic_controller = '-'
-                elif cur_info[node_name]['TRAFFIC_CONTROLLER'] != traffic_controller:
-                    alarm_event.occur_event(conn, node_name, 'TRAFFIC_CONTROLLER', cur_info[node_name]['TRAFFIC_CONTROLLER'], traffic_node)
+                onos_app = alarm_event.process_event(conn, node_name, type, 'ONOS_APP', cur_info[node_name]['ONOS_APP'], onos_app)
+                onos_ovsdb = alarm_event.process_event(conn, node_name, type, 'ONOS_OVSDB', cur_info[node_name]['ONOS_OVSDB'], onos_ovsdb)
+                onos_of = alarm_event.process_event(conn, node_name, type, 'ONOS_OF', cur_info[node_name]['ONOS_OF'], onos_of)
+                onos_cluster = alarm_event.process_event(conn, node_name, type, 'ONOS_CLUSTER', cur_info[node_name]['ONOS_CLUSTER'], onos_cluster)
+                onos_rest = alarm_event.process_event(conn, node_name, type, 'ONOS_REST', cur_info[node_name]['ONOS_REST'], onos_rest)
+                onos_ha_list = alarm_event.process_event(conn, node_name, type, 'ONOS_HA_LIST', cur_info[node_name]['ONOS_HA_LIST'], onos_ha_list)
+                onos_ha_ratio = alarm_event.process_event(conn, node_name, type, 'ONOS_HA_RATIO', cur_info[node_name]['ONOS_HA_RATIO'], onos_ha_ratio)
+                openstack_node = alarm_event.process_event(conn, node_name, type, 'OPENSTACK_NODE', cur_info[node_name]['OPENSTACK_NODE'], openstack_node)
+                traffic_controller = alarm_event.process_event(conn, node_name, type, 'TRAFFIC_CONTROLLER', cur_info[node_name]['TRAFFIC_CONTROLLER'], traffic_controller)
 
             # 6. Swarm Check
             elif type.upper() == 'SWARM':
                 # 2. app check
-                if not alarm_event.is_monitor_item(type, 'SWARM_SVC'):
-                    onos_app = '-'
-                elif cur_info[node_name]['SWARM_SVC'] != swarm_svc:
-                    alarm_event.occur_event(conn, node_name, 'SWARM_SVC', cur_info[node_name]['SWARM_SVC'], swarm_svc)
-
-                if not alarm_event.is_monitor_item(type, 'SWARM_NODE'):
-                    openstack_node = '-'
-                elif cur_info[node_name]['SWARM_NODE'] != swarm_node:
-                    alarm_event.occur_event(conn, node_name, 'SWARM_NODE', cur_info[node_name]['SWARM_NODE'], swarm_node)
+                swarm_svc = alarm_event.process_event(conn, node_name, type, 'SWARM_SVC', cur_info[node_name]['SWARM_SVC'], swarm_svc)
+                swarm_node = alarm_event.process_event(conn, node_name, type, 'SWARM_NODE', cur_info[node_name]['SWARM_NODE'], swarm_node)
 
             # 7. Vrouter Check
             elif type.upper() == 'OPENSTACK':
                 if sub_type.upper() == 'GATEWAY':
-                    if not alarm_event.is_monitor_item(type, 'VROUTER'):
-                        v_router = '-'
-                    elif cur_info[node_name]['VROUTER'] != v_router:
-                        alarm_event.occur_event(conn, node_name, 'VROUTER', cur_info[node_name]['VROUTER'], v_router)
-
-                    if not alarm_event.is_monitor_item(type, 'TRAFFIC_GW'):
-                        traffic_gw = '-'
-                    elif cur_info[node_name]['TRAFFIC_GW'] != traffic_gw:
-                        alarm_event.occur_event(conn, node_name, 'TRAFFIC_GW', cur_info[node_name]['TRAFFIC_GW'], traffic_gw)
+                    v_router = alarm_event.process_event(conn, node_name, type, 'VROUTER', cur_info[node_name]['VROUTER'], v_router)
+                    traffic_gw = alarm_event.process_event(conn, node_name, type, 'TRAFFIC_GW', cur_info[node_name]['TRAFFIC_GW'], traffic_gw)
                 elif sub_type.upper() == 'COMPUTE':
                     v_router = '-'
                     traffic_gw = '-'
 
-                if not alarm_event.is_monitor_item(type, 'TRAFFIC_NODE'):
-                    traffic_node = '-'
-                elif cur_info[node_name]['TRAFFIC_NODE'] != traffic_node:
-                    alarm_event.occur_event(conn, node_name, 'TRAFFIC_NODE', cur_info[node_name]['TRAFFIC_NODE'], traffic_node)
+                traffic_node = alarm_event.process_event(conn, node_name, type, 'TRAFFIC_NODE', cur_info[node_name]['TRAFFIC_NODE'], traffic_node)
 
             try:
                 sql = 'UPDATE ' + DB.STATUS_TBL + \

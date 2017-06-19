@@ -12,6 +12,8 @@ def process_event(conn, node_name, type, id, pre_value, cur_value):
         return '-'
     elif pre_value != cur_value:
         occur_event(conn, node_name, id, pre_value, cur_value)
+        return cur_value
+
 
 def is_monitor_item(node_type, item_type):
     conf_dict = CONF_MAP[node_type.upper()]()
