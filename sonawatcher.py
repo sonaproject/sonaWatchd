@@ -47,7 +47,7 @@ class SonaWatchD(Daemon):
 
             while True:
                 try:
-                    watchdog.periodic(conn, history_log)
+                    watchdog.periodic(conn)
 
                     time.sleep(CONF.watchdog()['interval'])
                 except:

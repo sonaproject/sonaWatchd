@@ -8,11 +8,15 @@ from api.config import CONF
 
 
 def process_event(conn, node_name, type, id, pre_value, cur_value):
-    if not is_monitor_item(type, id):
-        return '-'
-    elif pre_value != cur_value:
-        occur_event(conn, node_name, id, pre_value, cur_value)
+    try:
+        if not is_monitor_item(type, id):
+            return '-'
+        elif pre_value != cur_value:
+            occur_event(conn, node_name, id, pre_value, cur_value)
+
         return cur_value
+    except:
+        LOG.exception()
 
 
 def is_monitor_item(node_type, item_type):
