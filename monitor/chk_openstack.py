@@ -172,6 +172,7 @@ def rx_tx_check(user_name, node_ip):
     try:
         port_rt = SshCommand.ssh_exec(user_name, node_ip, 'sudo ovs-ofctl show br-int | grep vxlan')
 
+        err_dict = dict()
         if port_rt is not None:
             port = int(str(port_rt).split('(')[0].strip())
 
@@ -182,12 +183,18 @@ def rx_tx_check(user_name, node_ip):
                 for line in port_rt.splitlines():
                     i = i + 1
                     if line.split(':')[0].replace(' ', '') == 'port' + str(port):
-                        rx_packet_cnt = int(line.split(',')[0].split('=')[1])
+                        tmp = line.split(',')
+                        rx_packet_cnt = int(tmp[0].split('=')[1])
+                        err_dict['rx_drop'] = int(tmp[2].split('=')[1])
+                        err_dict['rx_err'] = int(tmp[3].split('=')[1])
                         break
 
-                tx_packet_cnt = int(port_rt.splitlines()[i].split(',')[0].split('=')[1])
+                tmp = port_rt.splitlines()[i].split(',')
+                tx_packet_cnt = int(tmp[0].split('=')[1])
+                err_dict['tx_drop'] = int(tmp[2].split('=')[1])
+                err_dict['tx_err'] = int(tmp[3].split('=')[1])
 
-                return rx_packet_cnt, tx_packet_cnt
+                return rx_packet_cnt, tx_packet_cnt, err_dict
     except:
         LOG.exception()
 
@@ -213,10 +220,10 @@ def calc_node_traffic_ratio(total_rx, total_tx):
         return -1
 
 
-def get_node_traffic(conn, node_name, ratio, rx_dic, tx_dic, rx_total, tx_total):
+def get_node_traffic(conn, node_name, ratio, rx_dic, tx_dic, rx_total, tx_total, err_info):
     try:
-        strRatio = '(VXLAN) Received packet count = ' + str(rx_dic[node_name]) + '\n'
-        strRatio = strRatio + '(VXLAN) Sent packet count = ' + str(tx_dic[node_name]) + '\n'
+        strRatio = '(VXLAN) Received packet count = ' + str(rx_dic[node_name]) + ', drop = ' + str(err_info['rx_drop']) + ', errs = ' + str(err_info['rx_err']) + '\n'
+        strRatio = strRatio + '(VXLAN) Sent packet count = ' + str(tx_dic[node_name]) + ', drop = ' + str(err_info['tx_drop']) + ', errs = ' + str(err_info['tx_err']) + '\n'
         strRatio = strRatio + 'Ratio of success for all nodes = ' + str(ratio)  + ' (' + str(rx_total) + ' / ' + str(tx_total) + ')'
 
         try:
@@ -232,6 +239,19 @@ def get_node_traffic(conn, node_name, ratio, rx_dic, tx_dic, rx_total, tx_total)
 
         LOG.info('GW Ratio = ' + str(ratio))
         if ratio < float(CONF.alarm()['node_traffic_ratio']):
+            LOG.info('[NODE TRAFFIC] ratio nok')
+            return 'nok'
+        elif err_info['rx_drop'] > 0:
+            LOG.info('[NODE TRAFFIC] rx_drop nok')
+            return 'nok'
+        elif err_info['rx_err'] > 0:
+            LOG.info('[NODE TRAFFIC] rx_err nok')
+            return 'nok'
+        elif err_info['tx_drop'] > 0:
+            LOG.info('[NODE TRAFFIC] tx_drop nok')
+            return 'nok'
+        elif err_info['tx_err'] > 0:
+            LOG.info('[NODE TRAFFIC] tx_err nok')
             return 'nok'
 
         return 'ok'

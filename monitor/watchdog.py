@@ -56,9 +56,10 @@ def periodic(conn):
 
         openstack_rx_dic = dict()
         openstack_tx_dic = dict()
+        rx_tx_err_info = dict()
         for node_name, node_ip, user_name, type, sub_type in node_list:
             if type.upper() == 'OPENSTACK':
-                openstack_rx_dic[node_name], openstack_tx_dic[node_name] = chk_openstack.rx_tx_check(user_name, node_ip)
+                openstack_rx_dic[node_name], openstack_tx_dic[node_name], rx_tx_err_info[node_name] = chk_openstack.rx_tx_check(user_name, node_ip)
 
                 if openstack_rx_dic[node_name] > 0:
                     rx_total = rx_total + openstack_rx_dic[node_name]
@@ -127,7 +128,7 @@ def periodic(conn):
                 # check vrouter, gw_ratio
                 elif type.upper() == 'OPENSTACK':
                     traffic_node = chk_openstack.get_node_traffic(conn, node_name, node_ratio, openstack_rx_dic,
-                                                                  openstack_tx_dic, rx_total, tx_total)
+                                                                  openstack_tx_dic, rx_total, tx_total, rx_tx_err_info[node_name])
                     if sub_type.upper() == 'GATEWAY':
                         v_router = chk_openstack.vrouter_check(conn, node_name, user_name, node_ip)
                         traffic_gw = chk_openstack.get_gw_ratio(conn, node_name, node_ip, openstack_rx_dic[node_name], gw_total)
