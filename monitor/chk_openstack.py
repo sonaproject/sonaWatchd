@@ -4,6 +4,7 @@ from api.config import CONF
 from api.watcherdb import DB
 from api.sbapi import SshCommand
 
+
 def vrouter_check(conn, node_name, user_name, node_ip):
     str_docker = ''
     onos_id = ''
@@ -170,11 +171,16 @@ def get_gw_ratio(conn, node_name, node_ip, cur_val, total_val):
 
 def rx_tx_check(user_name, node_ip):
     try:
-        port_rt = SshCommand.ssh_exec(user_name, node_ip, 'sudo ovs-ofctl show br-int | grep vxlan')
+        port_rt = SshCommand.ssh_exec(user_name, node_ip, 'sudo ovs-ofctl show br-int')
 
         err_dict = dict()
+        patch_port = None
         if port_rt is not None:
-            port = int(str(port_rt).split('(')[0].strip())
+            for line in port_rt.splitlines():
+                if '(vxlan)' in line:
+                    vxlan_port = int(line.split('(')[0].strip())
+                elif '(patch-intg)' in line:
+                    patch_port = int(line.split('(')[0].strip())
 
             port_rt = SshCommand.ssh_exec(user_name, node_ip, 'sudo ovs-ofctl dump-ports br-int')
 
@@ -182,7 +188,7 @@ def rx_tx_check(user_name, node_ip):
                 i = 0
                 for line in port_rt.splitlines():
                     i = i + 1
-                    if line.split(':')[0].replace(' ', '') == 'port' + str(port):
+                    if line.split(':')[0].replace(' ', '') == 'port' + str(vxlan_port):
                         tmp = line.split(',')
                         rx_packet_cnt = int(tmp[0].split('=')[1])
                         err_dict['rx_drop'] = int(tmp[2].split('=')[1])
@@ -194,7 +200,20 @@ def rx_tx_check(user_name, node_ip):
                 err_dict['tx_drop'] = int(tmp[2].split('=')[1])
                 err_dict['tx_err'] = int(tmp[3].split('=')[1])
 
-                return rx_packet_cnt, tx_packet_cnt, err_dict
+                # find patch port
+                if not patch_port is None:
+                    i = 0
+                    for line in port_rt.splitlines():
+                        i = i + 1
+                        if line.split(':')[0].replace(' ', '') == 'port' + str(patch_port):
+                            break
+
+                    tmp = port_rt.splitlines()[i].split(',')
+                    patch_tx_packet_cnt = int(tmp[0].split('=')[1])
+                else:
+                    patch_tx_packet_cnt = -1
+
+                return rx_packet_cnt, tx_packet_cnt, err_dict, patch_tx_packet_cnt
     except:
         LOG.exception()
 
@@ -260,5 +279,60 @@ def get_node_traffic(conn, node_name, ratio, rx_dic, tx_dic, rx_total, tx_total,
         return 'fail'
 
 
+def get_internal_traffic(conn, node_name, node_ip, user_name, sub_type, rx_count, patch_tx):
+    try:
+        status = 'ok'
+
+        if sub_type == 'COMPUTE':
+            flow_rt = SshCommand.ssh_exec(user_name, node_ip, 'sudo ovs-ofctl -O OpenFlow13 dump-flows br-int')
+
+            inport_cnt = 0
+            gw_cnt = 0
+            output_cnt = 0
+
+            if flow_rt is not None:
+                for line in flow_rt.splitlines():
+                    tmp = line.split(',')
+                    if 'in_port' in line:
+                        inport_cnt = inport_cnt + int(tmp[3].split('=')[1])
+                    elif 'output' in line:
+                        output_cnt = output_cnt + int(tmp[3].split('=')[1])
+                    elif 'actions=group' in line:
+                        gw_cnt = gw_cnt + int(tmp[3].split('=')[1])
+
+                if not inport_cnt + rx_count == gw_cnt + output_cnt:
+                    status = 'nok'
+
+                if status == 'ok':
+                    op = '='
+                else:
+                    op = '!='
+
+                strmsg = 'in_port(' + str(inport_cnt) + ') + vxlan_rx(' + str(rx_count) + ') ' + op + ' gw(' + str(gw_cnt) + ') + output(' + str(output_cnt) + ')'
+            else:
+                status = 'fail'
+        else:
+            strmsg = 'vxlan rx = ' + str(rx_count) + ', patch-integ tx = ' + str(patch_tx)
+
+            if patch_tx == -1:
+                status = 'nok'
+            elif rx_count > patch_tx:
+                status = 'nok'
+
+        try:
+            sql = 'UPDATE ' + DB.OPENSTACK_TBL + \
+                  ' SET internal_traffic = \'' + strmsg + '\'' + \
+                  ' WHERE nodename = \'' + node_name + '\''
+            LOG.info('Update Internal Traffic info = ' + sql)
+
+            if DB.sql_execute(sql, conn) != 'SUCCESS':
+                LOG.error('DB Update Fail.')
+        except:
+            LOG.exception()
+
+        return status
+    except:
+        LOG.exception()
+        return 'fail'
 
 

@@ -25,7 +25,7 @@ class DB(object):
     onos_event_list = ['ONOS_APP', 'ONOS_REST', 'ONOS_OVSDB', 'ONOS_OF', 'ONOS_CLUSTER', 'ONOS_HA_LIST',
                        'ONOS_HA_RATIO', 'OPENSTACK_NODE', 'TRAFFIC_CONTROLLER']
     swarm_event_list = ['SWARM_SVC', 'SWARM_NODE']
-    openstack_event_list = ['VROUTER', 'TRAFFIC_GW', 'TRAFFIC_NODE']
+    openstack_event_list = ['VROUTER', 'TRAFFIC_GW', 'TRAFFIC_NODE', 'TRAFFIC_INTERNAL']
     xos_event_list = []
 
     item_list = ", ".join(common_event_list + onos_event_list + swarm_event_list + openstack_event_list + xos_event_list)
@@ -81,7 +81,7 @@ class DB(object):
                         'CREATE TABLE ' + cls.REGI_SYS_TBL + '(url text primary key, auth)',
                         'CREATE TABLE ' + cls.ONOS_TBL + '(nodename text primary key, applist, weblist, nodelist, port, haproxy, ovsdb, of, cluster, traffic_stat)',
                         'CREATE TABLE ' + cls.SWARM_TBL + '(nodename text primary key, node, service, ps)',
-                        'CREATE TABLE ' + cls.OPENSTACK_TBL + '(nodename text primary key, sub_type, docker, onosApp, routingTable, gw_ratio, vxlan_traffic)',
+                        'CREATE TABLE ' + cls.OPENSTACK_TBL + '(nodename text primary key, sub_type, docker, onosApp, routingTable, gw_ratio, vxlan_traffic, internal_traffic)',
                         'CREATE TABLE ' + cls.HA_TBL + '(ha_key text primary key, stats)',
                         'CREATE TABLE ' + cls.OF_TBL + '(hostname text primary key, of_id)',
                         'CREATE TABLE ' + cls.EVENT_TBL + '(nodename, item, grade, desc, time, PRIMARY KEY (nodename, item))']
@@ -139,7 +139,7 @@ class DB(object):
 
             # set status tbl
             sql = 'INSERT INTO ' + cls.STATUS_TBL + \
-                  ' VALUES (\'' + name + '\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', ' \
+                  ' VALUES (\'' + name + '\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', ' \
                                          '\'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\')'
             LOG.info('%s', sql)
             sql_rt = cls.sql_execute(sql)
@@ -189,7 +189,7 @@ class DB(object):
             elif type.upper() == 'OPENSTACK':
                 # set vrouter tbl
                 sql = 'INSERT INTO ' + cls.OPENSTACK_TBL + \
-                      ' VALUES (\'' + name + '\', \'' + sub_type + '\', \'none\', \'none\', \'none\', \'none\', \'none\')'
+                      ' VALUES (\'' + name + '\', \'' + sub_type + '\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\')'
                 LOG.info('%s', sql)
                 sql_rt = cls.sql_execute(sql)
                 if sql_rt != 'SUCCESS':
