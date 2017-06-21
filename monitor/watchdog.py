@@ -248,46 +248,53 @@ def periodic(conn):
         LOG.exception()
 
 def net_check(node):
-    if CONF.watchdog()['method'] == 'ping':
-        timeout = CONF.watchdog()['timeout']
-        if sys.platform == 'darwin':
-            timeout = timeout * 1000
+    try:
+        if CONF.watchdog()['method'] == 'ping':
+            timeout = CONF.watchdog()['timeout']
+            if sys.platform == 'darwin':
+                timeout = timeout * 1000
 
-        cmd = 'ping -c1 -W%d -n %s' % (timeout, node)
+            cmd = 'ping -c1 -W%d -n %s' % (timeout, node)
 
-        result = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
-        output, error = result.communicate()
+            result = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
+            output, error = result.communicate()
 
-        if result.returncode != 0:
-            LOG.error("\'%s\' Network Check Error(%d) ", node, result.returncode)
-            return 'nok'
-        else:
-            return 'ok'
+            if result.returncode != 0:
+                LOG.error("\'%s\' Network Check Error(%d) ", node, result.returncode)
+                return 'nok'
+            else:
+                return 'ok'
+    except:
+        LOG.exception()
 
 
 def check_app(conn, node_name, node_ip, user_name, type):
-    app = 'nok'
+    try:
+        app = 'nok'
 
-    if type.upper() == 'ONOS':
-        app, app_list = chk_onos.onos_app_check(node_ip)
+        if type.upper() == 'ONOS':
+            app, app_list = chk_onos.onos_app_check(node_ip)
 
-        try:
-            sql = 'UPDATE ' + DB.ONOS_TBL + \
-                  ' SET applist = \'' + app_list + '\'' \
-                                                   ' WHERE nodename = \'' + node_name + '\''
-            LOG.info('Update app info = ' + sql)
+            try:
+                sql = 'UPDATE ' + DB.ONOS_TBL + \
+                      ' SET applist = \'' + app_list + '\'' \
+                                                       ' WHERE nodename = \'' + node_name + '\''
+                LOG.info('Update app info = ' + sql)
 
-            if DB.sql_execute(sql, conn) != 'SUCCESS':
-                LOG.error('DB Update Fail.')
-        except:
-            LOG.exception()
+                if DB.sql_execute(sql, conn) != 'SUCCESS':
+                    LOG.error('DB Update Fail.')
+            except:
+                LOG.exception()
 
-    elif type.upper() == 'XOS':
-        app = xos_app_check(node_ip)
-    elif type.upper() == 'OPENSTACK':
-        app = openstack_app_check(node_ip)
+        elif type.upper() == 'XOS':
+            app = xos_app_check(node_ip)
+        elif type.upper() == 'OPENSTACK':
+            app = openstack_app_check(node_ip)
 
-    return app
+        return app
+    except:
+        LOG.exception()
+        return 'fail'
 
 
 # TODO xos app check

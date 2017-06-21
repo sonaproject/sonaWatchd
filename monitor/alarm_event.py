@@ -20,73 +20,89 @@ def process_event(conn, node_name, type, id, pre_value, cur_value):
 
 
 def is_monitor_item(node_type, item_type):
-    conf_dict = CONF_MAP[node_type.upper()]()
+    try:
+        conf_dict = CONF_MAP[node_type.upper()]()
 
-    if conf_dict.has_key('alarm_off_list'):
-        for item in (CONF_MAP[node_type.upper()]())['alarm_off_list']:
-            if item_type in item:
-                return False
+        if conf_dict.has_key('alarm_off_list'):
+            for item in (CONF_MAP[node_type.upper()]())['alarm_off_list']:
+                if item_type in item:
+                    return False
+    except:
+        LOG.exception()
 
     return True
 
 
 def get_grade(item, value):
-    critical, major, minor = (CONF.alarm()[item])
+    try:
+        critical, major, minor = (CONF.alarm()[item])
 
-    if value == '-1':
+        if value == '-1':
+            return 'fail'
+
+        if float(value) >= float(critical):
+            return 'critical'
+        elif float(value) >= float(major):
+            return 'major'
+        elif float(value) >= float(minor):
+            return 'minor'
+
+        return 'normal'
+    except:
+        LOG.exception()
         return 'fail'
-
-    if float(value) >= float(critical):
-        return 'critical'
-    elif float(value) >= float(major):
-        return 'major'
-    elif float(value) >= float(minor):
-        return 'minor'
-
-    return 'normal'
 
 
 def occur_event(conn, node_name, item, pre_value, cur_value):
-    time = str(datetime.now())
-    desc = pre_value + ' -> ' + cur_value
-    sql = 'UPDATE ' + DB.EVENT_TBL + \
-          ' SET grade = \'' + cur_value + '\'' + ',' + \
-          ' desc = \'' + desc + '\'' + ',' + \
-          ' time = \'' + time + '\'' + \
-          ' WHERE nodename = \'' + node_name + '\' and item = \'' + item + '\''
-    LOG.info('Update alarm info = ' + sql)
+    try:
+        time = str(datetime.now())
+        desc = pre_value + ' -> ' + cur_value
+        sql = 'UPDATE ' + DB.EVENT_TBL + \
+              ' SET grade = \'' + cur_value + '\'' + ',' + \
+              ' desc = \'' + desc + '\'' + ',' + \
+              ' time = \'' + time + '\'' + \
+              ' WHERE nodename = \'' + node_name + '\' and item = \'' + item + '\''
+        LOG.info('Update alarm info = ' + sql)
 
-    if DB.sql_execute(sql, conn) != 'SUCCESS':
-        LOG.error('DB Update Fail.')
+        if DB.sql_execute(sql, conn) != 'SUCCESS':
+            LOG.error('DB Update Fail.')
 
-    push_event(node_name, item, cur_value, desc, time)
+        push_event(node_name, item, cur_value, desc, time)
+    except:
+        LOG.exception()
+
 
 history_log = None
 def set_history_log(log):
     global history_log
     history_log = log
 
+
 def push_event(node_name, item, grade, desc, time):
     global history_log
-    history_log.write_log('[%s][%s][%s] %s', node_name, item, grade, desc)
 
-    sql = 'SELECT * FROM ' + DB.REGI_SYS_TBL
+    try:
+        history_log.write_log('[%s][%s][%s] %s', node_name, item, grade, desc)
 
-    with DB.connection() as conn:
-        url_list = conn.cursor().execute(sql).fetchall()
+        sql = 'SELECT * FROM ' + DB.REGI_SYS_TBL
 
-    conn.close()
+        with DB.connection() as conn:
+            url_list = conn.cursor().execute(sql).fetchall()
 
-    for url, auth in url_list:
-        header = {'Content-Type': 'application/json', 'Authorization': auth}
-        req_body = {'event': 'occur', 'system': node_name, 'item': item, 'grade': grade, 'desc': desc, 'time': time}
-        req_body_json = json.dumps(req_body)
+        conn.close()
 
-        try:
-            requests.post(url, headers=header, data=req_body_json, timeout = 2)
-        except:
-            # Push event does not respond
-            pass
+        for url, auth in url_list:
+            header = {'Content-Type': 'application/json', 'Authorization': auth}
+            req_body = {'event': 'occur', 'system': node_name, 'item': item, 'grade': grade, 'desc': desc, 'time': time}
+            req_body_json = json.dumps(req_body)
+
+            try:
+                requests.post(url, headers=header, data=req_body_json, timeout = 2)
+            except:
+                # Push event does not respond
+                pass
+    except:
+        LOG.exception()
 
 
 CONF_MAP = {'ONOS': CONF.onos,

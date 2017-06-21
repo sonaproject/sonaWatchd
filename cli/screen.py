@@ -581,30 +581,33 @@ class FlowTraceView(Frame):
         self.start_trace(saved_data, real_data)
 
     def start_trace(self, saved_data, real_data):
+        try:
+            if (len(self.data['COMPUTE'].strip()) == 0):
+                self._scene.add_effect(PopUpDialog(self._screen, "Please enter a compute node name.", ["OK"]))
+                return
 
-        if (len(self.data['COMPUTE'].strip()) == 0):
-            self._scene.add_effect(PopUpDialog(self._screen, "Please enter a compute node name.", ["OK"]))
-            return
+            if not (TRACE.compute_list.has_key(self.data['COMPUTE'].strip())):
+                self._scene.add_effect(PopUpDialog(self._screen, 'No ' + self.data["COMPUTE"].strip() + '(COMPUTE NODE) registered', ["OK"]))
+                return
 
-        if not (TRACE.compute_list.has_key(self.data['COMPUTE'].strip())):
-            self._scene.add_effect(PopUpDialog(self._screen, 'No ' + self.data["COMPUTE"].strip() + '(COMPUTE NODE) registered', ["OK"]))
-            return
+            if len(saved_data) == 0:
+                self._scene.add_effect(PopUpDialog(self._screen, "Please enter a flow-trace condition.", ["OK"]))
+                return
 
-        if len(saved_data) == 0:
-            self._scene.add_effect(PopUpDialog(self._screen, "Please enter a flow-trace condition.", ["OK"]))
-            return
+            num = len(self.trace_history) + 1
+            data = (saved_data, num)
 
-        num = len(self.trace_history) + 1
-        data = (saved_data, num)
+            self.trace_history.insert(0, data)
+            self.real_trace.append(real_data)
 
-        self.trace_history.insert(0, data)
-        self.real_trace.append(real_data)
+            self._list_view.value = len(self.trace_history)
 
-        self._list_view.value = len(self.trace_history)
+            cmd_rt = TRACE.exec_trace(TRACE.compute_id, TRACE.compute_list[self.data['COMPUTE'].strip()], real_data)
 
-        cmd_rt = TRACE.exec_trace(TRACE.compute_id, TRACE.compute_list[self.data['COMPUTE'].strip()], real_data)
+            self._trace_result.value = cmd_rt
+        except:
+            LOG.exception_err_write()
 
-        self._trace_result.value = cmd_rt
 
     @staticmethod
     def _menu():

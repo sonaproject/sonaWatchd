@@ -8,27 +8,29 @@ from api.sbapi import SshCommand
 
 
 def onos_app_check(node):
-    app_rt = SshCommand.onos_ssh_exec(node, 'apps -a -s')
+    try:
+        app_rt = SshCommand.onos_ssh_exec(node, 'apps -a -s')
 
-    exist_cpman = False
+        app_active_list = list()
+        if app_rt is not None:
+            for line in app_rt.splitlines():
+                app_active_list.append(line.split(".")[2].split()[0])
 
-    app_active_list = list()
-    if app_rt is not None:
-        for line in app_rt.splitlines():
-            app_active_list.append(line.split(".")[2].split()[0])
+            if not 'cpman' in app_active_list:
+                # activate cpman
+                LOG.info('Cpman does not exist. Activate cpman')
+                SshCommand.onos_ssh_exec(node, 'app activate org.onosproject.cpman')
 
-        if not 'cpman' in app_active_list:
-            # activate cpman
-            LOG.info('Cpman does not exist. Activate cpman')
-            SshCommand.onos_ssh_exec(node, 'app activate org.onosproject.cpman')
-
-        if set(CONF.onos()['app_list']).issubset(app_active_list):
-            return 'ok', app_rt
+            if set(CONF.onos()['app_list']).issubset(app_active_list):
+                return 'ok', app_rt
+            else:
+                LOG.error("\'%s\' Application Check Error", node)
+                return 'nok', app_rt
         else:
             LOG.error("\'%s\' Application Check Error", node)
-            return 'nok', app_rt
-    else:
-        LOG.error("\'%s\' Application Check Error", node)
+            return 'nok', 'fail'
+    except:
+        LOG.exception()
         return 'nok', 'fail'
 
 
@@ -65,7 +67,7 @@ def onos_conn_check(conn, node_name, node_ip):
                     if not ('available=true, local-status=connected' in line):
                         ovsdb_status = 'nok'
         else:
-            LOG.error("\'%s\' Connection Check Error", node_ip)
+            LOG.error("\'%s\' Connection Check Error(devices)", node_ip)
             of_status = 'fail'
             ovsdb_status = 'fail'
 
@@ -75,7 +77,7 @@ def onos_conn_check(conn, node_name, node_ip):
                 if not ('state=READY' in line):
                     cluster_status = 'nok'
         else:
-            LOG.error("\'%s\' Connection Check Error", node_ip)
+            LOG.error("\'%s\' Connection Check Error(nodes)", node_ip)
             cluster_status = 'fail'
 
         try:
@@ -87,7 +89,7 @@ def onos_conn_check(conn, node_name, node_ip):
             LOG.info('Update Connection info = ' + sql)
 
             if DB.sql_execute(sql, conn) != 'SUCCESS':
-                LOG.error('DB Update Fail.')
+                LOG.error('ONOS(conn) DB Update Fail.')
         except:
             LOG.exception()
 
@@ -120,7 +122,7 @@ def onos_web_check(conn, node_name, node_ip):
             LOG.info('Update Resource info = ' + sql)
 
             if DB.sql_execute(sql, conn) != 'SUCCESS':
-                LOG.error('DB Update Fail.')
+                LOG.error('ONOS(web) DB Update Fail.')
         except:
             LOG.exception()
 
@@ -168,7 +170,7 @@ def onos_ha_check(conn):
             LOG.info('Update HA info = ' + sql)
 
             if DB.sql_execute(sql, conn) != 'SUCCESS':
-                LOG.error('DB Update Fail.')
+                LOG.error('HA DB Update Fail.')
         except:
             LOG.exception()
 
@@ -217,7 +219,7 @@ def get_ha_stats(conn, ha_dic, node_name):
             LOG.info('Update HA info = ' + sql)
 
             if DB.sql_execute(sql, conn) != 'SUCCESS':
-                LOG.error('DB Update Fail.')
+                LOG.error('ONOS(HA STAT) DB Update Fail.')
         except:
             LOG.exception()
 
@@ -249,7 +251,7 @@ def onos_node_check(conn, node_name, node_ip):
                               ' VALUES (\'' + host_name + '\',\'' + of_id + '\')'
 
                         if DB.sql_execute(sql, conn) != 'SUCCESS':
-                            LOG.error('DB Update Fail.')
+                            LOG.error('OF(node) DB Update Fail.')
                     except:
                         LOG.exception()
 
@@ -282,7 +284,7 @@ def onos_node_check(conn, node_name, node_ip):
             LOG.info('Update Resource info = ' + sql)
 
             if DB.sql_execute(sql, conn) != 'SUCCESS':
-                LOG.error('DB Update Fail.')
+                LOG.error('ONOS(node) DB Update Fail.')
         except:
             LOG.exception()
 
@@ -357,7 +359,7 @@ def controller_traffic_check(conn, node_name, node_ip):
             LOG.info('Update Controller Traffic info = ' + sql)
 
             if DB.sql_execute(sql, conn) != 'SUCCESS':
-                LOG.error('DB Update Fail.')
+                LOG.error('ONOS(traffic_stat) DB Update Fail.')
         except:
             LOG.exception()
 

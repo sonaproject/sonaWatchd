@@ -25,18 +25,21 @@ class TRACE():
 
     @classmethod
     def set_cnd_list(cls):
-        cls.compute_id = CONFIG.get_trace_cpt_id()
-        cpt_list = CONFIG.get_trace_cpt_list()
+        try:
+            cls.compute_id = CONFIG.get_trace_cpt_id()
+            cpt_list = CONFIG.get_trace_cpt_list()
 
-        for cpt in cpt_list.split(','):
-            cpt = cpt.strip()
+            for cpt in cpt_list.split(','):
+                cpt = cpt.strip()
 
-            tmp = cpt.split(':')
+                tmp = cpt.split(':')
 
-            if len(tmp) == 2:
-                cls.compute_list[tmp[0]] = tmp[1]
+                if len(tmp) == 2:
+                    cls.compute_list[tmp[0]] = tmp[1]
 
-        cls.trace_cond_list = CONFIG.get_cnd_list()
+            cls.trace_cond_list = CONFIG.get_cnd_list()
+        except:
+            LOG.exception_err_write()
 
     @staticmethod
     def valid_IPv4(address):
@@ -74,23 +77,26 @@ class TRACE():
 
     @classmethod
     def get_cookie_list(cls, username, node):
-        command = 'sudo ovs-ofctl -O OpenFlow13 dump-flows br-int'
+        try:
+            command = 'sudo ovs-ofctl -O OpenFlow13 dump-flows br-int'
 
-        cls.TRACE_LOG.trace_log('GET COOKIES | username = ' + username + ', ip = ' + node + ', condition = ' + command)
+            cls.TRACE_LOG.trace_log('GET COOKIES | username = ' + username + ', ip = ' + node + ', condition = ' + command)
 
-        cmd = 'ssh %s %s@%s %s' % (cls.ssh_options, username, node, command)
-        cls.TRACE_LOG.trace_log('Command: ' + cmd)
+            cmd = 'ssh %s %s@%s %s' % (cls.ssh_options, username, node, command)
+            cls.TRACE_LOG.trace_log('Command: ' + cmd)
 
-        result = cls.ssh_exec(cmd)
+            result = cls.ssh_exec(cmd)
 
-        for cookie in cls.cookie_list:
-            cls.cookie_list.remove(cookie)
+            for cookie in cls.cookie_list:
+                cls.cookie_list.remove(cookie)
 
-        for line in result.splitlines():
-            if 'cookie' in line:
-                cookie = line.split(',')[0].split('=')[1].strip()
-                LOG.debug_log('insert cookie = ' + cookie)
-                cls.cookie_list.append(cookie)
+            for line in result.splitlines():
+                if 'cookie' in line:
+                    cookie = line.split(',')[0].split('=')[1].strip()
+                    LOG.debug_log('insert cookie = ' + cookie)
+                    cls.cookie_list.append(cookie)
+        except:
+            LOG.exception_err_write()
 
 
     @classmethod
