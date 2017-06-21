@@ -188,7 +188,11 @@ def openstack():
     print "\n\n[Setup] Start to copy ssh-key to OpenStack systems ......"
 
     conf = CONF().get_system_info('OPENSTACK')
-    for node in str(conf['list']).replace(" ", "").split(","):
+    for node in str(conf['compute_list']).replace(" ", "").split(","):
+        key_copy(node.split(":")[1], conf)
+        print "-- %s setup finish ------\n" % node
+
+    for node in str(conf['gateway_list']).replace(" ", "").split(","):
         key_copy(node.split(":")[1], conf)
         print "-- %s setup finish ------\n" % node
 

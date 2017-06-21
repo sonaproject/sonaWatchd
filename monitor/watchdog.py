@@ -56,9 +56,11 @@ def periodic(conn):
 
         openstack_rx_dic = dict()
         openstack_tx_dic = dict()
+        rx_tx_err_info = dict()
+        patch_tx_dic = dict()
         for node_name, node_ip, user_name, type, sub_type in node_list:
             if type.upper() == 'OPENSTACK':
-                openstack_rx_dic[node_name], openstack_tx_dic[node_name] = chk_openstack.rx_tx_check(user_name, node_ip)
+                openstack_rx_dic[node_name], openstack_tx_dic[node_name], rx_tx_err_info[node_name], patch_tx_dic[node_name] = chk_openstack.rx_tx_check(user_name, node_ip)
 
                 if openstack_rx_dic[node_name] > 0:
                     rx_total = rx_total + openstack_rx_dic[node_name]
@@ -101,6 +103,7 @@ def periodic(conn):
             traffic_gw = 'fail'
             traffic_node = 'fail'
             traffic_controller = 'fail'
+            traffic_internal = 'fail'
 
             if network == 'ok':
                 if type.upper() == 'ONOS':
@@ -127,10 +130,13 @@ def periodic(conn):
                 # check vrouter, gw_ratio
                 elif type.upper() == 'OPENSTACK':
                     traffic_node = chk_openstack.get_node_traffic(conn, node_name, node_ratio, openstack_rx_dic,
-                                                                  openstack_tx_dic, rx_total, tx_total)
+                                                                  openstack_tx_dic, rx_total, tx_total, rx_tx_err_info[node_name])
+                    traffic_internal = chk_openstack.get_internal_traffic(conn, node_name, node_ip, user_name, sub_type,
+                                                                          openstack_rx_dic[node_name], patch_tx_dic[node_name])
                     if sub_type.upper() == 'GATEWAY':
                         v_router = chk_openstack.vrouter_check(conn, node_name, user_name, node_ip)
                         traffic_gw = chk_openstack.get_gw_ratio(conn, node_name, node_ip, openstack_rx_dic[node_name], gw_total)
+
                 else:
                     # check app
                     onos_app = check_app(conn, node_name, node_ip, user_name, type)
@@ -198,6 +204,8 @@ def periodic(conn):
 
             # 7. Vrouter Check
             elif type.upper() == 'OPENSTACK':
+                traffic_internal = alarm_event.process_event(conn, node_name, type, 'TRAFFIC_INTERNAL',
+                                                             cur_info[node_name]['TRAFFIC_INTERNAL'], traffic_internal)
                 if sub_type.upper() == 'GATEWAY':
                     v_router = alarm_event.process_event(conn, node_name, type, 'VROUTER', cur_info[node_name]['VROUTER'], v_router)
                     traffic_gw = alarm_event.process_event(conn, node_name, type, 'TRAFFIC_GW', cur_info[node_name]['TRAFFIC_GW'], traffic_gw)
@@ -227,6 +235,7 @@ def periodic(conn):
                       ' TRAFFIC_GW = \'' + traffic_gw + '\',' + \
                       ' TRAFFIC_NODE = \'' + traffic_node + '\',' + \
                       ' TRAFFIC_CONTROLLER = \'' + traffic_controller + '\',' + \
+                      ' TRAFFIC_INTERNAL = \'' + traffic_internal + '\',' + \
                       ' time = \'' + str(datetime.now()) + '\'' + \
                       ' WHERE nodename = \'' + node_name + '\''
                 LOG.info('Update Status info = ' + sql)

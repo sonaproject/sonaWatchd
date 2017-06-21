@@ -4,6 +4,7 @@ from api.config import CONF
 from api.watcherdb import DB
 from api.sbapi import SshCommand
 
+
 def vrouter_check(conn, node_name, user_name, node_ip):
     str_docker = ''
     onos_id = ''
@@ -170,10 +171,16 @@ def get_gw_ratio(conn, node_name, node_ip, cur_val, total_val):
 
 def rx_tx_check(user_name, node_ip):
     try:
-        port_rt = SshCommand.ssh_exec(user_name, node_ip, 'sudo ovs-ofctl show br-int | grep vxlan')
+        port_rt = SshCommand.ssh_exec(user_name, node_ip, 'sudo ovs-ofctl show br-int')
 
+        err_dict = dict()
+        patch_port = None
         if port_rt is not None:
-            port = int(str(port_rt).split('(')[0].strip())
+            for line in port_rt.splitlines():
+                if '(vxlan)' in line:
+                    vxlan_port = int(line.split('(')[0].strip())
+                elif '(patch-intg)' in line:
+                    patch_port = int(line.split('(')[0].strip())
 
             port_rt = SshCommand.ssh_exec(user_name, node_ip, 'sudo ovs-ofctl dump-ports br-int')
 
@@ -181,13 +188,32 @@ def rx_tx_check(user_name, node_ip):
                 i = 0
                 for line in port_rt.splitlines():
                     i = i + 1
-                    if line.split(':')[0].replace(' ', '') == 'port' + str(port):
-                        rx_packet_cnt = int(line.split(',')[0].split('=')[1])
+                    if line.split(':')[0].replace(' ', '') == 'port' + str(vxlan_port):
+                        tmp = line.split(',')
+                        rx_packet_cnt = int(tmp[0].split('=')[1])
+                        err_dict['rx_drop'] = int(tmp[2].split('=')[1])
+                        err_dict['rx_err'] = int(tmp[3].split('=')[1])
                         break
 
-                tx_packet_cnt = int(port_rt.splitlines()[i].split(',')[0].split('=')[1])
+                tmp = port_rt.splitlines()[i].split(',')
+                tx_packet_cnt = int(tmp[0].split('=')[1])
+                err_dict['tx_drop'] = int(tmp[2].split('=')[1])
+                err_dict['tx_err'] = int(tmp[3].split('=')[1])
 
-                return rx_packet_cnt, tx_packet_cnt
+                # find patch port
+                if not patch_port is None:
+                    i = 0
+                    for line in port_rt.splitlines():
+                        i = i + 1
+                        if line.split(':')[0].replace(' ', '') == 'port' + str(patch_port):
+                            break
+
+                    tmp = port_rt.splitlines()[i].split(',')
+                    patch_tx_packet_cnt = int(tmp[0].split('=')[1])
+                else:
+                    patch_tx_packet_cnt = -1
+
+                return rx_packet_cnt, tx_packet_cnt, err_dict, patch_tx_packet_cnt
     except:
         LOG.exception()
 
@@ -196,14 +222,13 @@ def rx_tx_check(user_name, node_ip):
 
 def calc_node_traffic_ratio(total_rx, total_tx):
     try:
-        if total_tx == 0:
+        if total_rx == 0 and total_tx == 0:
+            ratio = 100
+        elif total_tx == 0:
             LOG.info('Node Traffic Ratio Fail.')
             ratio = 0
         else:
-            if total_rx == 0:
-                ratio = 0
-            else:
-                ratio = float(total_rx) * 100 / total_tx
+            ratio = float(total_rx) * 100 / total_tx
 
 
         LOG.info('Node Traffic Ratio = ' + str(ratio))
@@ -213,10 +238,10 @@ def calc_node_traffic_ratio(total_rx, total_tx):
         return -1
 
 
-def get_node_traffic(conn, node_name, ratio, rx_dic, tx_dic, rx_total, tx_total):
+def get_node_traffic(conn, node_name, ratio, rx_dic, tx_dic, rx_total, tx_total, err_info):
     try:
-        strRatio = '(VXLAN) Received packet count = ' + str(rx_dic[node_name]) + '\n'
-        strRatio = strRatio + '(VXLAN) Sent packet count = ' + str(tx_dic[node_name]) + '\n'
+        strRatio = '(VXLAN) Received packet count = ' + str(rx_dic[node_name]) + ', drop = ' + str(err_info['rx_drop']) + ', errs = ' + str(err_info['rx_err']) + '\n'
+        strRatio = strRatio + '(VXLAN) Sent packet count = ' + str(tx_dic[node_name]) + ', drop = ' + str(err_info['tx_drop']) + ', errs = ' + str(err_info['tx_err']) + '\n'
         strRatio = strRatio + 'Ratio of success for all nodes = ' + str(ratio)  + ' (' + str(rx_total) + ' / ' + str(tx_total) + ')'
 
         try:
@@ -230,8 +255,21 @@ def get_node_traffic(conn, node_name, ratio, rx_dic, tx_dic, rx_total, tx_total)
         except:
             LOG.exception()
 
-        LOG.info('GW Ratio = ' + str(ratio))
+        LOG.info('Node Traffic Ratio = ' + str(ratio))
         if ratio < float(CONF.alarm()['node_traffic_ratio']):
+            LOG.info('[NODE TRAFFIC] ratio nok')
+            return 'nok'
+        elif err_info['rx_drop'] > 0:
+            LOG.info('[NODE TRAFFIC] rx_drop nok')
+            return 'nok'
+        elif err_info['rx_err'] > 0:
+            LOG.info('[NODE TRAFFIC] rx_err nok')
+            return 'nok'
+        elif err_info['tx_drop'] > 0:
+            LOG.info('[NODE TRAFFIC] tx_drop nok')
+            return 'nok'
+        elif err_info['tx_err'] > 0:
+            LOG.info('[NODE TRAFFIC] tx_err nok')
             return 'nok'
 
         return 'ok'
@@ -240,5 +278,79 @@ def get_node_traffic(conn, node_name, ratio, rx_dic, tx_dic, rx_total, tx_total)
         return 'fail'
 
 
+def get_internal_traffic(conn, node_name, node_ip, user_name, sub_type, rx_count, patch_tx):
+    try:
+        status = 'ok'
+
+        if sub_type == 'COMPUTE':
+            flow_rt = SshCommand.ssh_exec(user_name, node_ip, 'sudo ovs-ofctl -O OpenFlow13 dump-flows br-int')
+
+            inport_cnt = 0
+            gw_cnt = 0
+            output_cnt = 0
+
+            if flow_rt is not None:
+                for line in flow_rt.splitlines():
+                    tmp = line.split(',')
+                    if 'in_port' in line:
+                        inport_cnt = inport_cnt + int(tmp[3].split('=')[1])
+                    elif 'output' in line:
+                        output_cnt = output_cnt + int(tmp[3].split('=')[1])
+                    elif 'actions=group' in line:
+                        gw_cnt = gw_cnt + int(tmp[3].split('=')[1])
+
+                in_packet = inport_cnt + rx_count
+                out_packet = gw_cnt + output_cnt
+            else:
+                status = 'fail'
+                strmsg = 'fail'
+        else:
+            strmsg = 'vxlan rx = ' + str(rx_count) + ', patch-integ tx = ' + str(patch_tx)
+
+            if patch_tx == -1:
+                status = 'nok'
+            else:
+                in_packet = rx_count
+                out_packet = patch_tx
+
+
+        if status == 'ok':
+            if in_packet == 0 and out_packet == 0:
+                ratio = 100
+            elif in_packet == 0:
+                LOG.info('Internal Traffic Ratio Fail.')
+                ratio = 0
+            else:
+                ratio = float(out_packet) * 100 / in_packet
+
+            LOG.info('Internal Traffic Ratio = ' + str(ratio))
+
+            if ratio < float(CONF.alarm()['internal_traffic_ratio']):
+                status = 'nok'
+
+        if sub_type == 'COMPUTE':
+            if status == 'ok':
+                op = '='
+            else:
+                op = '!='
+
+            strmsg = 'in_port(' + str(inport_cnt) + ') + vxlan_rx(' + str(rx_count) + ') ' + op + ' gw(' + str(
+                gw_cnt) + ') + output(' + str(output_cnt) + ')'
+
+        try:
+            sql = 'UPDATE ' + DB.OPENSTACK_TBL + \
+                  ' SET internal_traffic = \'' + strmsg + '\'' + \
+                  ' WHERE nodename = \'' + node_name + '\''
+            LOG.info('Update Internal Traffic info = ' + sql)
+
+            if DB.sql_execute(sql, conn) != 'SUCCESS':
+                LOG.error('DB Update Fail.')
+        except:
+            LOG.exception()
+
+        return status
+    except:
+        LOG.exception()
+        return 'fail'
 
 

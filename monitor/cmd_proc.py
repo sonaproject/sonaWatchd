@@ -236,6 +236,22 @@ def proc_dis_traffic_node(node, dummy):
     return res_result
 
 
+def proc_dis_traffic_internal(node, dummy):
+    nodes_info = get_node_list(node, 'nodename, internal_traffic', DB.OPENSTACK_TBL)
+
+    if len(nodes_info) == 0:
+        return {'fail': 'This is not a command on the target system.'}
+
+    res_result = dict()
+    for nodename, ratio in nodes_info:
+        if list == 'fail' or ratio == 'none':
+            res_result[nodename] = 'FAIL'
+        else:
+            res_result[nodename] = ratio
+
+    return res_result
+
+
 def proc_dis_traffic_controller(node, dummy):
     nodes_info = get_node_list(node, 'nodename, traffic_stat', DB.ONOS_TBL)
 
@@ -430,6 +446,7 @@ COMMAND_MAP = {'resource': proc_dis_resource,
                'traffic-gw': proc_dis_gwratio,
                'traffic-node': proc_dis_traffic_node,
                'traffic-controller': proc_dis_traffic_controller,
+               'traffic-internal': proc_dis_traffic_internal,
                #internal command
                'system-status':proc_dis_system,
                'onos':proc_onos_cmd,
