@@ -4,8 +4,7 @@ from subprocess import Popen, PIPE
 
 class TRACE():
     TRACE_LOG = None
-    trace_l2_cond_list = []
-    trace_l3_cond_list = []
+    trace_cond_list = []
 
     compute_id = ''
     compute_list = {}
@@ -37,8 +36,7 @@ class TRACE():
             if len(tmp) == 2:
                 cls.compute_list[tmp[0]] = tmp[1]
 
-        cls.trace_l2_cond_list = CONFIG.get_cnd_list('l2')
-        cls.trace_l3_cond_list = CONFIG.get_cnd_list('l3')
+        cls.trace_cond_list = CONFIG.get_cnd_list()
 
     @staticmethod
     def valid_IPv4(address):
@@ -76,7 +74,7 @@ class TRACE():
 
     @classmethod
     def get_cookie_list(cls, username, node):
-        command = 'ovs-ofctl -O OpenFlow13 dump-flows br-int'
+        command = 'sudo ovs-ofctl -O OpenFlow13 dump-flows br-int'
 
         cls.TRACE_LOG.trace_log('GET COOKIES | username = ' + username + ', ip = ' + node + ', condition = ' + command)
 

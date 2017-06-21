@@ -24,7 +24,7 @@ LOG_BACKUP_KEY_NAME = 'log_backup_count'
 TRACE_LOG_KEY_NAME = 'trace_log'
 
 CPT_LIST_KEY_NAME = 'list'
-CPT_ID_KEY_NAME = 'id'
+CPT_ID_KEY_NAME = 'account'
 
 CLI_CONFIG_FILE = 'config/cli_config.ini'
 TRACE_CONFIG_FILE = 'config/trace_config.ini'
@@ -66,9 +66,9 @@ class CONFIG():
             return ''
 
     @classmethod
-    def get_cnd_list(cls, layer):
+    def get_cnd_list(cls):
         try:
-            return cls.config_trace.items(layer + '_' + TRACE_SECTION_NAME)
+            return cls.config_trace.items(TRACE_SECTION_NAME)
         except:
             cls.LOG.exception_err_write()
             return []
@@ -171,6 +171,6 @@ class CONFIG():
 
     @classmethod
     def get_trace_cpt_id(cls):
-        return cls.trace_get_value(CPT_SECTION_NAME, CPT_ID_KEY_NAME)
+        return cls.trace_get_value(CPT_SECTION_NAME, CPT_ID_KEY_NAME).split(':')[0]
 
 
