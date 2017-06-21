@@ -74,7 +74,7 @@ def vrouter_check(conn, node_name, user_name, node_ip):
         LOG.info('Update Vrouter info = ' + sql)
 
         if DB.sql_execute(sql, conn) != 'SUCCESS':
-            LOG.error('DB Update Fail.')
+            LOG.error('OPENSTACK(vrouter) DB Update Fail.')
     except:
         LOG.exception()
 
@@ -155,7 +155,7 @@ def get_gw_ratio(conn, node_name, node_ip, cur_val, total_val):
             LOG.info('Update GW Ratio info = ' + sql)
 
             if DB.sql_execute(sql, conn) != 'SUCCESS':
-                LOG.error('DB Update Fail.')
+                LOG.error('OPENSTACK(gw_ratio) DB Update Fail.')
         except:
             LOG.exception()
 
@@ -229,7 +229,6 @@ def calc_node_traffic_ratio(total_rx, total_tx):
             ratio = 0
         else:
             ratio = float(total_rx) * 100 / total_tx
-
 
         LOG.info('Node Traffic Ratio = ' + str(ratio))
         return ratio
@@ -344,7 +343,7 @@ def get_internal_traffic(conn, node_name, node_ip, user_name, sub_type, rx_count
             LOG.info('Update Internal Traffic info = ' + sql)
 
             if DB.sql_execute(sql, conn) != 'SUCCESS':
-                LOG.error('DB Update Fail.')
+                LOG.error('OPENSTACK(internal_traffic) DB Update Fail.')
         except:
             LOG.exception()
 

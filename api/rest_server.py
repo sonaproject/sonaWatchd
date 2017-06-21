@@ -38,19 +38,22 @@ class RestHandler(BaseHTTPRequestHandler):
 
         elif self.auth_pw(self.headers.getheader('Authorization')):
             if self.path.startswith('/command'):
-                if command.exist_command(request_obj):
-                    res_body = command.parse_command(request_obj)
+                try:
+                    if command.exist_command(request_obj):
+                        res_body = command.parse_command(request_obj)
 
-                    self.do_HEAD(200)
-                    self.wfile.write(json.dumps(res_body))
+                        self.do_HEAD(200)
+                        self.wfile.write(json.dumps(res_body))
 
-                    LOG.info('[REST-SERVER] RES BODY = \n%s',
-                             json.dumps(res_body, sort_keys=True, indent=4))
-                else:
-                    self.do_HEAD(404)
-                    self.wfile.write('command not found')
+                        LOG.info('[REST-SERVER] RES BODY = \n%s',
+                                 json.dumps(res_body, sort_keys=True, indent=4))
+                    else:
+                        self.do_HEAD(404)
+                        self.wfile.write('command not found')
 
-                    LOG.info('[REST-SERVER] ' + 'command not found')
+                        LOG.info('[REST-SERVER] ' + 'command not found')
+                except:
+                    LOG.exception()
 
             elif self.path.startswith('/regi'):
                 try:
@@ -96,16 +99,22 @@ class RestHandler(BaseHTTPRequestHandler):
             LOG.info('[REST-SERVER] not authenticated')
 
     def auth_pw(self, cli_pw):
-        id_pw_list = CONF.rest()['user_password']
-        cli_pw = base64.b64decode(cli_pw)
+        try:
+            id_pw_list = CONF.rest()['user_password']
+            cli_pw = base64.b64decode(cli_pw)
 
-        for id_pw in id_pw_list:
-            if id_pw.strip() == cli_pw:
-                LOG.info('[REST-SERVER] AUTH SUCCESS = ' + id_pw)
-                return True
+            for id_pw in id_pw_list:
+                if id_pw.strip() == cli_pw:
+                    LOG.info('[REST-SERVER] AUTH SUCCESS = ' + id_pw)
+                    return True
 
-        LOG.info('[REST-SERVER] AUTH FAIL = ' + cli_pw)
+            LOG.info('[REST-SERVER] AUTH FAIL = ' + cli_pw)
+
+        except:
+            LOG.exception()
+
         return False
+
 
 def run():
     try:

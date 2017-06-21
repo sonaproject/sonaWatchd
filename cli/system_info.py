@@ -49,13 +49,17 @@ class SYS():
     @classmethod
     def changed_sys_info(cls, new_info):
         # if changed : return true
-        new_sys_info = json.loads(new_info)
-        cls.last_check_time = new_sys_info['time']
+        try:
+            new_sys_info = json.loads(new_info)
+            cls.last_check_time = new_sys_info['time']
 
-        if cls.pre_sys_info == new_sys_info['result']:
-            return False
-        else:
-            cls.set_sys_info(new_info)
+            if cls.pre_sys_info == new_sys_info['result']:
+                return False
+            else:
+                cls.set_sys_info(new_info)
+                return True
+        except:
+            LOG.exception_err_write()
             return True
 
     @classmethod

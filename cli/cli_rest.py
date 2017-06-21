@@ -14,29 +14,32 @@ class RestHandler(BaseHTTPRequestHandler):
         global global_conn_evt
         global global_history_log
 
-        request_sz = int(self.headers["Content-length"])
-        request_str = self.rfile.read(request_sz)
-        request_obj = json.loads(request_str)
+        try:
+            request_sz = int(self.headers["Content-length"])
+            request_str = self.rfile.read(request_sz)
+            request_obj = json.loads(request_str)
 
-        LOG.debug_log('[REST-SERVER] CLIENT INFO = ' + str(self.client_address))
-        LOG.debug_log('[REST-SERVER] RECV BODY = \n' + json.dumps(request_obj, sort_keys=True, indent=4))
+            LOG.debug_log('[REST-SERVER] CLIENT INFO = ' + str(self.client_address))
+            LOG.debug_log('[REST-SERVER] RECV BODY = \n' + json.dumps(request_obj, sort_keys=True, indent=4))
 
-        if self.headers.getheader('Authorization') is None:
-            LOG.debug_log('[REST-SERVER] no auth header received')
+            if self.headers.getheader('Authorization') is None:
+                LOG.debug_log('[REST-SERVER] no auth header received')
 
-        elif not self.path.startswith('/event'):
-            LOG.debug_log('[REST-SERVER] ' + self.path + ' not found')
+            elif not self.path.startswith('/event'):
+                LOG.debug_log('[REST-SERVER] ' + self.path + ' not found')
 
-        elif self.auth_pw(self.headers.getheader('Authorization')):
-            global_history_log.write_history('[%s][%s][%s] %s', request_obj['system'], request_obj['item'], request_obj['grade'], request_obj['desc'])
+            elif self.auth_pw(self.headers.getheader('Authorization')):
+                global_history_log.write_history('[%s][%s][%s] %s', request_obj['system'], request_obj['item'], request_obj['grade'], request_obj['desc'])
 
-            if request_obj['system'] == 'sonawatcher' and request_obj['item'] == 'SONAWATCHER_DISCONNECT':
-                global_conn_evt.set()
-                LOG.debug_log('[REST-SERVER] ' + request_obj['desc'])
+                if request_obj['system'] == 'sonawatcher' and request_obj['item'] == 'SONAWATCHER_DISCONNECT':
+                    global_conn_evt.set()
+                    LOG.debug_log('[REST-SERVER] ' + request_obj['desc'])
+                else:
+                    global_evt.set()
             else:
-                global_evt.set()
-        else:
-            LOG.debug_log('[REST-SERVER] not authenticated')
+                LOG.debug_log('[REST-SERVER] not authenticated')
+        except:
+            LOG.exception_err_write()
 
     def auth_pw(self, cli_pw):
         if cli_pw == base64.b64encode(CLI.get_auth()):

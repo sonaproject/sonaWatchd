@@ -7,19 +7,8 @@ Ubuntu, CentOS 및 Mac OSX 환경을 지원한다.
 
 * 설치방법
 ssh key 생성 및 배포를 위해서 setup tool을 사용한다.
-  1. setup_tool 구성
-    - setup_config.ini
-    - ssh_key_setup.py
-        
-  2. setup_config.ini 설정
-    : ssh public key 배포 대상 장비를 설정한다.
-      * [BASE] section은 설정 대상을 한정한다.
-      * 각 대상 section 내용
-         - list: 대상 장비 IP 리스트
-         - auto_password: NO인 경우 직접 password를 넣어 인증하게 됨. "YES"(or etc)는 설정 파일에 있는 password를 사용함
-         - username: sudoers에 포함되어 있는 OS의 account
-  
-  3. ssh_key_setup.py 실행.
+  1. 서버 실행 장비에서는 setup/ssh_key_setup.py 파일을 실행시킨다.
+  2. 클라이언트 실행 환경에서는 cli/setup/ssh_key_setup.py 파일을 실행시킨다.
 
 * Monitoring Tool 실행
   1. Server

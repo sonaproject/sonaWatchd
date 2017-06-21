@@ -126,75 +126,79 @@ class DB(object):
 
     @classmethod
     def sql_insert_nodes(cls, node_list, username, type, sub_type = 'none'):
-        for node in node_list:
-            name, ip = str(node).split(':')
-            LOG.info('Insert node [%s %s %s %s]', name, ip, username, type)
-            sql = 'INSERT INTO ' + cls.NODE_INFO_TBL + \
-                  ' VALUES (\'' + name + '\', \'' + ip + '\', \'' + username + '\', \'' + type.upper() + '\', \'' + sub_type.upper() + '\')'
-            LOG.info('%s', sql)
-            sql_rt = cls.sql_execute(sql)
-            if sql_rt != 'SUCCESS':
-                LOG.info(" [NODE TABLE] Node data insert fail \n%s", sql_rt)
-                sys.exit(1)
-
-            # set status tbl
-            sql = 'INSERT INTO ' + cls.STATUS_TBL + \
-                  ' VALUES (\'' + name + '\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', ' \
-                                         '\'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\')'
-            LOG.info('%s', sql)
-            sql_rt = cls.sql_execute(sql)
-            if sql_rt != 'SUCCESS':
-                LOG.info(" [STATUS TABLE] Node data insert fail \n%s", sql_rt)
-                sys.exit(1)
-
-            # add Alarm Items
-            evt_list = DB.get_event_list(type)
-            for item in evt_list:
-                LOG.info('Insert item [%s %s]', name, item)
-                sql = 'INSERT INTO ' + cls.EVENT_TBL + \
-                      ' VALUES (\'' + name + '\',\'' + item + '\',\'none\', \'none\', \'none\')'
+        try:
+            for node in node_list:
+                name, ip = str(node).split(':')
+                LOG.info('Insert node [%s %s %s %s]', name, ip, username, type)
+                sql = 'INSERT INTO ' + cls.NODE_INFO_TBL + \
+                      ' VALUES (\'' + name + '\', \'' + ip + '\', \'' + username + '\', \'' + type.upper() + '\', \'' + sub_type.upper() + '\')'
                 LOG.info('%s', sql)
                 sql_rt = cls.sql_execute(sql)
                 if sql_rt != 'SUCCESS':
-                    LOG.info(" [ITEM TABLE] Item data insert fail \n%s", sql_rt)
+                    LOG.info(" [NODE TABLE] Node data insert fail \n%s", sql_rt)
                     sys.exit(1)
 
-            # set resource tbl
-            sql = 'INSERT INTO ' + cls.RESOURCE_TBL + ' VALUES (\'' + name + '\', -1, -1, -1)'
-            LOG.info('%s', sql)
-            sql_rt = cls.sql_execute(sql)
-            if sql_rt != 'SUCCESS':
-                LOG.info(" [RESOURCE TABLE] Node data insert fail \n%s", sql_rt)
-                sys.exit(1)
-
-            if type.upper() == 'ONOS':
-                # set app tbl
-                sql = 'INSERT INTO ' + cls.ONOS_TBL + ' VALUES (\'' + name + '\', \'none\', \'none\', \'none\', \'none\', ' \
-                                                                             '\'none\', \'none\', \'none\', \'none\', \'none\')'
+                # set status tbl
+                sql = 'INSERT INTO ' + cls.STATUS_TBL + \
+                      ' VALUES (\'' + name + '\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', ' \
+                                             '\'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\')'
                 LOG.info('%s', sql)
                 sql_rt = cls.sql_execute(sql)
                 if sql_rt != 'SUCCESS':
-                    LOG.info(" [APP TABLE] Node data insert fail \n%s", sql_rt)
+                    LOG.info(" [STATUS TABLE] Node data insert fail \n%s", sql_rt)
                     sys.exit(1)
 
-            elif type.upper() == 'SWARM':
-                # set swarm tbl
-                sql = 'INSERT INTO ' + cls.SWARM_TBL + ' VALUES (\'' + name + '\', \'none\', \'none\', \'none\')'
+                # add Alarm Items
+                evt_list = DB.get_event_list(type)
+                for item in evt_list:
+                    LOG.info('Insert item [%s %s]', name, item)
+                    sql = 'INSERT INTO ' + cls.EVENT_TBL + \
+                          ' VALUES (\'' + name + '\',\'' + item + '\',\'none\', \'none\', \'none\')'
+                    LOG.info('%s', sql)
+                    sql_rt = cls.sql_execute(sql)
+                    if sql_rt != 'SUCCESS':
+                        LOG.info(" [ITEM TABLE] Item data insert fail \n%s", sql_rt)
+                        sys.exit(1)
+
+                # set resource tbl
+                sql = 'INSERT INTO ' + cls.RESOURCE_TBL + ' VALUES (\'' + name + '\', -1, -1, -1)'
                 LOG.info('%s', sql)
                 sql_rt = cls.sql_execute(sql)
                 if sql_rt != 'SUCCESS':
-                    LOG.info(" [SWARM TABLE] Node data insert fail \n%s", sql_rt)
+                    LOG.info(" [RESOURCE TABLE] Node data insert fail \n%s", sql_rt)
                     sys.exit(1)
 
-            elif type.upper() == 'OPENSTACK':
-                # set vrouter tbl
-                sql = 'INSERT INTO ' + cls.OPENSTACK_TBL + \
-                      ' VALUES (\'' + name + '\', \'' + sub_type + '\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\')'
-                LOG.info('%s', sql)
-                sql_rt = cls.sql_execute(sql)
-                if sql_rt != 'SUCCESS':
-                    LOG.info(" [VROUTER TABLE] Node data insert fail \n%s", sql_rt)
-                    sys.exit(1)
+                if type.upper() == 'ONOS':
+                    # set app tbl
+                    sql = 'INSERT INTO ' + cls.ONOS_TBL + ' VALUES (\'' + name + '\', \'none\', \'none\', \'none\', \'none\', ' \
+                                                                                 '\'none\', \'none\', \'none\', \'none\', \'none\')'
+                    LOG.info('%s', sql)
+                    sql_rt = cls.sql_execute(sql)
+                    if sql_rt != 'SUCCESS':
+                        LOG.info(" [APP TABLE] Node data insert fail \n%s", sql_rt)
+                        sys.exit(1)
+
+                elif type.upper() == 'SWARM':
+                    # set swarm tbl
+                    sql = 'INSERT INTO ' + cls.SWARM_TBL + ' VALUES (\'' + name + '\', \'none\', \'none\', \'none\')'
+                    LOG.info('%s', sql)
+                    sql_rt = cls.sql_execute(sql)
+                    if sql_rt != 'SUCCESS':
+                        LOG.info(" [SWARM TABLE] Node data insert fail \n%s", sql_rt)
+                        sys.exit(1)
+
+                elif type.upper() == 'OPENSTACK':
+                    # set vrouter tbl
+                    sql = 'INSERT INTO ' + cls.OPENSTACK_TBL + \
+                          ' VALUES (\'' + name + '\', \'' + sub_type + '\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\')'
+                    LOG.info('%s', sql)
+                    sql_rt = cls.sql_execute(sql)
+                    if sql_rt != 'SUCCESS':
+                        LOG.info(" [VROUTER TABLE] Node data insert fail \n%s", sql_rt)
+                        sys.exit(1)
+
+        except:
+            LOG.exception()
 
     @classmethod
     def sql_execute(cls, sql, conn = None):

@@ -277,53 +277,59 @@ def listen_disconnect_evt(evt, rest_evt):
     global evt_thread
 
     while SYS.get_sys_thr_flag():
-        evt.wait(1)
+        try:
+            evt.wait(1)
 
-        if evt.is_set():
-            LOG.debug_log('Get disconnect event')
-            evt.clear()
-            SYS.disconnect_type = 'disconnect'
+            if evt.is_set():
+                LOG.debug_log('Get disconnect event')
+                evt.clear()
+                SYS.disconnect_type = 'disconnect'
 
-            if SYS.get_sys_redraw_flag():
-                SCREEN.draw_event(SYS.disconnect_type)
-                SCREEN.get_screen().clear()
-                SCREEN.screen_exit()
+                if SYS.get_sys_redraw_flag():
+                    SCREEN.draw_event(SYS.disconnect_type)
+                    SCREEN.get_screen().clear()
+                    SCREEN.screen_exit()
 
-            print '\nCheck monitoring server.'
-            os.killpg(os.getpid(), signal.SIGKILL)
-            #os.kill(os.getpid(), signal.SIGKILL)
+                print '\nCheck monitoring server.'
+                os.killpg(os.getpid(), signal.SIGKILL)
+                #os.kill(os.getpid(), signal.SIGKILL)
 
-        time.sleep(1)
+            time.sleep(1)
 
-        rest_evt.wait(1)
+            rest_evt.wait(1)
 
-        if rest_evt.is_set():
-            LOG.debug_log('Get rest error event')
-            rest_evt.clear()
-            SYS.disconnect_type = 'rest_warn'
+            if rest_evt.is_set():
+                LOG.debug_log('Get rest error event')
+                rest_evt.clear()
+                SYS.disconnect_type = 'rest_warn'
 
-            if SYS.get_sys_redraw_flag():
-                SCREEN.draw_event(SYS.disconnect_type)
-                SCREEN.get_screen().clear()
-                SCREEN.screen_exit()
+                if SYS.get_sys_redraw_flag():
+                    SCREEN.draw_event(SYS.disconnect_type)
+                    SCREEN.get_screen().clear()
+                    SCREEN.screen_exit()
 
-            print '\nCheck client rest server.'
-            os.killpg(os.getpid(), signal.SIGKILL)
-            #os.kill(os.getpid(), signal.SIGKILL)
+                print '\nCheck client rest server.'
+                os.killpg(os.getpid(), signal.SIGKILL)
+                #os.kill(os.getpid(), signal.SIGKILL)
 
-        time.sleep(1)
+            time.sleep(1)
+        except:
+            LOG.exception_err_write()
 
 
 def listen_evt(evt):
     while SYS.get_sys_thr_flag():
-        evt.wait(1)
+        try:
+            evt.wait(1)
 
-        if evt.is_set():
-            evt.clear()
-            # system check
-            check_system()
+            if evt.is_set():
+                evt.clear()
+                # system check
+                check_system()
 
-        time.sleep(1)
+            time.sleep(1)
+        except:
+            LOG.exception_err_write()
 
 def check_system():
     try:
