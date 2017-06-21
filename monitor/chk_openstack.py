@@ -222,14 +222,13 @@ def rx_tx_check(user_name, node_ip):
 
 def calc_node_traffic_ratio(total_rx, total_tx):
     try:
-        if total_tx == 0:
+        if total_rx == 0 and total_tx == 0:
+            ratio = 100
+        elif total_tx == 0:
             LOG.info('Node Traffic Ratio Fail.')
             ratio = 0
         else:
-            if total_rx == 0:
-                ratio = 0
-            else:
-                ratio = float(total_rx) * 100 / total_tx
+            ratio = float(total_rx) * 100 / total_tx
 
 
         LOG.info('Node Traffic Ratio = ' + str(ratio))
@@ -256,7 +255,7 @@ def get_node_traffic(conn, node_name, ratio, rx_dic, tx_dic, rx_total, tx_total,
         except:
             LOG.exception()
 
-        LOG.info('GW Ratio = ' + str(ratio))
+        LOG.info('Node Traffic Ratio = ' + str(ratio))
         if ratio < float(CONF.alarm()['node_traffic_ratio']):
             LOG.info('[NODE TRAFFIC] ratio nok')
             return 'nok'
@@ -300,24 +299,43 @@ def get_internal_traffic(conn, node_name, node_ip, user_name, sub_type, rx_count
                     elif 'actions=group' in line:
                         gw_cnt = gw_cnt + int(tmp[3].split('=')[1])
 
-                if not inport_cnt + rx_count == gw_cnt + output_cnt:
-                    status = 'nok'
-
-                if status == 'ok':
-                    op = '='
-                else:
-                    op = '!='
-
-                strmsg = 'in_port(' + str(inport_cnt) + ') + vxlan_rx(' + str(rx_count) + ') ' + op + ' gw(' + str(gw_cnt) + ') + output(' + str(output_cnt) + ')'
+                in_packet = inport_cnt + rx_count
+                out_packet = gw_cnt + output_cnt
             else:
                 status = 'fail'
+                strmsg = 'fail'
         else:
             strmsg = 'vxlan rx = ' + str(rx_count) + ', patch-integ tx = ' + str(patch_tx)
 
             if patch_tx == -1:
                 status = 'nok'
-            elif rx_count > patch_tx:
+            else:
+                in_packet = rx_count
+                out_packet = patch_tx
+
+
+        if status == 'ok':
+            if in_packet == 0 and out_packet == 0:
+                ratio = 100
+            elif in_packet == 0:
+                LOG.info('Internal Traffic Ratio Fail.')
+                ratio = 0
+            else:
+                ratio = float(out_packet) * 100 / in_packet
+
+            LOG.info('Internal Traffic Ratio = ' + str(ratio))
+
+            if ratio < float(CONF.alarm()['internal_traffic_ratio']):
                 status = 'nok'
+
+        if sub_type == 'COMPUTE':
+            if status == 'ok':
+                op = '='
+            else:
+                op = '!='
+
+            strmsg = 'in_port(' + str(inport_cnt) + ') + vxlan_rx(' + str(rx_count) + ') ' + op + ' gw(' + str(
+                gw_cnt) + ') + output(' + str(output_cnt) + ')'
 
         try:
             sql = 'UPDATE ' + DB.OPENSTACK_TBL + \

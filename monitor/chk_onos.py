@@ -332,7 +332,17 @@ def controller_traffic_check(conn, node_name, node_ip):
 
                             str_info = str_info + '\n'
 
-                if not out_packet == in_packet:
+                if in_packet == 0 and out_packet == 0:
+                    ratio = 100
+                elif in_packet == 0:
+                    LOG.info('Controller Traffic Ratio Fail.')
+                    ratio = 0
+                else:
+                    ratio = float(out_packet) * 100 / in_packet
+
+                LOG.info('Controller Traffic Ratio = ' + str(ratio))
+
+                if ratio < float(CONF.alarm()['controller_traffic_ratio']):
                     controller_traffic = 'nok'
             except:
                 LOG.exception()

@@ -142,6 +142,8 @@ class ConfReader:
             value['ha_proxy'] = int(self.conf_map['ALARM']['ha_proxy'])
             value['gw_ratio'] = int(self.conf_map['ALARM']['gw_ratio'])
             value['node_traffic_ratio'] = int(self.conf_map['ALARM']['node_traffic_ratio'])
+            value['controller_traffic_ratio'] = int(self.conf_map['ALARM']['controller_traffic_ratio'])
+            value['internal_traffic_ratio'] = int(self.conf_map['ALARM']['internal_traffic_ratio'])
 
             return value
         except KeyError as KE:
