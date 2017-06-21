@@ -455,7 +455,7 @@ class FlowTraceView(Frame):
             layout_cpt.add_widget(Divider())
 
             i = 0
-            for key, value in TRACE.trace_l2_cond_list + TRACE.trace_l3_cond_list:
+            for key, value in TRACE.trace_cond_list:
                 if i % 2 == 0:
                     layout_line = Layout([1, 35, 3, 35, 1])
                     self.add_layout(layout_line)
@@ -568,7 +568,7 @@ class FlowTraceView(Frame):
 
         saved_data = ''
         real_data = ''
-        for key, real_key in TRACE.trace_l2_cond_list + TRACE.trace_l3_cond_list:
+        for key, real_key in TRACE.trace_cond_list:
             val = self.data[real_key].strip()
 
             if val != '':
