@@ -246,7 +246,9 @@ def select_menu():
                             if SCREEN.quit_flag:
                                 return
                             elif SCREEN.menu_flag:
-                                return
+                                SCREEN.set_screen()
+                                SCREEN.main_scr.timeout(-1)
+                                break
                             elif SCREEN.resize_err_flag:
                                 SCREEN.draw_trace_warning()
                                 SCREEN.screen_exit()

@@ -93,7 +93,6 @@ class TRACE():
             for line in result.splitlines():
                 if 'cookie' in line:
                     cookie = line.split(',')[0].split('=')[1].strip()
-                    LOG.debug_log('insert cookie = ' + cookie)
                     cls.cookie_list.append(cookie)
         except:
             LOG.exception_err_write()

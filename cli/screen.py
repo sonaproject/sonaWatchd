@@ -466,22 +466,22 @@ class FlowTraceView(Frame):
 
                 i = i + 1
 
-            layout_btn = Layout([1, 3, 3, 3])
+            layout_btn = Layout([1, 3, 3, 3, 3])
             self.add_layout(layout_btn)
             layout_btn.add_widget(Divider(), 0)
             layout_btn.add_widget(Divider(), 1)
             layout_btn.add_widget(Divider(), 2)
             layout_btn.add_widget(Divider(), 3)
-            #layout_btn.add_widget(Divider(), 4)
+            layout_btn.add_widget(Divider(), 4)
             layout_btn.add_widget(Button("Start Trace", self._ok), 1)
             layout_btn.add_widget(Button("Clear All", self.reset), 2)
-            #layout_btn.add_widget(Button("Menu", self._menu), 3)
-            layout_btn.add_widget(Button("Quit", self._quit), 3)
+            layout_btn.add_widget(Button("Menu", self._menu), 3)
+            layout_btn.add_widget(Button("Quit", self._quit), 4)
             layout_btn.add_widget(Divider(height=2), 0)
             layout_btn.add_widget(Divider(), 1)
             layout_btn.add_widget(Divider(), 2)
             layout_btn.add_widget(Divider(), 3)
-            #layout_btn.add_widget(Divider(), 4)
+            layout_btn.add_widget(Divider(), 4)
 
             layout_result = Layout([1], fill_frame=True)
             self.add_layout(layout_result)
@@ -613,6 +613,7 @@ class FlowTraceView(Frame):
     def _menu():
         SCREEN.menu_flag = True
         raise StopApplication("User terminated app")
+
 
     @staticmethod
     def _quit():
