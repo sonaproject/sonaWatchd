@@ -217,7 +217,7 @@ def rx_tx_check(user_name, node_ip):
     except:
         LOG.exception()
 
-    return -1, -1
+    return -1, -1, -1, -1
 
 
 def calc_node_traffic_ratio(total_rx, total_tx):
