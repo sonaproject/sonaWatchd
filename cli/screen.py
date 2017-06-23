@@ -219,15 +219,17 @@ class SCREEN():
 
     @classmethod
     def display_status(cls):
-        onos_list = ['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK', 'ONOS_APP', 'ONOS_REST', 'ONOS_OVSDB', 'ONOS_OF',
-                     'ONOS_CLUSTER', 'ONOS_HA_LIST', 'ONOS_HA_RATIO', 'OPENSTACK_NODE', 'TRAFFIC_CONTROLLER']
+        onos_list = ['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK', 'ONOS_APP', 'ONOS_REST', 'ONOS_OVSDB', 'ONOS_OPENFLOW',
+                     'ONOS_CLUSTER', 'OPENSTACK_NODE', 'TRAFFIC_CONTROLLER']
         swarm_list = ['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK', 'SWARM_SVC', 'SWARM_NODE']
-        openstack_list = ['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK', 'VROUTER', 'TRAFFIC_GW', 'TRAFFIC_NODE', 'TRAFFIC_INTERNAL']
+        openstack_list = ['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK', 'GATEWAY', 'TRAFFIC_GW', 'TRAFFIC_NODE', 'TRAFFIC_INTERNAL']
         xos_list = ['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK']
+        ha_list=['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK', 'HA_LIST', 'HA_RATIO']
 
         try:
             print ''
             cls.draw_grid('ONOS', onos_list)
+            cls.draw_grid('HA', ha_list)
             cls.draw_grid('SWARM', swarm_list)
             cls.draw_grid('OPENSTACK', openstack_list)
             cls.draw_grid('XOS', xos_list)

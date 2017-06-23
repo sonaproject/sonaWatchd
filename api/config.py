@@ -82,11 +82,24 @@ class ConfReader:
             value['list'] = self.__list_opt(self.conf_map['ONOS']['list'])
             value['account'] = str(self.conf_map['ONOS']['account'])
             value['app_list'] = self.__list_opt(self.conf_map['ONOS']['app_list'])
-            value['ha_proxy_server'] = str(self.conf_map['ONOS']['ha_proxy_server'])
-            value['ha_proxy_account'] = str(self.conf_map['ONOS']['ha_proxy_account'])
 
             if self.config.has_option('ONOS', 'alarm_off_list'):
                 value['alarm_off_list'] = self.__list_opt(self.conf_map['ONOS']['alarm_off_list'])
+
+            return value
+        except KeyError as KE:
+            return dict({'fail': KE})
+
+    def ha(self):
+        value = dict()
+        try:
+            value['list'] = self.__list_opt(self.conf_map['HA']['list'])
+            value['account'] = str(self.conf_map['HA']['account'])
+            value['ha_proxy_server'] = str(self.conf_map['HA']['ha_proxy_server'])
+            value['ha_proxy_account'] = str(self.conf_map['HA']['ha_proxy_account'])
+
+            if self.config.has_option('HA', 'alarm_off_list'):
+                value['alarm_off_list'] = self.__list_opt(self.conf_map['HA']['alarm_off_list'])
 
             return value
         except KeyError as KE:

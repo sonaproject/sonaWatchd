@@ -216,8 +216,6 @@ def select_menu():
                             break
                         elif CLI.is_exit(cmd):
                             return
-                        elif cmd == 'system-status':
-                            SCREEN.display_sys()
                         elif cmd == 'help':
                             SCREEN.display_help()
                         elif cmd == 'monitoring-details':

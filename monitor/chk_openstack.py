@@ -74,7 +74,7 @@ def vrouter_check(conn, node_name, user_name, node_ip):
         LOG.info('Update Vrouter info = ' + sql)
 
         if DB.sql_execute(sql, conn) != 'SUCCESS':
-            LOG.error('OPENSTACK(vrouter) DB Update Fail.')
+            LOG.error('OPENSTACK(gateway) DB Update Fail.')
     except:
         LOG.exception()
 
@@ -178,46 +178,54 @@ def rx_tx_check(user_name, node_ip):
         if port_rt is not None:
             for line in port_rt.splitlines():
                 if '(vxlan)' in line:
-                    vxlan_port = int(line.split('(')[0].strip())
+                    vxlan_port = line.split('(')[0].strip()
                 elif '(patch-intg)' in line:
-                    patch_port = int(line.split('(')[0].strip())
+                    patch_port = line.split('(')[0].strip()
 
-            port_rt = SshCommand.ssh_exec(user_name, node_ip, 'sudo ovs-ofctl dump-ports br-int')
+            port_rt = SshCommand.ssh_exec(user_name, node_ip, 'sudo ovs-ofctl dump-ports br-int ' + vxlan_port)
 
             if port_rt is not None:
-                i = 0
-                for line in port_rt.splitlines():
-                    i = i + 1
-                    if line.split(':')[0].replace(' ', '') == 'port' + str(vxlan_port):
-                        tmp = line.split(',')
-                        rx_packet_cnt = int(tmp[0].split('=')[1])
-                        err_dict['rx_drop'] = int(tmp[2].split('=')[1])
-                        err_dict['rx_err'] = int(tmp[3].split('=')[1])
-                        break
+                line = port_rt.splitlines()
 
-                tmp = port_rt.splitlines()[i].split(',')
+                if '?' in line[1]:
+                    line[1] = line[1].replace('?', '0')
+
+                if '?' in line[2]:
+                    line[2] = line[2].replace('?', '0')
+
+                tmp = line[1].split(',')
+                rx_packet_cnt = int(tmp[0].split('=')[1])
+                err_dict['rx_drop'] = int(tmp[2].split('=')[1])
+                err_dict['rx_err'] = int(tmp[3].split('=')[1])
+
+                tmp = line[2].split(',')
                 tx_packet_cnt = int(tmp[0].split('=')[1])
                 err_dict['tx_drop'] = int(tmp[2].split('=')[1])
                 err_dict['tx_err'] = int(tmp[3].split('=')[1])
+            else:
+                rx_packet_cnt = -1
+                tx_packet_cnt = -1
 
-                # find patch port
-                if not patch_port is None:
-                    i = 0
-                    for line in port_rt.splitlines():
-                        i = i + 1
-                        if line.split(':')[0].replace(' ', '') == 'port' + str(patch_port):
-                            break
+            patch_tx_packet_cnt = -1
 
-                    tmp = port_rt.splitlines()[i].split(',')
+            # find patch port
+            if not patch_port is None:
+                port_rt = SshCommand.ssh_exec(user_name, node_ip, 'sudo ovs-ofctl dump-ports br-int ' + patch_port)
+
+                if port_rt is not None:
+                    line = port_rt.splitlines()
+
+                    if '?' in line[2]:
+                        line[2] = line[2].replace('?', '0')
+
+                    tmp = line[2].split(',')
                     patch_tx_packet_cnt = int(tmp[0].split('=')[1])
-                else:
-                    patch_tx_packet_cnt = -1
 
-                return rx_packet_cnt, tx_packet_cnt, err_dict, patch_tx_packet_cnt
+            return rx_packet_cnt, tx_packet_cnt, err_dict, patch_tx_packet_cnt
     except:
         LOG.exception()
 
-    return -1, -1, -1, -1
+    return -1, -1, err_dict, -1
 
 
 def calc_node_traffic_ratio(total_rx, total_tx):

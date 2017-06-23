@@ -50,11 +50,12 @@ class CLI():
             if len(cmd.strip()) == 0:
                 cls.set_cli_ret_flag(True)
                 return
-            elif (cmd.startswith('onos ') or cmd.startswith('shell ')) and len(cmd.split(' ')) > 2:
+            elif (cmd.startswith('onos-shell ') or cmd.startswith('os-shell ')) and len(cmd.split(' ')) > 2:
                 pass
             elif cmd not in cls.cli_validate_list:
-                if cmd.startswith('sys'):
-                    tmp = cmd.split(' ')
+                tmp = cmd.split(' ')
+
+                if tmp[0] == 'sys':
                     if len(tmp) == 1:
                         print 'system name is missing.'
                     if len(tmp) >= 2:
@@ -428,7 +429,7 @@ class CLI():
                             print ''
 
                 elif command == 'onos-conn':
-                    if param in ['ovsdb', 'of']:
+                    if param in ['ovsdb', 'openflow']:
                         print('')
                         for sys in sorted_list:
                             print '[' + sys + ']'
@@ -456,7 +457,7 @@ class CLI():
 
                                 col_id = dict()
                                 col_id['title'] = 'ID'
-                                if param == 'of':
+                                if param == 'openflow':
                                     col_id['title'] = 'HOSTNAME(ID)'
                                     col_id['size'] = '31'
                                 else:
@@ -591,7 +592,7 @@ class CLI():
         param = ''
         system = ''
 
-        if cmd.startswith('onos ') or cmd.startswith('shell '):
+        if cmd.startswith('onos-shell ') or cmd.startswith('os-shell '):
             sys_name = tmp[1]
             param = cmd[len(tmp[0]) + 1 + len(sys_name) + 1:]
             system = sys_name
@@ -744,13 +745,11 @@ class CLI():
                     cls.cli_search_list_sub[cmd] = tmp
 
             cls.cli_search_list.append('menu')
-            cls.cli_search_list.append('quit')
             cls.cli_search_list.append('exit')
             cls.cli_search_list.append('sys')
-            cls.cli_search_list.append('onos')
-            cls.cli_search_list.append('shell')
+            cls.cli_search_list.append('onos-shell')
+            cls.cli_search_list.append('os-shell')
             cls.cli_search_list.append('monitoring-details')
-            cls.cli_search_list.append('system-status')
             cls.cli_search_list.append('help')
 
             onos_list = []
@@ -761,7 +760,7 @@ class CLI():
             for sys_name in SYS.get_sys_list():
                 tmp_sys.append(sys_name)
                 cls.cli_validate_list.append('sys ' + sys_name)
-                cls.cli_validate_list.append('shell ' + sys_name)
+                cls.cli_validate_list.append('os-shell ' + sys_name)
 
                 if dict(SYS.sys_list[sys_name])['TYPE'] == 'ONOS':
                     onos_list.append(sys_name)
@@ -769,8 +768,8 @@ class CLI():
                 shell_list.append(sys_name)
 
             cls.cli_search_list_sub['sys'] = tmp_sys
-            cls.cli_search_list_sub['onos'] = onos_list
-            cls.cli_search_list_sub['shell'] = shell_list
+            cls.cli_search_list_sub['onos-shell'] = onos_list
+            cls.cli_search_list_sub['os-shell'] = shell_list
         except:
             LOG.exception_err_write()
 
