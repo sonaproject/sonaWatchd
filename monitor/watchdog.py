@@ -8,6 +8,7 @@ import chk_onos
 import chk_swarm
 import chk_openstack
 import chk_resource
+import chk_ha
 import cmd_proc
 
 from datetime import datetime
@@ -45,7 +46,8 @@ def periodic(conn):
             cur_info[nodename][item] = grade
 
         # check HA, once
-        ha_dic = chk_onos.onos_ha_check(conn)
+        ha_dic = chk_ha.onos_ha_check(conn)
+        global_ha_svc, global_ha_ratio = chk_ha.get_ha_stats(ha_dic)
 
         # check GW ratio
         gw_total = 0
@@ -91,8 +93,8 @@ def periodic(conn):
             swarm_node = 'fail'
             swarm_svc = 'fail'
 
-            onos_ha_list = 'fail'
-            onos_ha_ratio = 'fail'
+            ha_svc = 'fail'
+            ha_ratio = 'fail'
 
             openstack_node = 'fail'
 
@@ -119,11 +121,11 @@ def periodic(conn):
                     # check web
                     onos_rest = chk_onos.onos_web_check(conn, node_name, node_ip)
 
-                    onos_ha_list, onos_ha_ratio = chk_onos.get_ha_stats(conn, ha_dic, node_name)
-
                     # check controller traffic
                     traffic_controller = chk_onos.controller_traffic_check(conn, node_name, node_ip)
-
+                elif type.upper() == 'HA':
+                    ha_svc = global_ha_svc
+                    ha_ratio = global_ha_ratio
                 # check swarm (app/node)
                 elif type.upper() == 'SWARM':
                     swarm_svc, swarm_node = chk_swarm.swarm_check(conn, node_name, user_name, node_ip)
@@ -136,7 +138,6 @@ def periodic(conn):
                     if sub_type.upper() == 'GATEWAY':
                         v_router = chk_openstack.vrouter_check(conn, node_name, user_name, node_ip)
                         traffic_gw = chk_openstack.get_gw_ratio(conn, node_name, node_ip, openstack_rx_dic[node_name], gw_total)
-
                 else:
                     # check app
                     onos_app = check_app(conn, node_name, node_ip, user_name, type)
@@ -188,13 +189,15 @@ def periodic(conn):
             if type.upper() == 'ONOS':
                 onos_app = alarm_event.process_event(conn, node_name, type, 'ONOS_APP', cur_info[node_name]['ONOS_APP'], onos_app)
                 onos_ovsdb = alarm_event.process_event(conn, node_name, type, 'ONOS_OVSDB', cur_info[node_name]['ONOS_OVSDB'], onos_ovsdb)
-                onos_of = alarm_event.process_event(conn, node_name, type, 'ONOS_OF', cur_info[node_name]['ONOS_OF'], onos_of)
+                onos_of = alarm_event.process_event(conn, node_name, type, 'ONOS_OPENFLOW', cur_info[node_name]['ONOS_OPENFLOW'], onos_of)
                 onos_cluster = alarm_event.process_event(conn, node_name, type, 'ONOS_CLUSTER', cur_info[node_name]['ONOS_CLUSTER'], onos_cluster)
                 onos_rest = alarm_event.process_event(conn, node_name, type, 'ONOS_REST', cur_info[node_name]['ONOS_REST'], onos_rest)
-                onos_ha_list = alarm_event.process_event(conn, node_name, type, 'ONOS_HA_LIST', cur_info[node_name]['ONOS_HA_LIST'], onos_ha_list)
-                onos_ha_ratio = alarm_event.process_event(conn, node_name, type, 'ONOS_HA_RATIO', cur_info[node_name]['ONOS_HA_RATIO'], onos_ha_ratio)
                 openstack_node = alarm_event.process_event(conn, node_name, type, 'OPENSTACK_NODE', cur_info[node_name]['OPENSTACK_NODE'], openstack_node)
                 traffic_controller = alarm_event.process_event(conn, node_name, type, 'TRAFFIC_CONTROLLER', cur_info[node_name]['TRAFFIC_CONTROLLER'], traffic_controller)
+
+            elif type.upper == 'HA':
+                ha_svc = alarm_event.process_event(conn, node_name, type, 'HA_SVC', cur_info[node_name]['HA_SVC'], ha_svc)
+                ha_ratio = alarm_event.process_event(conn, node_name, type, 'HA_RATIO', cur_info[node_name]['HA_RATIO'], ha_ratio)
 
             # 6. Swarm Check
             elif type.upper() == 'SWARM':
@@ -207,7 +210,7 @@ def periodic(conn):
                 traffic_internal = alarm_event.process_event(conn, node_name, type, 'TRAFFIC_INTERNAL',
                                                              cur_info[node_name]['TRAFFIC_INTERNAL'], traffic_internal)
                 if sub_type.upper() == 'GATEWAY':
-                    v_router = alarm_event.process_event(conn, node_name, type, 'VROUTER', cur_info[node_name]['VROUTER'], v_router)
+                    v_router = alarm_event.process_event(conn, node_name, type, 'GATEWAY', cur_info[node_name]['GATEWAY'], v_router)
                     traffic_gw = alarm_event.process_event(conn, node_name, type, 'TRAFFIC_GW', cur_info[node_name]['TRAFFIC_GW'], traffic_gw)
                 elif sub_type.upper() == 'COMPUTE':
                     v_router = '-'
@@ -224,14 +227,14 @@ def periodic(conn):
                       ' ONOS_APP = \'' + onos_app + '\',' + \
                       ' ONOS_REST = \'' + onos_rest + '\',' + \
                       ' ONOS_OVSDB = \'' + onos_ovsdb + '\',' + \
-                      ' ONOS_OF = \'' + onos_of + '\',' + \
+                      ' ONOS_OPENFLOW = \'' + onos_of + '\',' + \
                       ' ONOS_CLUSTER = \'' + onos_cluster + '\',' + \
                       ' SWARM_NODE = \'' + swarm_node + '\',' + \
                       ' OPENSTACK_NODE = \'' + openstack_node + '\',' + \
                       ' SWARM_SVC = \'' + swarm_svc + '\',' + \
-                      ' VROUTER = \'' + v_router + '\',' + \
-                      ' ONOS_HA_LIST = \'' + onos_ha_list + '\',' + \
-                      ' ONOS_HA_RATIO = \'' + onos_ha_ratio + '\',' + \
+                      ' GATEWAY = \'' + v_router + '\',' + \
+                      ' HA_SVC = \'' + ha_svc + '\',' + \
+                      ' HA_RATIO = \'' + ha_ratio + '\',' + \
                       ' TRAFFIC_GW = \'' + traffic_gw + '\',' + \
                       ' TRAFFIC_NODE = \'' + traffic_node + '\',' + \
                       ' TRAFFIC_CONTROLLER = \'' + traffic_controller + '\',' + \

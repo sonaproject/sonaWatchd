@@ -150,7 +150,7 @@ def proc_dis_onos(node, param):
         if param == 'app':
             nodes_info = get_node_list(node, 'nodename, applist', DB.ONOS_TBL)
 
-        if param == 'web':
+        if param == 'rest':
             nodes_info = get_node_list(node, 'nodename, weblist', DB.ONOS_TBL)
 
         if len(nodes_info) == 0:
@@ -202,7 +202,7 @@ def proc_dis_log(node, param):
 
 def proc_dis_vrouter(node, param):
     try:
-        nodes_info = get_node_list(node, 'nodename, ' + param, DB.OPENSTACK_TBL)
+        nodes_info = get_node_list(node, 'nodename, ' + param, DB.OPENSTACK_TBL, 'sub_type = \'GATEWAY\'')
 
         if len(nodes_info) == 0:
             return {'fail': 'This is not a command on the target system.'}
@@ -324,35 +324,18 @@ def proc_dis_xos(system, param):
     pass
 
 
-def proc_dis_onosha(node, param):
+def proc_dis_ha(dummy, param):
     try:
-        # check onos
-        nodes_info = get_node_list(node, 'nodename, haproxy', DB.ONOS_TBL)
+        sql = 'SELECT stats FROM ' + DB.HA_TBL + ' WHERE ha_key = \'HA\''
 
-        if len(nodes_info) == 0:
-            return {'fail': 'This is not a command on the target system.'}
+        with DB.connection() as conn:
+            nodes_info = conn.cursor().execute(sql).fetchone()
+        conn.close()
 
-        if param == 'list':
-            res_result = dict()
-            for nodename, haproxy in nodes_info:
-                if haproxy == 'none':
-                    res_result[nodename] = 'FAIL'
-                else:
-                    res_result[nodename] = haproxy
+        for value in nodes_info:
+            return json.loads(str(value).replace('\'', '\"'))
 
-            return res_result
-
-        elif param == 'stats':
-            sql = 'SELECT stats FROM ' + DB.HA_TBL + ' WHERE ha_key = \'HA\''
-
-            with DB.connection() as conn:
-                nodes_info = conn.cursor().execute(sql).fetchone()
-            conn.close()
-
-            for value in nodes_info:
-                return json.loads(str(value).replace('\'', '\"'))
-
-            return {'HA': 'FAIL'}
+        return {'HA': 'FAIL'}
     except:
         LOG.exception()
         return {'Result': 'FAIL'}
@@ -484,10 +467,10 @@ def proc_shell_cmd(node, cmd):
 COMMAND_MAP = {'resource': proc_dis_resource,
                'onos-svc': proc_dis_onos,
                'onos-log': proc_dis_log,
-               'vrouter-svc': proc_dis_vrouter,
+               'gateway': proc_dis_vrouter,
                'swarm-svc': proc_dis_swarm,
                'xos-svc': proc_dis_xos,
-               'onos-ha': proc_dis_onosha,
+               'ha-proxy': proc_dis_ha,
                'openstack-node': proc_dis_node,
                'onos-conn': proc_dis_connection,
                'traffic-gw': proc_dis_gwratio,
@@ -496,6 +479,6 @@ COMMAND_MAP = {'resource': proc_dis_resource,
                'traffic-internal': proc_dis_traffic_internal,
                #internal command
                'system-status':proc_dis_system,
-               'onos':proc_onos_cmd,
-               'shell':proc_shell_cmd
+               'onos-shell':proc_onos_cmd,
+               'os-shell':proc_shell_cmd
                }

@@ -175,6 +175,15 @@ def xos():
         print "-- %s setup finish ------\n" % node
 
 
+def ha():
+    print "\n\n[Setup] Start to copy ssh-key to HA systems ......"
+
+    conf = CONF().get_system_info('HA')
+    for node in str(conf['list']).replace(" ", "").split(","):
+        key_copy(node.split(":")[1], conf)
+        print "-- %s setup finish ------\n" % node
+
+
 def swarm():
     print "\n\n[Setup] Start to copy ssh-key to SWARM systems ......"
 
@@ -230,6 +239,8 @@ def main(argv):
             swarm()
         if node.__eq__('OPENSTACK'):
             openstack()
+        if node.__eq__('HA'):
+            ha()
 
 
 if __name__ == "__main__":

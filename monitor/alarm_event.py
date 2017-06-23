@@ -106,6 +106,7 @@ def push_event(node_name, item, grade, desc, time):
 
 
 CONF_MAP = {'ONOS': CONF.onos,
+            'HA': CONF.ha,
             'XOS': CONF.xos,
             'SWARM': CONF.swarm,
             'OPENSTACK': CONF.openstack}
