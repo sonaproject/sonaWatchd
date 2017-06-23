@@ -324,35 +324,18 @@ def proc_dis_xos(system, param):
     pass
 
 
-def proc_dis_ha(node, param):
+def proc_dis_ha(dummy, param):
     try:
-        if param == 'list':
-            res_result = dict()
+        sql = 'SELECT stats FROM ' + DB.HA_TBL + ' WHERE ha_key = \'HA\''
 
-            sql = 'SELECT haproxy FROM ' + DB.HA_TBL + ' WHERE ha_key = \'HA\''
+        with DB.connection() as conn:
+            nodes_info = conn.cursor().execute(sql).fetchone()
+        conn.close()
 
-            with DB.connection() as conn:
-                nodes_info = conn.cursor().execute(sql).fetchone()
-            conn.close()
+        for value in nodes_info:
+            return json.loads(str(value).replace('\'', '\"'))
 
-            for haproxy in nodes_info:
-                if haproxy == 'none':
-                    res_result['HA'] = 'FAIL'
-                else:
-                    res_result['HA'] = haproxy
-                    return res_result
-
-        elif param == 'stats':
-            sql = 'SELECT stats FROM ' + DB.HA_TBL + ' WHERE ha_key = \'HA\''
-
-            with DB.connection() as conn:
-                nodes_info = conn.cursor().execute(sql).fetchone()
-            conn.close()
-
-            for value in nodes_info:
-                return json.loads(str(value).replace('\'', '\"'))
-
-            return {'HA': 'FAIL'}
+        return {'HA': 'FAIL'}
     except:
         LOG.exception()
         return {'Result': 'FAIL'}
@@ -487,7 +470,7 @@ COMMAND_MAP = {'resource': proc_dis_resource,
                'gateway': proc_dis_vrouter,
                'swarm-svc': proc_dis_swarm,
                'xos-svc': proc_dis_xos,
-               'onos-ha': proc_dis_ha,
+               'ha-proxy': proc_dis_ha,
                'openstack-node': proc_dis_node,
                'onos-conn': proc_dis_connection,
                'traffic-gw': proc_dis_gwratio,

@@ -151,78 +151,40 @@ class CLI():
                     cls.draw_grid(header, data)
                     print ''
 
-                elif command == 'onos-ha':
-                    if param == 'list':
-                        print('')
-                        for sys in sorted_list:
-                            print '[' + sys + ']'
+                elif command == 'ha-proxy':
+                    print ''
+                    print "+----------------------------------------------------------+"
+                    print "|  Proxy Service Name  | Service Host |  Sts |  Req | Succ |"
+                    print "+----------------------------------------------------------+"
 
-                            sys_ret = result[sys]
-                            if sys_ret.upper().endswith('FAIL'):
-                                sys_ret = 'fail'
-                                print sys_ret
+                    for key in dict(result).keys():
+                        for line in result[key]:
+                            host = dict(line)['name']
+
+                            if host == 'FRONTEND':
+                                print "|%21s |%13s |%5s |%5s |%5s |" % (
+                                    key, host, dict(line)['node_sts'], dict(line)['req_count'],
+                                    dict(line)['succ_count'])
+
+                    for key in dict(result).keys():
+                        first_flag = 1;
+                        for line in result[key]:
+                            host = dict(line)['name']
+
+                            if host == 'FRONTEND':
+                                continue
+
+                            if first_flag == 1:
+                                print "|%21s |%13s |%5s |%5s |%5s |" % (
+                                    key, host, dict(line)['node_sts'], dict(line)['req_count'],
+                                    dict(line)['succ_count'])
+                                first_flag = 0
                             else:
-                                data = []
-
-                                for row in sys_ret.splitlines():
-                                    tmp = row.split(':')
-
-                                    line = []
-                                    line.append(tmp[0].strip())
-                                    line.append(tmp[1].strip())
-                                    data.append(line)
-
-                                header = []
-
-                                col_sys = dict()
-                                col_sys['title'] = 'Proxy Service Name'
-                                col_sys['size'] = '20'
-
-                                col_value = dict()
-                                col_value['title'] = 'STATUS'
-                                col_value['size'] = '8'
-
-                                header.append(col_sys)
-                                header.append(col_value)
-
-                                cls.draw_grid(header, data)
-
-                            print ''
-
-                    elif param == 'stats':
-                        print ''
-                        print "+----------------------------------------------------------+"
-                        print "|  Proxy Service Name  | Service Host |  Sts |  Req | Succ |"
-                        print "+----------------------------------------------------------+"
-
-                        for key in dict(result).keys():
-                            for line in result[key]:
-                                host = dict(line)['name']
-
-                                if host == 'FRONTEND':
-                                    print "|%21s |%13s |%5s |%5s |%5s |" % (
-                                        key, host, dict(line)['node_sts'], dict(line)['req_count'],
-                                        dict(line)['succ_count'])
-
-                        for key in dict(result).keys():
-                            first_flag = 1;
-                            for line in result[key]:
-                                host = dict(line)['name']
-
-                                if host == 'FRONTEND':
-                                    continue
-
-                                if first_flag == 1:
-                                    print "|%21s |%13s |%5s |%5s |%5s |" % (
-                                        key, host, dict(line)['node_sts'], dict(line)['req_count'],
-                                        dict(line)['succ_count'])
-                                    first_flag = 0
-                                else:
-                                    print "|%21s |%13s |%5s |%5s |%5s |" % (
-                                        '', host, dict(line)['node_sts'], dict(line)['req_count'],
-                                        dict(line)['succ_count'])
-                        print "+-----------------------------------------------------------+"
-                        print ''
+                                print "|%21s |%13s |%5s |%5s |%5s |" % (
+                                    '', host, dict(line)['node_sts'], dict(line)['req_count'],
+                                    dict(line)['succ_count'])
+                    print "+-----------------------------------------------------------+"
+                    print ''
 
                 elif command == 'traffic-controller':
                     print('')

@@ -25,7 +25,7 @@ class DB(object):
     onos_event_list = ['ONOS_APP', 'ONOS_REST', 'ONOS_OVSDB', 'ONOS_OPENFLOW', 'ONOS_CLUSTER', 'OPENSTACK_NODE', 'TRAFFIC_CONTROLLER']
     swarm_event_list = ['SWARM_SVC', 'SWARM_NODE']
     openstack_event_list = ['GATEWAY', 'TRAFFIC_GW', 'TRAFFIC_NODE', 'TRAFFIC_INTERNAL']
-    ha_event_list = ['HA_LIST', 'HA_RATIO']
+    ha_event_list = ['HA_SVC', 'HA_RATIO']
     xos_event_list = []
 
     item_list = ", ".join(common_event_list + onos_event_list + swarm_event_list + openstack_event_list + xos_event_list + ha_event_list)
@@ -84,7 +84,7 @@ class DB(object):
                         'CREATE TABLE ' + cls.ONOS_TBL + '(nodename text primary key, applist, weblist, nodelist, port, ovsdb, openflow, cluster, traffic_stat)',
                         'CREATE TABLE ' + cls.SWARM_TBL + '(nodename text primary key, node, service, ps)',
                         'CREATE TABLE ' + cls.OPENSTACK_TBL + '(nodename text primary key, sub_type, docker, onosApp, routingTable, gw_ratio, vxlan_traffic, internal_traffic)',
-                        'CREATE TABLE ' + cls.HA_TBL + '(ha_key text primary key, stats, haproxy)',
+                        'CREATE TABLE ' + cls.HA_TBL + '(ha_key text primary key, stats)',
                         'CREATE TABLE ' + cls.OF_TBL + '(hostname text primary key, of_id)',
                         'CREATE TABLE ' + cls.EVENT_TBL + '(nodename, item, grade, desc, time, PRIMARY KEY (nodename, item))']
             for sql in init_sql:
@@ -116,7 +116,7 @@ class DB(object):
                                      str((CONF_MAP[node_type.upper()]())['account']).split(':')[0], node_type)
 
             # set ha proxy tbl
-            sql = 'INSERT INTO ' + cls.HA_TBL + ' VALUES (\'' + 'HA' + '\', \'none\', \'none\')'
+            sql = 'INSERT INTO ' + cls.HA_TBL + ' VALUES (\'' + 'HA' + '\', \'none\')'
             LOG.info('%s', sql)
             sql_rt = cls.sql_execute(sql)
             if sql_rt != 'SUCCESS':
@@ -173,7 +173,7 @@ class DB(object):
                 if type.upper() == 'ONOS':
                     # set app tbl
                     sql = 'INSERT INTO ' + cls.ONOS_TBL + ' VALUES (\'' + name + '\', \'none\', \'none\', \'none\', \'none\', ' \
-                                                                                 '\'none\', \'none\', \'none\', \'none\', \'none\')'
+                                                                                 '\'none\', \'none\', \'none\', \'none\')'
                     LOG.info('%s', sql)
                     sql_rt = cls.sql_execute(sql)
                     if sql_rt != 'SUCCESS':

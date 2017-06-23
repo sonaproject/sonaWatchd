@@ -224,7 +224,7 @@ class SCREEN():
         swarm_list = ['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK', 'SWARM_SVC', 'SWARM_NODE']
         openstack_list = ['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK', 'GATEWAY', 'TRAFFIC_GW', 'TRAFFIC_NODE', 'TRAFFIC_INTERNAL']
         xos_list = ['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK']
-        ha_list=['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK', 'HA_LIST', 'HA_RATIO']
+        ha_list=['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK', 'HA_SVC', 'HA_RATIO']
 
         try:
             print ''

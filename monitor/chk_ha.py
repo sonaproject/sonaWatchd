@@ -54,12 +54,10 @@ def onos_ha_check(conn):
         return None
 
 
-def get_ha_stats(conn, ha_dic):
+def get_ha_stats(ha_dic):
     try:
         ha_status = 'ok'
         ha_ratio = 'ok'
-
-        str_list = ''
 
         frontend = 0
         backend = 0
@@ -69,31 +67,21 @@ def get_ha_stats(conn, ha_dic):
                 host = dict(line)['name']
                 status = dict(line)['node_sts']
 
-                if not 'UP' in status:
-                    ha_status = 'nok'
-
-                    str_list = str_list + key + ' : ' + status + '\n'
-
                 if host == 'FRONTEND':
+                    if not 'OPEN' in status:
+                        ha_status = 'nok'
+
                     frontend = int(dict(line)['req_count'])
                 else:
+                    if not 'UP' in status:
+                        ha_status = 'nok'
+
                     backend = backend + int(dict(line)['succ_count'])
 
         ratio = float(backend) * 100 / frontend
 
         if ratio < float(CONF.alarm()['ha_proxy']):
             ha_ratio = 'nok'
-
-        try:
-            sql = 'UPDATE ' + DB.HA_TBL + \
-                  ' SET haproxy = \'' + str_list + '\'' + \
-                  ' WHERE ha_key = \"' + 'HA' + '\"'
-            LOG.info('Update HA info = ' + sql)
-
-            if DB.sql_execute(sql, conn) != 'SUCCESS':
-                LOG.error('ONOS(HA STAT) DB Update Fail.')
-        except:
-            LOG.exception()
 
         return ha_status, ha_ratio
     except:

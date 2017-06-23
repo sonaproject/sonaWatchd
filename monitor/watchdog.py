@@ -47,7 +47,7 @@ def periodic(conn):
 
         # check HA, once
         ha_dic = chk_ha.onos_ha_check(conn)
-        global_ha_list, global_ha_ratio = chk_ha.get_ha_stats(conn, ha_dic)
+        global_ha_svc, global_ha_ratio = chk_ha.get_ha_stats(ha_dic)
 
         # check GW ratio
         gw_total = 0
@@ -93,7 +93,7 @@ def periodic(conn):
             swarm_node = 'fail'
             swarm_svc = 'fail'
 
-            ha_list = 'fail'
+            ha_svc = 'fail'
             ha_ratio = 'fail'
 
             openstack_node = 'fail'
@@ -124,7 +124,7 @@ def periodic(conn):
                     # check controller traffic
                     traffic_controller = chk_onos.controller_traffic_check(conn, node_name, node_ip)
                 elif type.upper() == 'HA':
-                    ha_list = global_ha_list
+                    ha_svc = global_ha_svc
                     ha_ratio = global_ha_ratio
                 # check swarm (app/node)
                 elif type.upper() == 'SWARM':
@@ -196,7 +196,7 @@ def periodic(conn):
                 traffic_controller = alarm_event.process_event(conn, node_name, type, 'TRAFFIC_CONTROLLER', cur_info[node_name]['TRAFFIC_CONTROLLER'], traffic_controller)
 
             elif type.upper == 'HA':
-                ha_list = alarm_event.process_event(conn, node_name, type, 'HA_LIST', cur_info[node_name]['HA_LIST'], ha_list)
+                ha_svc = alarm_event.process_event(conn, node_name, type, 'HA_SVC', cur_info[node_name]['HA_SVC'], ha_svc)
                 ha_ratio = alarm_event.process_event(conn, node_name, type, 'HA_RATIO', cur_info[node_name]['HA_RATIO'], ha_ratio)
 
             # 6. Swarm Check
@@ -233,7 +233,7 @@ def periodic(conn):
                       ' OPENSTACK_NODE = \'' + openstack_node + '\',' + \
                       ' SWARM_SVC = \'' + swarm_svc + '\',' + \
                       ' GATEWAY = \'' + v_router + '\',' + \
-                      ' HA_LIST = \'' + ha_list + '\',' + \
+                      ' HA_SVC = \'' + ha_svc + '\',' + \
                       ' HA_RATIO = \'' + ha_ratio + '\',' + \
                       ' TRAFFIC_GW = \'' + traffic_gw + '\',' + \
                       ' TRAFFIC_NODE = \'' + traffic_node + '\',' + \
