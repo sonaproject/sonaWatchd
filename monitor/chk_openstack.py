@@ -99,14 +99,14 @@ def get_gw_ratio(conn, node_name, node_ip, cur_val, total_val):
         for nodename, nodelist, ip in nodes_info:
             if not nodelist == 'none':
                 for line in str(nodelist).splitlines():
-                    if 'managementIp=' + node_ip + ',' in line:
-                        tmp = line.split(',')
+                    if not (line.startswith('Total') or line.startswith('Hostname')):
+                        new_line = " ".join(line.split())
 
-                        for col in tmp:
-                            if 'managementIp' in col:
-                                data_ip = col.split('=')[1]
-                                manage_ip = ip
-                                break
+                        tmp = new_line.split(' ')
+                        if tmp[3].startswith('of:'):
+                            manage_ip = tmp[4]
+                        else:
+                            manage_ip = tmp[3]
 
                     if not manage_ip == '':
                         break
@@ -247,8 +247,8 @@ def calc_node_traffic_ratio(total_rx, total_tx):
 
 def get_node_traffic(conn, node_name, ratio, rx_dic, tx_dic, rx_total, tx_total, err_info):
     try:
-        strRatio = '(VXLAN) Received packet count = ' + str(rx_dic[node_name]) + ', drop = ' + str(err_info['rx_drop']) + ', errs = ' + str(err_info['rx_err']) + '\n'
-        strRatio = strRatio + '(VXLAN) Sent packet count = ' + str(tx_dic[node_name]) + ', drop = ' + str(err_info['tx_drop']) + ', errs = ' + str(err_info['tx_err']) + '\n'
+        strRatio = 'rx = ' + str(rx_dic[node_name]) + ', drop = ' + str(err_info['rx_drop']) + ', errs = ' + str(err_info['rx_err']) + '\n'
+        strRatio = strRatio + 'tx = ' + str(tx_dic[node_name]) + ', drop = ' + str(err_info['tx_drop']) + ', errs = ' + str(err_info['tx_err']) + '\n'
         strRatio = strRatio + 'Ratio of success for all nodes = ' + str(ratio)  + ' (' + str(rx_total) + ' / ' + str(tx_total) + ')'
 
         try:

@@ -4,11 +4,9 @@ import json
 import base64
 import readline
 
-from subprocess import Popen, PIPE
-
 from config import CONFIG
 from system_info import SYS
-from log_lib import LOG, USER_LOG
+from log_lib import LOG
 
 class CLI():
     command_list = []
@@ -495,6 +493,8 @@ class CLI():
 
                             print ''
                 else:
+                    special_line_vxlan = ''
+
                     print('')
                     for sys in sorted_list:
                         sys_ret = result[sys]
@@ -502,10 +502,17 @@ class CLI():
                             sys_ret = 'fail'
 
                         print '[' + sys + ']'
-                        print sys_ret
 
-                        if not sys_ret.endswith('\n'):
-                            print('')
+                        for line in sys_ret.splitlines():
+                            if 'Ratio of success for all node' in line:
+                                special_line_vxlan = line
+                            else:
+                                print '   ' + line
+
+                        print('')
+
+                    if len(special_line_vxlan) > 0:
+                        print ' * ' + special_line_vxlan + '\n'
             except:
                 LOG.exception_err_write()
                 print '[parser err] return = ' + str(result)
@@ -712,6 +719,7 @@ class CLI():
             cls.cli_search_list.append('onos-shell')
             cls.cli_search_list.append('os-shell')
             cls.cli_search_list.append('monitoring-details')
+            cls.cli_search_list.append('event-history')
             cls.cli_search_list.append('help')
 
             onos_list = []

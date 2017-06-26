@@ -240,7 +240,7 @@ def proc_dis_gwratio(node, dummy):
         return {'Result': 'FAIL'}
 
 
-def proc_dis_traffic_node(node, dummy):
+def proc_dis_traffic_vxlan(node, dummy):
     try:
         nodes_info = get_node_list(node, 'nodename, vxlan_traffic', DB.OPENSTACK_TBL)
 
@@ -474,7 +474,7 @@ COMMAND_MAP = {'resource': proc_dis_resource,
                'openstack-node': proc_dis_node,
                'onos-conn': proc_dis_connection,
                'traffic-gw': proc_dis_gwratio,
-               'traffic-node': proc_dis_traffic_node,
+               'port-stat-vxlan': proc_dis_traffic_vxlan,
                'traffic-controller': proc_dis_traffic_controller,
                'traffic-internal': proc_dis_traffic_internal,
                #internal command

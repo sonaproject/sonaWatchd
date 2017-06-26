@@ -142,12 +142,15 @@ def onos_node_check(conn, node_name, node_ip):
 
         if node_rt is not None:
             for line in node_rt.splitlines():
-                if line.startswith('hostname'):
+                if not (line.startswith('Total') or line.startswith('Hostname')):
                     if not 'init=COMPLETE' in line:
                         node_status = 'nok'
 
-                    host_name = line.split(',')[0].split('=')[1]
-                    of_id = line.split(',')[4].split('=')[1]
+                    new_line = " ".join(line.split())
+
+                    tmp = new_line.split(' ')
+                    host_name = tmp[0]
+                    of_id = tmp[2]
 
                     try:
                         sql = 'INSERT OR REPLACE INTO ' + DB.OF_TBL + '(hostname, of_id)' + \
@@ -232,8 +235,10 @@ def controller_traffic_check(conn, node_name, node_ip):
 
                                 if type == 'INBOUND_PACKET':
                                     in_packet = in_packet + avg_cnt
+                                    LOG.info('[CPMAN] HOST_NAME = ' + hostname + ', IN_PACKET = ' + str(avg_cnt))
                                 elif type == 'OUTBOUND_PACKET':
                                     out_packet = out_packet + avg_cnt
+                                    LOG.info('[CPMAN] HOST_NAME = ' + hostname + ', OUT_PACKET = ' + str(avg_cnt))
 
                             str_info = str_info + '\n'
 
@@ -245,7 +250,7 @@ def controller_traffic_check(conn, node_name, node_ip):
                 else:
                     ratio = float(out_packet) * 100 / in_packet
 
-                LOG.info('Controller Traffic Ratio = ' + str(ratio))
+                LOG.info('[CPMAN][' + node_name + '] Controller Traffic Ratio = ' + str(ratio) + '(' + str(out_packet) + '/' + str(in_packet) + ')')
 
                 if ratio < float(CONF.alarm()['controller_traffic_ratio']):
                     controller_traffic = 'nok'
