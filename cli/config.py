@@ -25,6 +25,7 @@ TRACE_LOG_KEY_NAME = 'trace_log'
 
 CPT_LIST_KEY_NAME = 'list'
 CPT_ID_KEY_NAME = 'account'
+TRACE_BASE_BRIDGE = 'base_bridge'
 
 CLI_CONFIG_FILE = 'config/cli_config.ini'
 TRACE_CONFIG_FILE = 'config/trace_config.ini'
@@ -172,5 +173,9 @@ class CONFIG():
     @classmethod
     def get_trace_cpt_id(cls):
         return cls.trace_get_value(CPT_SECTION_NAME, CPT_ID_KEY_NAME).split(':')[0]
+
+    @classmethod
+    def get_trace_base_bridge(cls):
+        return cls.trace_get_value(CPT_SECTION_NAME, TRACE_BASE_BRIDGE)
 
 

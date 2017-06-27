@@ -63,7 +63,7 @@ class TRACE():
                   '-o ConnectTimeout=' + str(CONFIG.get_ssh_timeout())
     @classmethod
     def exec_trace(cls, username, node, command):
-        command = 'sudo ovs-appctl ofproto/trace br-int \'' + command + '\''
+        command = 'sudo ovs-appctl ofproto/trace ' + CONFIG.get_trace_base_bridge() + ' \'' + command + '\''
 
         cls.TRACE_LOG.trace_log('START TRACE | username = ' + username + ', ip = ' + node + ', condition = ' + command)
 
@@ -78,7 +78,7 @@ class TRACE():
     @classmethod
     def get_cookie_list(cls, username, node):
         try:
-            command = 'sudo ovs-ofctl -O OpenFlow13 dump-flows br-int'
+            command = 'sudo ovs-ofctl -O OpenFlow13 dump-flows ' + CONFIG.get_trace_base_bridge()
 
             cls.TRACE_LOG.trace_log('GET COOKIES | username = ' + username + ', ip = ' + node + ', condition = ' + command)
 
@@ -121,7 +121,7 @@ class TRACE():
             result_flow = ''
             lines = output.splitlines()
 
-            is_br_int = False
+            is_base_bridge = False
             for line in lines:
                 line = line.strip()
 
@@ -130,13 +130,13 @@ class TRACE():
 
                     if not cookie == '0':
                         if cookie in cls.cookie_list:
-                            if not is_br_int:
-                                result_flow = result_flow + '-------------------------------- br-int --------------------------------\n'
-                            is_br_int = True
+                            if not is_base_bridge:
+                                result_flow = result_flow + '-------------------------------- ' + CONFIG.get_trace_base_bridge() + ' --------------------------------\n'
+                            is_base_bridge = True
                         else:
-                            if is_br_int:
+                            if is_base_bridge:
                                 result_flow = result_flow + '----------------------------- other bridge -----------------------------\n'
-                            is_br_int = False
+                            is_base_bridge = False
 
                     result_flow = result_flow + line + '\n'
                 elif line.startswith('OpenFlow actions='):

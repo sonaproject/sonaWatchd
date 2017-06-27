@@ -220,6 +220,15 @@ def select_menu():
                             SCREEN.display_help()
                         elif cmd == 'monitoring-details':
                             SCREEN.display_status()
+                        elif cmd.startswith('event-history'):
+                            if len(cmd.split(' ')) == 2:
+                                try:
+                                    num = int(cmd.split(' ')[1])
+                                    SCREEN.display_event(num)
+                                except:
+                                    print 'log count param is wrong. ex) event-history 15'
+                            else:
+                                SCREEN.display_event()
                         else:
                             # send command
                             CLI.process_cmd(cmd)

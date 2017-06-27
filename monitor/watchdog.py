@@ -103,7 +103,7 @@ def periodic(conn):
             onos_cluster = 'fail'
 
             traffic_gw = 'fail'
-            traffic_node = 'fail'
+            port_stat_vxlan = 'fail'
             traffic_controller = 'fail'
             traffic_internal = 'fail'
 
@@ -131,7 +131,7 @@ def periodic(conn):
                     swarm_svc, swarm_node = chk_swarm.swarm_check(conn, node_name, user_name, node_ip)
                 # check vrouter, gw_ratio
                 elif type.upper() == 'OPENSTACK':
-                    traffic_node = chk_openstack.get_node_traffic(conn, node_name, node_ratio, openstack_rx_dic,
+                    port_stat_vxlan = chk_openstack.get_node_traffic(conn, node_name, node_ratio, openstack_rx_dic,
                                                                   openstack_tx_dic, rx_total, tx_total, rx_tx_err_info[node_name])
                     traffic_internal = chk_openstack.get_internal_traffic(conn, node_name, node_ip, user_name, sub_type,
                                                                           openstack_rx_dic[node_name], patch_tx_dic[node_name])
@@ -216,7 +216,7 @@ def periodic(conn):
                     v_router = '-'
                     traffic_gw = '-'
 
-                traffic_node = alarm_event.process_event(conn, node_name, type, 'TRAFFIC_NODE', cur_info[node_name]['TRAFFIC_NODE'], traffic_node)
+                port_stat_vxlan = alarm_event.process_event(conn, node_name, type, 'PORT_STAT_VXLAN', cur_info[node_name]['PORT_STAT_VXLAN'], port_stat_vxlan)
 
             try:
                 sql = 'UPDATE ' + DB.STATUS_TBL + \
@@ -236,7 +236,7 @@ def periodic(conn):
                       ' HA_SVC = \'' + ha_svc + '\',' + \
                       ' HA_RATIO = \'' + ha_ratio + '\',' + \
                       ' TRAFFIC_GW = \'' + traffic_gw + '\',' + \
-                      ' TRAFFIC_NODE = \'' + traffic_node + '\',' + \
+                      ' PORT_STAT_VXLAN = \'' + port_stat_vxlan + '\',' + \
                       ' TRAFFIC_CONTROLLER = \'' + traffic_controller + '\',' + \
                       ' TRAFFIC_INTERNAL = \'' + traffic_internal + '\',' + \
                       ' time = \'' + str(datetime.now()) + '\'' + \

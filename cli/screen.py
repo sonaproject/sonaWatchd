@@ -222,7 +222,7 @@ class SCREEN():
         onos_list = ['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK', 'ONOS_APP', 'ONOS_REST', 'ONOS_OVSDB', 'ONOS_OPENFLOW',
                      'ONOS_CLUSTER', 'OPENSTACK_NODE', 'TRAFFIC_CONTROLLER']
         swarm_list = ['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK', 'SWARM_SVC', 'SWARM_NODE']
-        openstack_list = ['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK', 'GATEWAY', 'TRAFFIC_GW', 'TRAFFIC_NODE', 'TRAFFIC_INTERNAL']
+        openstack_list = ['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK', 'GATEWAY', 'TRAFFIC_GW', 'PORT_STAT_VXLAN', 'TRAFFIC_INTERNAL']
         xos_list = ['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK']
         ha_list=['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK', 'HA_SVC', 'HA_RATIO']
 
@@ -238,9 +238,9 @@ class SCREEN():
 
 
     @classmethod
-    def display_event(cls):
+    def display_event(cls, cnt = 10):
         try:
-            cmd = 'tail -n 10 log/evt_history.log'
+            cmd = 'tail -n ' + str(cnt) + ' log/evt_history.log'
             result = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
             output, error = result.communicate()
 

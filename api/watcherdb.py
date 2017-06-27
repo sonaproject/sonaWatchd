@@ -24,7 +24,7 @@ class DB(object):
     common_event_list = ['NETWORK', 'CPU', 'MEMORY', 'DISK']
     onos_event_list = ['ONOS_APP', 'ONOS_REST', 'ONOS_OVSDB', 'ONOS_OPENFLOW', 'ONOS_CLUSTER', 'OPENSTACK_NODE', 'TRAFFIC_CONTROLLER']
     swarm_event_list = ['SWARM_SVC', 'SWARM_NODE']
-    openstack_event_list = ['GATEWAY', 'TRAFFIC_GW', 'TRAFFIC_NODE', 'TRAFFIC_INTERNAL']
+    openstack_event_list = ['GATEWAY', 'TRAFFIC_GW', 'PORT_STAT_VXLAN', 'TRAFFIC_INTERNAL']
     ha_event_list = ['HA_SVC', 'HA_RATIO']
     xos_event_list = []
 

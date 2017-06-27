@@ -4,11 +4,9 @@ import json
 import base64
 import readline
 
-from subprocess import Popen, PIPE
-
 from config import CONFIG
 from system_info import SYS
-from log_lib import LOG, USER_LOG
+from log_lib import LOG
 
 class CLI():
     command_list = []
@@ -267,20 +265,26 @@ class CLI():
                                 data = []
 
                                 for row in sys_ret.splitlines():
-                                    if str(row).startswith('Total'):
+                                    if str(row).startswith('Total') or str(row).startswith('Hostname'):
                                         continue
 
                                     line = []
-                                    for col in row.split(' '):
-                                        tmp = col.split('=')
 
-                                        if 'Bridge' in tmp[0]:
-                                            if 'empty' in tmp[1]:
-                                                line.append('empty')
-                                            else:
-                                                line.append('exist')
-                                        else:
-                                            line.append(str(tmp[1]).strip().strip(','))
+                                    new_line = " ".join(row.split())
+                                    tmp = new_line.split(' ')
+
+                                    line.append(tmp[0])
+                                    line.append(tmp[1])
+
+                                    if tmp[3].startswith('of:'):
+                                        line.append(tmp[4])
+                                        line.append(tmp[5])
+                                        line.append(tmp[6])
+                                    else:
+                                        line.append(tmp[3])
+                                        line.append(tmp[4])
+                                        line.append(tmp[5])
+
                                     data.append(line)
 
                                 header = []
@@ -301,14 +305,6 @@ class CLI():
                                 col_ip2['title'] = 'Data IP'
                                 col_ip2['size'] = '12'
 
-                                col_brint = dict()
-                                col_brint['title'] = 'br-int'
-                                col_brint['size'] = '8'
-
-                                col_brrouter = dict()
-                                col_brrouter['title'] = 'br-router'
-                                col_brrouter['size'] = '10'
-
                                 col_status = dict()
                                 col_status['title'] = 'Status'
                                 col_status['size'] = '10'
@@ -317,8 +313,6 @@ class CLI():
                                 header.append(col_type)
                                 header.append(col_ip1)
                                 header.append(col_ip2)
-                                header.append(col_brint)
-                                header.append(col_brrouter)
                                 header.append(col_status)
 
                                 cls.draw_grid(header, data)
@@ -340,8 +334,6 @@ class CLI():
                                 for row in sys_ret.splitlines():
                                     if str(row).strip() == '':
                                         continue
-
-                                    LOG.debug_log('row = ' + row)
 
                                     if str(row).startswith('*'):
                                         line.append(str(row).lstrip('*').strip())
@@ -495,6 +487,8 @@ class CLI():
 
                             print ''
                 else:
+                    special_line_vxlan = ''
+
                     print('')
                     for sys in sorted_list:
                         sys_ret = result[sys]
@@ -502,10 +496,17 @@ class CLI():
                             sys_ret = 'fail'
 
                         print '[' + sys + ']'
-                        print sys_ret
 
-                        if not sys_ret.endswith('\n'):
-                            print('')
+                        for line in sys_ret.splitlines():
+                            if 'Ratio of success for all node' in line:
+                                special_line_vxlan = line
+                            else:
+                                print '   ' + line
+
+                        print('')
+
+                    if len(special_line_vxlan) > 0:
+                        print ' * ' + special_line_vxlan + '\n'
             except:
                 LOG.exception_err_write()
                 print '[parser err] return = ' + str(result)
@@ -712,6 +713,7 @@ class CLI():
             cls.cli_search_list.append('onos-shell')
             cls.cli_search_list.append('os-shell')
             cls.cli_search_list.append('monitoring-details')
+            cls.cli_search_list.append('event-history')
             cls.cli_search_list.append('help')
 
             onos_list = []
