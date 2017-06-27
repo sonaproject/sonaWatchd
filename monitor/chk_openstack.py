@@ -99,14 +99,15 @@ def get_gw_ratio(conn, node_name, node_ip, cur_val, total_val):
         for nodename, nodelist, ip in nodes_info:
             if not nodelist == 'none':
                 for line in str(nodelist).splitlines():
-                    if not (line.startswith('Total') or line.startswith('Hostname')):
+                    if (not (line.startswith('Total') or line.startswith('Hostname'))) and node_ip in line:
                         new_line = " ".join(line.split())
 
                         tmp = new_line.split(' ')
                         if tmp[3].startswith('of:'):
-                            manage_ip = tmp[4]
+                            data_ip = tmp[4]
                         else:
-                            manage_ip = tmp[3]
+                            data_ip = tmp[3]
+                        manage_ip = node_ip
 
                     if not manage_ip == '':
                         break

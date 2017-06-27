@@ -143,7 +143,7 @@ def onos_node_check(conn, node_name, node_ip):
         if node_rt is not None:
             for line in node_rt.splitlines():
                 if not (line.startswith('Total') or line.startswith('Hostname')):
-                    if not 'init=COMPLETE' in line:
+                    if not 'COMPLETE' in line:
                         node_status = 'nok'
 
                     new_line = " ".join(line.split())
