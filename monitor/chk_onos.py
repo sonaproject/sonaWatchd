@@ -200,7 +200,7 @@ def onos_node_check(conn, node_name, node_ip):
         return 'fail'
 
 
-def controller_traffic_check(conn, node_name, node_ip):
+def controller_traffic_check(conn, node_name, node_ip, pre_stat):
     try:
         summary_rt = SshCommand.onos_ssh_exec(node_ip, 'summary')
 
@@ -242,18 +242,34 @@ def controller_traffic_check(conn, node_name, node_ip):
 
                             str_info = str_info + '\n'
 
-                if in_packet == 0 and out_packet == 0:
-                    ratio = 100
-                elif in_packet == 0:
-                    LOG.info('Controller Traffic Ratio Fail.')
-                    ratio = 0
+                for_save_in = in_packet
+                for_save_out = out_packet
+
+                if not dict(pre_stat).has_key(node_name):
+                    controller_traffic = '-'
                 else:
-                    ratio = float(out_packet) * 100 / in_packet
+                    in_packet = in_packet - int(dict(pre_stat)[node_name]['in_packet'])
+                    out_packet = out_packet - int(dict(pre_stat)[node_name]['out_packet'])
 
-                LOG.info('[CPMAN][' + node_name + '] Controller Traffic Ratio = ' + str(ratio) + '(' + str(out_packet) + '/' + str(in_packet) + ')')
+                    if in_packet == 0 and out_packet == 0:
+                        ratio = 100
+                    elif in_packet <= 0 or out_packet < 0:
+                        LOG.info('Controller Traffic Ratio Fail.')
+                        ratio = 0
+                    else:
+                        ratio = float(out_packet) * 100 / in_packet
 
-                if ratio < float(CONF.alarm()['controller_traffic_ratio']):
-                    controller_traffic = 'nok'
+                    LOG.info('[CPMAN][' + node_name + '] Controller Traffic Ratio = ' + str(ratio) + '(' + str(out_packet) + '/' + str(in_packet) + ')')
+                    str_info = str_info + ' * [LAST ' + str(CONF.watchdog()['interval']) + ' Sec] Controller Traffic Ratio = ' + str(ratio) + '(' + str(out_packet) + '/' + str(in_packet) + ')\n'
+
+                    if ratio < float(CONF.alarm()['controller_traffic_ratio']):
+                        controller_traffic = 'nok'
+
+                in_out_dic = dict()
+                in_out_dic['in_packet'] = for_save_in
+                in_out_dic['out_packet'] = for_save_out
+
+                pre_stat[node_name] = in_out_dic
             except:
                 LOG.exception()
                 controller_traffic = 'nok'
@@ -271,7 +287,7 @@ def controller_traffic_check(conn, node_name, node_ip):
         except:
             LOG.exception()
 
-        return controller_traffic
+        return controller_traffic, pre_stat
     except:
         LOG.exception()
         return 'fail'

@@ -19,7 +19,7 @@ from api.sona_log import LOG
 from api.watcherdb import DB
 
 
-def periodic(conn):
+def periodic(conn, pre_stat):
     try:
         cur_info = {}
         LOG.info("Periodic checking...%s", str(CONF.watchdog()['check_system']))
@@ -74,9 +74,6 @@ def periodic(conn):
                     if openstack_rx_dic[node_name] > 0:
                         gw_total = gw_total + openstack_rx_dic[node_name]
 
-        # calc node traffic rate
-        node_ratio  = chk_openstack.calc_node_traffic_ratio(rx_total, tx_total)
-
         for node_name, node_ip, user_name, type, sub_type in node_list:
             # check ping
             network = net_check(node_ip)
@@ -122,7 +119,7 @@ def periodic(conn):
                     onos_rest = chk_onos.onos_web_check(conn, node_name, node_ip)
 
                     # check controller traffic
-                    traffic_controller = chk_onos.controller_traffic_check(conn, node_name, node_ip)
+                    traffic_controller, pre_stat = chk_onos.controller_traffic_check(conn, node_name, node_ip, pre_stat)
                 elif type.upper() == 'HA':
                     ha_svc = global_ha_svc
                     ha_ratio = global_ha_ratio
@@ -131,13 +128,13 @@ def periodic(conn):
                     swarm_svc, swarm_node = chk_swarm.swarm_check(conn, node_name, user_name, node_ip)
                 # check vrouter, gw_ratio
                 elif type.upper() == 'OPENSTACK':
-                    port_stat_vxlan = chk_openstack.get_node_traffic(conn, node_name, node_ratio, openstack_rx_dic,
-                                                                  openstack_tx_dic, rx_total, tx_total, rx_tx_err_info[node_name])
-                    traffic_internal = chk_openstack.get_internal_traffic(conn, node_name, node_ip, user_name, sub_type,
-                                                                          openstack_rx_dic[node_name], patch_tx_dic[node_name])
+                    port_stat_vxlan, pre_stat = chk_openstack.get_node_traffic(conn, node_name, openstack_rx_dic,
+                                                                  openstack_tx_dic, rx_total, tx_total, rx_tx_err_info[node_name], pre_stat)
+                    traffic_internal, pre_stat = chk_openstack.get_internal_traffic(conn, node_name, node_ip, user_name, sub_type,
+                                                                          openstack_rx_dic[node_name], patch_tx_dic[node_name], pre_stat)
                     if sub_type.upper() == 'GATEWAY':
                         v_router = chk_openstack.vrouter_check(conn, node_name, user_name, node_ip)
-                        traffic_gw = chk_openstack.get_gw_ratio(conn, node_name, node_ip, openstack_rx_dic[node_name], gw_total)
+                        traffic_gw, pre_stat = chk_openstack.get_gw_ratio(conn, node_name, node_ip, openstack_rx_dic[node_name], gw_total, pre_stat)
                 else:
                     # check app
                     onos_app = check_app(conn, node_name, node_ip, user_name, type)
@@ -249,6 +246,8 @@ def periodic(conn):
                 LOG.exception()
     except:
         LOG.exception()
+
+    return pre_stat
 
 def net_check(node):
     try:

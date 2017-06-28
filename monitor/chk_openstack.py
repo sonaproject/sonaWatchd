@@ -81,7 +81,9 @@ def vrouter_check(conn, node_name, user_name, node_ip):
     return ret_docker
 
 
-def get_gw_ratio(conn, node_name, node_ip, cur_val, total_val):
+def get_gw_ratio(conn, node_name, node_ip, rx, gw_rx_sum, pre_stat):
+    status = 'ok'
+
     try:
         sql = 'SELECT ' + DB.ONOS_TBL + '.nodename, nodelist, ip_addr' + ' FROM ' + DB.ONOS_TBL + \
                 ' INNER JOIN ' + DB.NODE_INFO_TBL + ' ON ' + DB.ONOS_TBL + '.nodename = ' + DB.NODE_INFO_TBL + '.nodename'
@@ -95,7 +97,7 @@ def get_gw_ratio(conn, node_name, node_ip, cur_val, total_val):
         # search data_ip
         data_ip = ''
         manage_ip = ''
-        packet_cnt = 0
+        cpt_to_gw_packet = 0
         for nodename, nodelist, ip in nodes_info:
             if not nodelist == 'none':
                 for line in str(nodelist).splitlines():
@@ -116,7 +118,7 @@ def get_gw_ratio(conn, node_name, node_ip, cur_val, total_val):
 
         if data_ip == '':
             LOG.info('Can not find data ip')
-            return 'fail'
+            return 'fail', pre_stat
 
         group_rt = SshCommand.onos_ssh_exec(manage_ip, 'groups')
 
@@ -127,27 +129,39 @@ def get_gw_ratio(conn, node_name, node_ip, cur_val, total_val):
 
                     for col in tmp:
                         if 'packets=' in col:
-                            packet_cnt = packet_cnt + int(col.split('=')[1])
+                            cpt_to_gw_packet = cpt_to_gw_packet + int(col.split('=')[1])
 
-        if cur_val == -1 or total_val == 0:
+        if rx == -1 or gw_rx_sum == 0:
             LOG.info('GW Ratio Fail.')
             strRatio = 'fail'
-            ratio = 0
         else:
-            if cur_val == 0:
-                ratio = 0
-            else:
-                ratio = float(cur_val) * 100 / total_val
+            strRatio = 'Received packet count = ' + str(rx) + '\n'
+            strRatio = strRatio + 'compute nodes -> ' + node_name + ' Packet count = ' + str(cpt_to_gw_packet) + '\n'
 
-            strRatio = 'Received packet count = ' + str(cur_val) + '\n'
-            strRatio = strRatio + 'compute nodes -> ' + node_name + ' Packet count = ' + str(packet_cnt) + '\n'
-            strRatio = strRatio + str(ratio) + ' (' + str(cur_val) + ' / ' + str(total_val) + ')'
-
-            if cur_val < packet_cnt:
-                LOG.info('GW Ratio Fail. (Data loss)')
-                strRatio = strRatio + '(packet loss)'
+            if not dict(pre_stat).has_key(node_name + '_GW'):
+                status = '-'
             else:
-                strRatio = strRatio + '(no packet loss)'
+                cur_rx = rx - int(dict(pre_stat)[node_name + '_GW']['rx'])
+                cur_total = gw_rx_sum - int(dict(pre_stat)[node_name + '_GW']['gw_rx_sum'])
+                cur_packet = cpt_to_gw_packet - int(dict(pre_stat)[node_name + '_GW']['cpt_to_gw_packet'])
+
+                if cur_rx == 0:
+                    ratio = 0
+                else:
+                    ratio = float(cur_rx) * 100 / cur_total
+
+                strRatio = strRatio + '[LAST ' + str(CONF.watchdog()['interval']) + ' Sec] GW RATIO = ' + str(ratio) + ' (' + str(cur_rx) + ' / ' + str(cur_total) + ')'
+
+                if cur_rx < cur_packet:
+                    LOG.info('GW Ratio Fail. (Data loss)')
+                    strRatio = strRatio + '(packet loss)'
+                else:
+                    strRatio = strRatio + '(no packet loss)'
+
+                LOG.info('GW Ratio = ' + str(ratio))
+
+                if ratio < float(CONF.alarm()['gw_ratio']) or cur_rx < cur_packet:
+                    status = 'nok'
 
         try:
             sql = 'UPDATE ' + DB.OPENSTACK_TBL + \
@@ -160,14 +174,17 @@ def get_gw_ratio(conn, node_name, node_ip, cur_val, total_val):
         except:
             LOG.exception()
 
-        LOG.info('GW Ratio = ' + str(ratio))
-        if ratio < float(CONF.alarm()['gw_ratio']) or cur_val < packet_cnt:
-            return 'nok'
+        in_out_dic = dict()
+        in_out_dic['rx'] = rx
+        in_out_dic['gw_rx_sum'] = gw_rx_sum
+        in_out_dic['cpt_to_gw_packet'] = cpt_to_gw_packet
 
-        return 'ok'
+        pre_stat[node_name + '_GW'] = in_out_dic
     except:
         LOG.exception()
-        return 'fail'
+        status = 'fail'
+
+    return status, pre_stat
 
 
 def rx_tx_check(user_name, node_ip):
@@ -229,28 +246,55 @@ def rx_tx_check(user_name, node_ip):
     return -1, -1, err_dict, -1
 
 
-def calc_node_traffic_ratio(total_rx, total_tx):
+def get_node_traffic(conn, node_name, rx_dic, tx_dic, total_rx, total_tx, err_info, pre_stat):
     try:
-        if total_rx == 0 and total_tx == 0:
-            ratio = 100
-        elif total_tx == 0:
-            LOG.info('Node Traffic Ratio Fail.')
-            ratio = 0
+        status = 'ok'
+
+        pre_total_rx = total_rx
+        pre_total_tx = total_tx
+
+        if not dict(pre_stat).has_key('VXLAN'):
+            status = '-'
+            ratio = -1
         else:
-            ratio = float(total_rx) * 100 / total_tx
+            total_rx = total_rx - int(dict(pre_stat)['VXLAN']['total_rx'])
+            total_tx = total_tx - int(dict(pre_stat)['VXLAN']['total_tx'])
+
+            if total_rx == 0 and total_tx == 0:
+                ratio = 100
+            elif total_tx <= 0 or total_tx < 0:
+                LOG.info('Node Traffic Ratio Fail.')
+                ratio = 0
+            else:
+                ratio = float(total_rx) * 100 / total_tx
 
         LOG.info('Node Traffic Ratio = ' + str(ratio))
-        return ratio
-    except:
-        LOG.exception()
-        return -1
 
-
-def get_node_traffic(conn, node_name, ratio, rx_dic, tx_dic, rx_total, tx_total, err_info):
-    try:
         strRatio = 'rx = ' + str(rx_dic[node_name]) + ', drop = ' + str(err_info['rx_drop']) + ', errs = ' + str(err_info['rx_err']) + '\n'
         strRatio = strRatio + 'tx = ' + str(tx_dic[node_name]) + ', drop = ' + str(err_info['tx_drop']) + ', errs = ' + str(err_info['tx_err']) + '\n'
-        strRatio = strRatio + 'Ratio of success for all nodes = ' + str(ratio)  + ' (' + str(rx_total) + ' / ' + str(tx_total) + ')'
+
+        if not status == '-':
+            strRatio = strRatio + '* [LAST ' + str(CONF.watchdog()['interval']) + ' Sec] Ratio of success for all nodes = ' + str(ratio)  + ' (' + str(total_rx) + ' / ' + str(total_tx) + ')'
+
+            if ratio < float(CONF.alarm()['node_traffic_ratio']):
+                LOG.info('[NODE TRAFFIC] ratio nok')
+                status = 'nok'
+
+            if err_info['rx_drop'] - int(dict(pre_stat)['VXLAN']['rx_drop']) > 0:
+                LOG.info('[NODE TRAFFIC] rx_drop nok')
+                status = 'nok'
+
+            if err_info['rx_err'] - int(dict(pre_stat)['VXLAN']['rx_err']) > 0:
+                LOG.info('[NODE TRAFFIC] rx_err nok')
+                status = 'nok'
+
+            if err_info['tx_drop'] - int(dict(pre_stat)['VXLAN']['tx_drop']) > 0:
+                LOG.info('[NODE TRAFFIC] tx_drop nok')
+                status = 'nok'
+
+            if err_info['tx_err'] - int(dict(pre_stat)['VXLAN']['tx_err']) > 0:
+                LOG.info('[NODE TRAFFIC] tx_err nok')
+                status = 'nok'
 
         try:
             sql = 'UPDATE ' + DB.OPENSTACK_TBL + \
@@ -263,32 +307,28 @@ def get_node_traffic(conn, node_name, ratio, rx_dic, tx_dic, rx_total, tx_total,
         except:
             LOG.exception()
 
-        LOG.info('Node Traffic Ratio = ' + str(ratio))
-        if ratio < float(CONF.alarm()['node_traffic_ratio']):
-            LOG.info('[NODE TRAFFIC] ratio nok')
-            return 'nok'
-        elif err_info['rx_drop'] > 0:
-            LOG.info('[NODE TRAFFIC] rx_drop nok')
-            return 'nok'
-        elif err_info['rx_err'] > 0:
-            LOG.info('[NODE TRAFFIC] rx_err nok')
-            return 'nok'
-        elif err_info['tx_drop'] > 0:
-            LOG.info('[NODE TRAFFIC] tx_drop nok')
-            return 'nok'
-        elif err_info['tx_err'] > 0:
-            LOG.info('[NODE TRAFFIC] tx_err nok')
-            return 'nok'
+        in_out_dic = dict()
+        in_out_dic['total_rx'] = pre_total_rx
+        in_out_dic['total_tx'] = pre_total_tx
 
-        return 'ok'
+        in_out_dic['rx_drop'] = err_info['rx_drop']
+        in_out_dic['rx_err'] = err_info['rx_err']
+        in_out_dic['tx_drop'] = err_info['tx_drop']
+        in_out_dic['tx_err'] = err_info['tx_err']
+
+        pre_stat['VXLAN'] = in_out_dic
+
+        return status, pre_stat
     except:
         LOG.exception()
-        return 'fail'
+        return 'fail', pre_stat
 
 
-def get_internal_traffic(conn, node_name, node_ip, user_name, sub_type, rx_count, patch_tx):
+def get_internal_traffic(conn, node_name, node_ip, user_name, sub_type, rx_count, patch_tx, pre_stat):
     try:
         status = 'ok'
+        in_packet = 0
+        out_packet = 0
 
         if sub_type == 'COMPUTE':
             flow_rt = SshCommand.ssh_exec(user_name, node_ip, 'sudo ovs-ofctl -O OpenFlow13 dump-flows br-int')
@@ -309,11 +349,14 @@ def get_internal_traffic(conn, node_name, node_ip, user_name, sub_type, rx_count
 
                 in_packet = inport_cnt + rx_count
                 out_packet = gw_cnt + output_cnt
+
+                strmsg = 'IN[vm_tx = ' + str(inport_cnt) + ', vxlan_rx = ' + str(rx_count) + '], OUT[gw = ' + str(gw_cnt) + ', output = ' + str(output_cnt) + ']'
             else:
                 status = 'fail'
                 strmsg = 'fail'
+
         else:
-            strmsg = 'vxlan rx = ' + str(rx_count) + ', patch-integ tx = ' + str(patch_tx)
+            strmsg = 'IN[vxlan rx = ' + str(rx_count) + '], OUT[patch-integ tx = ' + str(patch_tx) + ']'
 
             if patch_tx == -1:
                 status = 'nok'
@@ -321,29 +364,33 @@ def get_internal_traffic(conn, node_name, node_ip, user_name, sub_type, rx_count
                 in_packet = rx_count
                 out_packet = patch_tx
 
+        for_save_in = in_packet
+        for_save_out = out_packet
 
-        if status == 'ok':
+        if not dict(pre_stat).has_key(node_name + '_internal'):
+            status = '-'
+        elif status == 'ok':
+            in_packet = in_packet - int(dict(pre_stat)[node_name + '_internal']['in_packet'])
+            out_packet = out_packet - int(dict(pre_stat)[node_name + '_internal']['out_packet'])
+
             if in_packet == 0 and out_packet == 0:
                 ratio = 100
-            elif in_packet == 0:
+            elif in_packet <= 0 or out_packet < 0:
                 LOG.info('Internal Traffic Ratio Fail.')
                 ratio = 0
             else:
                 ratio = float(out_packet) * 100 / in_packet
 
             LOG.info('Internal Traffic Ratio = ' + str(ratio))
+            strmsg = strmsg + '\n* [LAST ' + str(CONF.watchdog()['interval']) + ' Sec] Internal Traffic Ratio = ' + str(ratio) + '(' + str(out_packet) + '/' + str(in_packet) + ')\n'
 
             if ratio < float(CONF.alarm()['internal_traffic_ratio']):
                 status = 'nok'
 
-        if sub_type == 'COMPUTE':
-            if status == 'ok':
-                op = '='
-            else:
-                op = '!='
-
-            strmsg = 'in_port(' + str(inport_cnt) + ') + vxlan_rx(' + str(rx_count) + ') ' + op + ' gw(' + str(
-                gw_cnt) + ') + output(' + str(output_cnt) + ')'
+        in_out_dic = dict()
+        in_out_dic['in_packet'] = for_save_in
+        in_out_dic['out_packet'] = for_save_out
+        pre_stat[node_name + '_internal'] = in_out_dic
 
         try:
             sql = 'UPDATE ' + DB.OPENSTACK_TBL + \
@@ -356,9 +403,9 @@ def get_internal_traffic(conn, node_name, node_ip, user_name, sub_type, rx_count
         except:
             LOG.exception()
 
-        return status
+        return status, pre_stat
     except:
         LOG.exception()
-        return 'fail'
+        return 'fail', pre_stat
 
 

@@ -185,6 +185,7 @@ class CLI():
                     print ''
 
                 elif command == 'traffic-controller':
+                    ratio = ''
                     print('')
                     for sys in sorted_list:
                         print '[' + sys + ']'
@@ -197,6 +198,10 @@ class CLI():
                             data = []
 
                             for row in sys_ret.splitlines():
+                                if row.startswith(' *'):
+                                    ratio = row
+                                    continue
+
                                 line = []
                                 for col in row.split(', '):
                                     tmp = col.split('=')
@@ -249,6 +254,8 @@ class CLI():
 
                             cls.draw_grid(header, data)
 
+                        if not ratio == '':
+                            print ratio
                         print ''
 
                 elif command == 'openstack-node':
