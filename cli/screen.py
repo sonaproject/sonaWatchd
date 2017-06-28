@@ -298,8 +298,8 @@ class SCREEN():
             col['title'] = item
 
             size = len(item)
-            if size < 6:
-                size = 6
+            if size < 8:
+                size = 8
 
             col['size'] = str(size)
 

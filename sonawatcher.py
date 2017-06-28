@@ -22,6 +22,7 @@ PIDFILE = CONF.get_pid_file()
 
 class SonaWatchD(Daemon):
     def run(self):
+        pre_stat = dict()
 
         # DB initiation
         DB.db_initiation()
@@ -47,7 +48,7 @@ class SonaWatchD(Daemon):
 
             while True:
                 try:
-                    watchdog.periodic(conn)
+                    pre_stat = watchdog.periodic(conn, pre_stat)
 
                     time.sleep(CONF.watchdog()['interval'])
                 except:
