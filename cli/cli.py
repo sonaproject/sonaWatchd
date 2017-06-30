@@ -390,7 +390,7 @@ class CLI():
                             print ''
 
                 elif command == 'onos-conn':
-                    if param in ['ovsdb', 'openflow']:
+                    if param == 'openflow':
                         print('')
                         for sys in sorted_list:
                             print '[' + sys + ']'
@@ -513,7 +513,7 @@ class CLI():
                         print('')
 
                     if len(special_line_vxlan) > 0:
-                        print ' * ' + special_line_vxlan + '\n'
+                        print special_line_vxlan + '\n'
             except:
                 LOG.exception_err_write()
                 print '[parser err] return = ' + str(result)
@@ -524,6 +524,10 @@ class CLI():
 
     @staticmethod
     def draw_grid(header, data):
+        RED = '\033[1;91m'
+        BLUE = '\033[1;94m'
+        OFF = '\033[0m'
+
         try:
             width = -1
 
@@ -544,7 +548,13 @@ class CLI():
                 print '|',
                 i = 0
                 for col in line:
-                    cmd = '%' + header[i]['size'] + 's|'
+                    if col == 'OK':
+                        cmd = BLUE + '%' + header[i]['size'] + 's' + OFF + '|'
+                    elif col == 'NOK':
+                        cmd = RED + '%' + header[i]['size'] + 's' + OFF + '|'
+                    else:
+                        cmd = '%' + header[i]['size'] + 's|'
+
                     print cmd % col,
                     i = i + 1
                 print ''
