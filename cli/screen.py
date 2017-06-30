@@ -33,7 +33,7 @@ BG_BLACK = '\033[0;90m'
 ENDC = '\033[0m'
 BOLD = '\033[1m'
 UNDERLINE = '\033[4m'
-OFF = '\[\033[0m\]'
+OFF = '\033[0m'
 
 MAIN_WIDTH = 50
 
