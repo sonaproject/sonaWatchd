@@ -39,7 +39,7 @@ def regi_url(url, auth):
         event_list = []
 
         for nodename, item, grade, desc, time in evt_list:
-            if not grade in ['ok', 'normal']:
+            if not grade in ['ok', 'normal', 'none']:
                 evt = {'event': 'occur', 'system': nodename, 'item': item, 'grade': grade, 'desc': desc, 'time': time}
                 event_list.append(evt)
 

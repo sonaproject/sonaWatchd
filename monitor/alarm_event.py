@@ -93,7 +93,7 @@ def push_event(node_name, item, grade, desc, time):
 
         for url, auth in url_list:
             header = {'Content-Type': 'application/json', 'Authorization': auth}
-            req_body = {'event': 'occur', 'system': node_name, 'item': item, 'grade': grade, 'desc': desc, 'time': time}
+            req_body = {'system': node_name, 'item': item, 'grade': grade, 'desc': desc, 'time': time}
             req_body_json = json.dumps(req_body)
 
             try:
