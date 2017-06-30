@@ -33,6 +33,7 @@ BG_BLACK = '\033[0;90m'
 ENDC = '\033[0m'
 BOLD = '\033[1m'
 UNDERLINE = '\033[4m'
+OFF = '\[\033[0m\]'
 
 MAIN_WIDTH = 50
 
@@ -219,7 +220,7 @@ class SCREEN():
 
     @classmethod
     def display_status(cls):
-        onos_list = ['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK', 'ONOS_APP', 'ONOS_REST', 'ONOS_OVSDB', 'ONOS_OPENFLOW',
+        onos_list = ['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK', 'ONOS_APP', 'ONOS_REST', 'ONOS_OPENFLOW',
                      'ONOS_CLUSTER', 'OPENSTACK_NODE', 'TRAFFIC_CONTROLLER']
         swarm_list = ['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK', 'SWARM_SVC', 'SWARM_NODE']
         openstack_list = ['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK', 'GATEWAY', 'TRAFFIC_GW', 'PORT_STAT_VXLAN', 'TRAFFIC_INTERNAL']
@@ -268,15 +269,24 @@ class SCREEN():
             line = []
             line.append(sys)
 
+            status = 'OK'
             for item in list:
                 if item in ['TYPE', 'IP']:
                     continue
 
+                value = SYS.sys_list[sys][item]
+
                 if (dict)(SYS.sys_list[sys]).has_key(item):
-                    line.append(SYS.sys_list[sys][item])
+                    line.append(value)
+
+                    if value == 'none':
+                        status = 'loading'
+                    elif not (value == 'ok' or value == 'normal' or value == '-'):
+                        status = 'NOK'
                 else:
                     line.append('-')
 
+            line.insert(1, status)
             data.append(line)
 
         header = []
@@ -286,6 +296,12 @@ class SCREEN():
         col['size'] = '6'
 
         header.append(col)
+
+        col_status = dict()
+        col_status['title'] = 'STATUS'
+        col_status['size'] = '6'
+
+        header.append(col_status)
 
         for item in list:
             if item in ['TYPE', 'IP']:
@@ -342,7 +358,7 @@ class SCREEN():
                 color = GREEN
                 if str_status is not 'OK':
                     color = RED
-                print '| ' + sys.ljust(6) + ' [' + color + str_status + BG_WHITE + ']' + \
+                print '| ' + sys.ljust(6) + ' [' + color + str_status + OFF + ']' + \
                       ("{0:>" + str(width - 6 - len(str_status) - 3) + "}").format('|') + ENDC
 
             print BG_WHITE + "+%s+" % ('-' * width).ljust(width) + ENDC
@@ -399,7 +415,6 @@ class SCREEN():
 
             sorted_list = sorted(SYS.sys_list.keys())
 
-            alarm_flag = False
             for sys in sorted_list:
                 str_info = sys.ljust(6) + ' ['
                 box_sys.addstr(i, 2, str_info)
@@ -417,7 +432,7 @@ class SCREEN():
                         break
                     elif not (value == 'ok' or value == 'normal' or value == '-'):
                         str_status = 'NOK'
-                        alarm_flag = True
+                        SYS.abnormal_flag = True
                         break
 
                 if str_status is 'OK':
@@ -427,8 +442,6 @@ class SCREEN():
 
                 box_sys.addstr(i, 2 + len(str_info) + len(str_status), ']')
                 i += 1
-
-            SYS.abnormal_flag = alarm_flag
         except:
             LOG.exception_err_write()
 

@@ -81,7 +81,7 @@ def vrouter_check(conn, node_name, user_name, node_ip):
     return ret_docker
 
 
-def get_gw_ratio(conn, node_name, node_ip, rx, gw_rx_sum, pre_stat):
+def get_gw_ratio_gateway(conn, node_name, node_ip, rx, gw_rx_sum, pre_stat):
     status = 'ok'
 
     try:
@@ -92,7 +92,7 @@ def get_gw_ratio(conn, node_name, node_ip, rx, gw_rx_sum, pre_stat):
 
         if len(nodes_info) == 0:
             LOG.info('Fail to load onos list')
-            return 'fail'
+            return 'fail', pre_stat
 
         # search data_ip
         data_ip = ''
@@ -101,15 +101,15 @@ def get_gw_ratio(conn, node_name, node_ip, rx, gw_rx_sum, pre_stat):
         for nodename, nodelist, ip in nodes_info:
             if not nodelist == 'none':
                 for line in str(nodelist).splitlines():
-                    if (not (line.startswith('Total') or line.startswith('Hostname'))) and node_ip in line:
+                    if (not (line.startswith('Total') or line.startswith('Hostname'))) and node_ip + ' ' in line:
                         new_line = " ".join(line.split())
 
                         tmp = new_line.split(' ')
                         if tmp[3].startswith('of:'):
-                            data_ip = tmp[4]
+                            data_ip = tmp[5]
                         else:
-                            data_ip = tmp[3]
-                        manage_ip = node_ip
+                            data_ip = tmp[4]
+                        manage_ip = ip
 
                     if not manage_ip == '':
                         break
@@ -131,37 +131,35 @@ def get_gw_ratio(conn, node_name, node_ip, rx, gw_rx_sum, pre_stat):
                         if 'packets=' in col:
                             cpt_to_gw_packet = cpt_to_gw_packet + int(col.split('=')[1])
 
-        if rx == -1 or gw_rx_sum == 0:
-            LOG.info('GW Ratio Fail.')
-            strRatio = 'fail'
+        strRatio = 'Received packet count = ' + str(rx) + '\n'
+        strRatio = strRatio + 'compute nodes -> ' + node_name + ' Packet count = ' + str(cpt_to_gw_packet) + '\n'
+
+        if not dict(pre_stat).has_key(node_name + '_GW'):
+            status = '-'
         else:
-            strRatio = 'Received packet count = ' + str(rx) + '\n'
-            strRatio = strRatio + 'compute nodes -> ' + node_name + ' Packet count = ' + str(cpt_to_gw_packet) + '\n'
+            cur_rx = rx - int(dict(pre_stat)[node_name + '_GW']['rx'])
+            cur_total = gw_rx_sum - int(dict(pre_stat)[node_name + '_GW']['gw_rx_sum'])
+            cur_packet = cpt_to_gw_packet - int(dict(pre_stat)[node_name + '_GW']['cpt_to_gw_packet'])
 
-            if not dict(pre_stat).has_key(node_name + '_GW'):
-                status = '-'
+            if cur_rx == 0 and cur_total == 0:
+                ratio = 100
+            elif cur_rx <= 0 or cur_total < 0:
+                ratio = 0
             else:
-                cur_rx = rx - int(dict(pre_stat)[node_name + '_GW']['rx'])
-                cur_total = gw_rx_sum - int(dict(pre_stat)[node_name + '_GW']['gw_rx_sum'])
-                cur_packet = cpt_to_gw_packet - int(dict(pre_stat)[node_name + '_GW']['cpt_to_gw_packet'])
+                ratio = float(cur_rx) * 100 / cur_total
 
-                if cur_rx == 0:
-                    ratio = 0
-                else:
-                    ratio = float(cur_rx) * 100 / cur_total
+            strRatio = strRatio + '[LAST ' + str(CONF.watchdog()['interval']) + ' Sec] GW RATIO = ' + str(ratio) + ' (' + str(cur_rx) + ' / ' + str(cur_total) + ')'
 
-                strRatio = strRatio + '[LAST ' + str(CONF.watchdog()['interval']) + ' Sec] GW RATIO = ' + str(ratio) + ' (' + str(cur_rx) + ' / ' + str(cur_total) + ')'
+            if cur_rx < cur_packet:
+                LOG.info('GW Ratio Fail. (Data loss)')
+                strRatio = strRatio + '(packet loss)'
+            else:
+                strRatio = strRatio + '(no packet loss)'
 
-                if cur_rx < cur_packet:
-                    LOG.info('GW Ratio Fail. (Data loss)')
-                    strRatio = strRatio + '(packet loss)'
-                else:
-                    strRatio = strRatio + '(no packet loss)'
+            LOG.info('GW Ratio = ' + str(ratio))
 
-                LOG.info('GW Ratio = ' + str(ratio))
-
-                if ratio < float(CONF.alarm()['gw_ratio']) or cur_rx < cur_packet:
-                    status = 'nok'
+            if ratio < float(CONF.alarm()['gw_ratio']) or cur_rx < cur_packet:
+                status = 'nok'
 
         try:
             sql = 'UPDATE ' + DB.OPENSTACK_TBL + \
@@ -182,7 +180,119 @@ def get_gw_ratio(conn, node_name, node_ip, rx, gw_rx_sum, pre_stat):
         pre_stat[node_name + '_GW'] = in_out_dic
     except:
         LOG.exception()
-        status = 'fail'
+        status = 'fail', pre_stat
+
+    return status, pre_stat
+
+
+def get_gw_ratio_compute(conn, node_name, node_ip, pre_stat):
+    status = 'ok'
+
+    try:
+        sql = 'SELECT ' + DB.ONOS_TBL + '.nodename, nodelist, ip_addr' + ' FROM ' + DB.ONOS_TBL + \
+                ' INNER JOIN ' + DB.NODE_INFO_TBL + ' ON ' + DB.ONOS_TBL + '.nodename = ' + DB.NODE_INFO_TBL + '.nodename'
+
+        nodes_info = conn.cursor().execute(sql).fetchall()
+
+        if len(nodes_info) == 0:
+            LOG.info('Fail to load onos list')
+            return 'fail', pre_stat
+
+        manage_ip = ''
+        hostname = ''
+        for nodename, nodelist, ip in nodes_info:
+            if not nodelist == 'none':
+                for line in str(nodelist).splitlines():
+                    if (not (line.startswith('Total') or line.startswith('Hostname'))) and node_ip + ' ' in line:
+                        new_line = " ".join(line.split())
+                        tmp = new_line.split(' ')
+
+                        hostname = tmp[0]
+                        manage_ip = ip
+
+                    if not manage_ip == '':
+                        break
+            if not manage_ip == '':
+                break
+
+        if hostname == '':
+            LOG.info('Can not find hostname')
+            return 'fail', pre_stat
+
+        try:
+            sql = 'SELECT of_id FROM ' + DB.OF_TBL + ' WHERE hostname = \'' + hostname + '\''
+            LOG.info(sql)
+            node_info = conn.cursor().execute(sql).fetchone()
+
+            of_id = node_info[0]
+        except:
+            LOG.exception()
+            LOG.info('Can not find of_id')
+            return 'fail', pre_stat
+
+        group_rt = SshCommand.onos_ssh_exec(manage_ip, 'groups')
+
+        total_cnt = 0
+        gw_list = []
+        if group_rt is not None:
+            for line in group_rt.splitlines():
+                if of_id in line:
+                    tmp = line.split(',')
+
+                    for col in tmp:
+                        if 'packets=' in col:
+                            total_cnt = total_cnt + int(col.split('=')[1])
+                            gw_list.append(int(col.split('=')[1]))
+
+        str_ratio = ''
+        gw_ratio_list = []
+
+        if not dict(pre_stat).has_key(node_name + '_GW'):
+            strRatio = '-'
+            status = '-'
+        else:
+            i = 0
+            for gw in gw_list:
+                cur_gw = gw - pre_stat[node_name + '_GW']['gw_list'][i]
+                cur_total = total_cnt - pre_stat[node_name + '_GW']['gw_total']
+
+                if cur_gw == 0 and cur_total == 0:
+                    ratio = 100
+                elif cur_gw <= 0 or cur_total < 0:
+                    ratio = 0
+                else:
+                    ratio = float(cur_gw) * 100 / cur_total
+                    i = i + 1
+
+                gw_ratio_list.append(ratio)
+                str_ratio = str_ratio + str(ratio) + ':'
+
+                if ratio < float(CONF.alarm()['gw_ratio']):
+                    status = 'nok'
+
+            strRatio = 'GW_RATIO = ' + str_ratio.rstrip(':') + '\n'
+            LOG.info('[COMPUTE] GW Ratio = ' + strRatio)
+
+        try:
+            sql = 'UPDATE ' + DB.OPENSTACK_TBL + \
+                  ' SET gw_ratio = \'' + strRatio + '\'' + \
+                  ' WHERE nodename = \'' + node_name + '\''
+            LOG.info('Update GW Ratio info = ' + sql)
+
+            if DB.sql_execute(sql, conn) != 'SUCCESS':
+                LOG.error('OPENSTACK(gw_ratio) DB Update Fail.')
+        except:
+            LOG.exception()
+
+        in_out_dic = dict()
+        in_out_dic['gw_list'] = gw_list
+        in_out_dic['gw_total'] = total_cnt
+
+        pre_stat[node_name + '_GW'] = in_out_dic
+
+    except:
+        LOG.exception()
+        status = 'fail', pre_stat
 
     return status, pre_stat
 

@@ -39,12 +39,10 @@ def onos_conn_check(conn, node_name, node_ip):
         device_rt = SshCommand.onos_ssh_exec(node_ip, 'devices')
         nodes_rt = SshCommand.onos_ssh_exec(node_ip, 'nodes')
 
-        str_ovsdb = ''
         str_of = ''
 
         if device_rt is not None:
             of_status = 'ok'
-            ovsdb_status = 'ok'
             for line in device_rt.splitlines():
                 if line.startswith('id=of'):
                     if not ('available=true' in line):
@@ -61,15 +59,9 @@ def onos_conn_check(conn, node_name, node_ip):
                         LOG.exception()
 
                     str_of = str_of + line + '\n'
-
-                elif line.startswith('id=ovsdb'):
-                    str_ovsdb = str_ovsdb + line + '\n'
-                    if not ('available=true, local-status=connected' in line):
-                        ovsdb_status = 'nok'
         else:
             LOG.error("\'%s\' Connection Check Error(devices)", node_ip)
             of_status = 'fail'
-            ovsdb_status = 'fail'
 
         if nodes_rt is not None:
             cluster_status = 'ok'
@@ -82,8 +74,7 @@ def onos_conn_check(conn, node_name, node_ip):
 
         try:
             sql = 'UPDATE ' + DB.ONOS_TBL + \
-                  ' SET ovsdb = \'' + str_ovsdb + '\',' + \
-                  ' openflow = \'' + str_of + '\',' + \
+                  ' SET openflow = \'' + str_of + '\',' + \
                   ' cluster = \'' + str(nodes_rt) + '\'' \
                   ' WHERE nodename = \'' + node_name + '\''
             LOG.info('Update Connection info = ' + sql)
@@ -93,10 +84,10 @@ def onos_conn_check(conn, node_name, node_ip):
         except:
             LOG.exception()
 
-        return of_status, ovsdb_status, cluster_status
+        return of_status, cluster_status
     except:
         LOG.exception()
-        return 'fail', 'fail', 'fail'
+        return 'fail', 'fail'
 
 
 def onos_web_check(conn, node_name, node_ip):

@@ -222,7 +222,7 @@ def proc_dis_vrouter(node, param):
 
 def proc_dis_gwratio(node, dummy):
     try:
-        nodes_info = get_node_list(node, 'nodename, gw_ratio', DB.OPENSTACK_TBL, 'sub_type = \'GATEWAY\'')
+        nodes_info = get_node_list(node, 'nodename, gw_ratio', DB.OPENSTACK_TBL)
 
         if len(nodes_info) == 0:
             return {'fail': 'This is not a command on the target system.'}

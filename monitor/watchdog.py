@@ -113,7 +113,7 @@ def periodic(conn, pre_stat):
                     onos_app = check_app(conn, node_name, node_ip, user_name, type)
 
                     # check connection
-                    onos_of, onos_ovsdb, onos_cluster = chk_onos.onos_conn_check(conn, node_name, node_ip)
+                    onos_of, onos_cluster = chk_onos.onos_conn_check(conn, node_name, node_ip)
 
                     # check web
                     onos_rest = chk_onos.onos_web_check(conn, node_name, node_ip)
@@ -134,7 +134,9 @@ def periodic(conn, pre_stat):
                                                                           openstack_rx_dic[node_name], patch_tx_dic[node_name], pre_stat)
                     if sub_type.upper() == 'GATEWAY':
                         v_router = chk_openstack.vrouter_check(conn, node_name, user_name, node_ip)
-                        traffic_gw, pre_stat = chk_openstack.get_gw_ratio(conn, node_name, node_ip, openstack_rx_dic[node_name], gw_total, pre_stat)
+                        traffic_gw, pre_stat = chk_openstack.get_gw_ratio_gateway(conn, node_name, node_ip, openstack_rx_dic[node_name], gw_total, pre_stat)
+                    elif sub_type.upper() == 'COMPUTE':
+                        traffic_gw, pre_stat = chk_openstack.get_gw_ratio_compute(conn, node_name, node_ip, pre_stat)
                 else:
                     # check app
                     onos_app = check_app(conn, node_name, node_ip, user_name, type)
@@ -185,7 +187,6 @@ def periodic(conn, pre_stat):
             # 9. Node check (ONOS)
             if type.upper() == 'ONOS':
                 onos_app = alarm_event.process_event(conn, node_name, type, 'ONOS_APP', cur_info[node_name]['ONOS_APP'], onos_app)
-                onos_ovsdb = alarm_event.process_event(conn, node_name, type, 'ONOS_OVSDB', cur_info[node_name]['ONOS_OVSDB'], onos_ovsdb)
                 onos_of = alarm_event.process_event(conn, node_name, type, 'ONOS_OPENFLOW', cur_info[node_name]['ONOS_OPENFLOW'], onos_of)
                 onos_cluster = alarm_event.process_event(conn, node_name, type, 'ONOS_CLUSTER', cur_info[node_name]['ONOS_CLUSTER'], onos_cluster)
                 onos_rest = alarm_event.process_event(conn, node_name, type, 'ONOS_REST', cur_info[node_name]['ONOS_REST'], onos_rest)
@@ -206,12 +207,13 @@ def periodic(conn, pre_stat):
             elif type.upper() == 'OPENSTACK':
                 traffic_internal = alarm_event.process_event(conn, node_name, type, 'TRAFFIC_INTERNAL',
                                                              cur_info[node_name]['TRAFFIC_INTERNAL'], traffic_internal)
+                traffic_gw = alarm_event.process_event(conn, node_name, type, 'TRAFFIC_GW',
+                                                       cur_info[node_name]['TRAFFIC_GW'], traffic_gw)
+
                 if sub_type.upper() == 'GATEWAY':
                     v_router = alarm_event.process_event(conn, node_name, type, 'GATEWAY', cur_info[node_name]['GATEWAY'], v_router)
-                    traffic_gw = alarm_event.process_event(conn, node_name, type, 'TRAFFIC_GW', cur_info[node_name]['TRAFFIC_GW'], traffic_gw)
                 elif sub_type.upper() == 'COMPUTE':
                     v_router = '-'
-                    traffic_gw = '-'
 
                 port_stat_vxlan = alarm_event.process_event(conn, node_name, type, 'PORT_STAT_VXLAN', cur_info[node_name]['PORT_STAT_VXLAN'], port_stat_vxlan)
 
@@ -223,7 +225,6 @@ def periodic(conn, pre_stat):
                       ' NETWORK = \'' + network + '\',' + \
                       ' ONOS_APP = \'' + onos_app + '\',' + \
                       ' ONOS_REST = \'' + onos_rest + '\',' + \
-                      ' ONOS_OVSDB = \'' + onos_ovsdb + '\',' + \
                       ' ONOS_OPENFLOW = \'' + onos_of + '\',' + \
                       ' ONOS_CLUSTER = \'' + onos_cluster + '\',' + \
                       ' SWARM_NODE = \'' + swarm_node + '\',' + \
