@@ -102,7 +102,7 @@ def proc_dis_system(node, dummy):
                   ' INNER JOIN ' + DB.NODE_INFO_TBL + ' ON ' + DB.STATUS_TBL + '.nodename = ' + DB.NODE_INFO_TBL + '.nodename WHERE type = \'' + sys_type + '\''
 
             if not node == 'all':
-                sql = sql + ' and nodename = \'' + node + '\''
+                sql = sql + ' and ' + DB.NODE_INFO_TBL + '.nodename = \'' + node + '\''
 
             with DB.connection() as conn:
                 nodes_info = conn.cursor().execute(sql).fetchall()
