@@ -356,8 +356,6 @@ class CLI():
                                         line.append(tmp[1].split('=')[0])
                                         status = tmp[0]
 
-                                        if status == 'NO':
-                                            status = '*' + status
                                         line.append(status)
                                         data.append(line)
                                         line = []
@@ -550,7 +548,7 @@ class CLI():
                 for col in line:
                     if col == 'OK':
                         cmd = BLUE + '%' + header[i]['size'] + 's' + OFF + '|'
-                    elif col == 'NOK':
+                    elif col == 'NOK' or col == 'NO':
                         cmd = RED + '%' + header[i]['size'] + 's' + OFF + '|'
                     else:
                         cmd = '%' + header[i]['size'] + 's|'

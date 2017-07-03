@@ -492,7 +492,7 @@ def get_internal_traffic(conn, node_name, node_ip, user_name, sub_type, rx_count
                 ratio = float(out_packet) * 100 / in_packet
 
             LOG.info('Internal Traffic Ratio = ' + str(ratio))
-            strmsg = strmsg + '\n* [LAST ' + str(CONF.watchdog()['interval']) + ' Sec] Internal Traffic Ratio = ' + str(ratio) + '(' + str(out_packet) + '/' + str(in_packet) + ')\n'
+            strmsg = strmsg + '\n\n* [LAST ' + str(CONF.watchdog()['interval']) + ' Sec] Internal Traffic Ratio = ' + str(ratio) + '(' + str(out_packet) + '/' + str(in_packet) + ')\n'
 
             if ratio < float(CONF.alarm()['internal_traffic_ratio']):
                 status = 'nok'
