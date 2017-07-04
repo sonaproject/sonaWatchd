@@ -429,7 +429,7 @@ class CLI():
 
                                 col_status = dict()
                                 col_status['title'] = 'Status'
-                                col_status['size'] = '10'
+                                col_status['size'] = '12'
 
                                 col_role = dict()
                                 col_role['title'] = 'Role'

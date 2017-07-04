@@ -156,6 +156,7 @@ class ConfReader:
             value['gw_ratio'] = int(self.conf_map['ALARM']['gw_ratio'])
             value['node_traffic_ratio'] = int(self.conf_map['ALARM']['node_traffic_ratio'])
             value['controller_traffic_ratio'] = int(self.conf_map['ALARM']['controller_traffic_ratio'])
+            value['controller_traffic_minimum_inbound'] = int(self.conf_map['ALARM']['controller_traffic_minimum_inbound'])
             value['internal_traffic_ratio'] = int(self.conf_map['ALARM']['internal_traffic_ratio'])
 
             return value
