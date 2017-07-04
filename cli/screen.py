@@ -331,11 +331,11 @@ class SCREEN():
             width = 60
 
             if not header:
-                print BG_WHITE + "+%s+" % ('-' * width).ljust(width) + ENDC
+                print "+%s+" % ('-' * width).ljust(width) + ENDC
 
             print '| SYSTEM INFO | TIME : ' + SYS.last_check_time.split('.')[0] + \
                   ("{0:>" + str(width - len(SYS.last_check_time.split('.')[0]) - len('SYSTEM INFO | TIME : ')) + "}").format('|') + ENDC
-            print BG_WHITE + "+%s+" % ('-' * width).ljust(width) + ENDC
+            print "+%s+" % ('-' * width).ljust(width) + ENDC
 
             sorted_list = sorted(SYS.sys_list.keys())
 
@@ -361,7 +361,7 @@ class SCREEN():
                 print '| ' + sys.ljust(6) + ' [' + color + str_status + OFF + ']' + \
                       ("{0:>" + str(width - 6 - len(str_status) - 3) + "}").format('|') + ENDC
 
-            print BG_WHITE + "+%s+" % ('-' * width).ljust(width) + ENDC
+            print "+%s+" % ('-' * width).ljust(width) + ENDC
 
             warn = ' * Not real time information'.rjust(width)
             print warn
