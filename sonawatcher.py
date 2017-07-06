@@ -22,10 +22,13 @@ PIDFILE = CONF.get_pid_file()
 
 class SonaWatchD(Daemon):
     def run(self):
+        db_log = USER_LOG()
+        db_log.set_log('db.log', CONF.base()['log_rotate_time'], CONF.base()['log_backup_count'])
+
         pre_stat = dict()
 
         # DB initiation
-        DB.db_initiation()
+        DB.db_initiation(db_log)
 
         # Start RESTful server
         try:
@@ -48,11 +51,11 @@ class SonaWatchD(Daemon):
 
             while True:
                 try:
-                    pre_stat = watchdog.periodic(conn, pre_stat)
+                    pre_stat = watchdog.periodic(conn, pre_stat, db_log)
 
                     time.sleep(CONF.watchdog()['interval'])
                 except:
-                    alarm_event.push_event('sonawatcher', 'SONAWATCHER_DISCONNECT', 'critical', 'sonawatcher server shutdown', str(datetime.now()))
+                    alarm_event.push_event('sonawatcher', 'SONAWATCHER_DISCONNECT', 'critical', 'sonawatcher server shutdown', 'sonawatcher server shutdown', str(datetime.now()))
                     conn.close()
                     LOG.exception()
                     sys.exit(1)
@@ -76,7 +79,7 @@ if __name__ == "__main__":
         elif 'stop' == sys.argv[1]:
             print "Stopping ..."
             try:
-                alarm_event.push_event('sonawatcher', 'SONAWATCHER_DISCONNECT', 'critical', 'sonawatcher server shutdown', str(datetime.now()))
+                alarm_event.push_event('sonawatcher', 'SONAWATCHER_DISCONNECT', 'critical', 'sonawatcher server shutdown', 'sonawatcher server shutdown', str(datetime.now()))
             except:
                 pass
             daemon.stop()
@@ -84,7 +87,7 @@ if __name__ == "__main__":
         elif 'restart' == sys.argv[1]:
             print "Restaring ..."
             try:
-                alarm_event.push_event('sonawatcher', 'SONAWATCHER_DISCONNECT', 'critical', 'sonawatcher server shutdown', str(datetime.now()))
+                alarm_event.push_event('sonawatcher', 'SONAWATCHER_DISCONNECT', 'critical', 'sonawatcher server shutdown', 'sonawatcher server shutdown', str(datetime.now()))
             except:
                 pass
             daemon.restart()

@@ -1,69 +1,78 @@
-import cmd_proc
 from api.sona_log import LOG
 from api.config import CONF
 from api.watcherdb import DB
 from api.sbapi import SshCommand
 
 
-def vrouter_check(conn, node_name, user_name, node_ip):
+def vrouter_check(conn, db_log, node_name, user_name, node_ip):
     str_docker = ''
-    onos_id = ''
-
     ret_docker = 'ok'
+
+    onos_id = ''
 
     docker_rt = SshCommand.ssh_exec(user_name, node_ip, 'sudo docker ps')
 
     if docker_rt is not None:
-        quagga_count = 0
-        onos_count = 0
-
         try:
-            for line in docker_rt.splitlines():
-                str_docker = str_docker + line + '\n'
+            for docker in CONF.openstack()['docker_list']:
+                for line in docker_rt.splitlines():
+                    if line.startswith('CONTAINER'):
+                        continue
 
-                if line.startswith('CONTAINER'):
-                    continue
+                    tmp_line = line.split()
 
-                tmp_line = line.split()
+                    if ' ' + docker in line:
+                         if not 'Up' in line:
+                            str_docker = str_docker + str(docker).ljust(30) + '[nok]\n'
+                            ret_docker = 'nok'
+                         else:
+                            str_docker = str_docker + str(docker).ljust(30) + '[ok]\n'
 
-                if 'quagga' in tmp_line[1]:
-                    quagga_count = quagga_count + 1
-
-                    if not 'Up' in line:
-                        ret_docker = 'nok'
-
-                elif 'onos' in tmp_line[1]:
-                    onos_count = onos_count + 1
-                    onos_id = tmp_line[0]
-
-                    if not 'Up' in line:
-                        ret_docker = 'nok'
-
-            if not (quagga_count == 2 and onos_count == 1):
-                ret_docker = 'nok'
+                    if 'onos' in tmp_line[1]:
+                        onos_id = tmp_line[0]
         except:
             LOG.exception()
     else:
         LOG.error("\'%s\' Vrouter Node Check Error", node_ip)
+        ret_docker = 'fail'
         str_docker = 'fail'
 
-    str_onosapp = 'fail'
-    str_route = 'fail'
+    str_onosapp = ''
+    str_route = ''
 
-    if onos_count == 1:
-        # get onos container ip
-        onos_rt = SshCommand.ssh_exec(user_name, node_ip, 'sudo docker inspect ' + onos_id + ' | grep IPAddress')
+    if not onos_id == '':
+        try:
+            # get onos container ip
+            onos_rt = SshCommand.ssh_exec(user_name, node_ip, 'sudo docker inspect ' + onos_id + ' | grep IPAddress')
 
-        if onos_rt is not None:
-            for line in onos_rt.splitlines():
-                line = line.strip()
-                if line.startswith('\"IPAddress'):
-                    tmp = line.split(':')
-                    onos_ip = tmp[1].strip().replace('\"', '').replace(',', '')
-                    break
+            if onos_rt is not None:
+                for line in onos_rt.splitlines():
+                    line = line.strip()
+                    if line.startswith('\"IPAddress'):
+                        tmp = line.split(':')
+                        onos_ip = tmp[1].strip().replace('\"', '').replace(',', '')
+                        break
 
-            str_onosapp = SshCommand.ssh_pexpect(user_name, node_ip, onos_ip, 'apps -a -s')
-            str_route = SshCommand.ssh_pexpect(user_name, node_ip, onos_ip, 'routes')
+                app_list = SshCommand.ssh_pexpect(user_name, node_ip, onos_ip, 'apps -a -s')
+
+                app_active_list = list()
+                for line in app_list.splitlines():
+                    app_active_list.append(line.split(".")[2].split()[0])
+
+                for app in CONF.openstack()['onos_vrouter_app_list']:
+                    if app in app_active_list:
+                        str_onosapp = str_onosapp + str(app).ljust(30) + '[ok]\n'
+                    else:
+                        str_onosapp = str_onosapp + str(app).ljust(30) + '[nok]\n'
+                        ret_docker = 'nok'
+
+                str_route = SshCommand.ssh_pexpect(user_name, node_ip, onos_ip, 'routes')
+        except:
+            str_onosapp = 'fail'
+            str_route = 'fail'
+    else:
+        str_onosapp = 'fail'
+        str_route = 'fail'
 
     try:
         sql = 'UPDATE ' + DB.OPENSTACK_TBL + \
@@ -71,17 +80,17 @@ def vrouter_check(conn, node_name, user_name, node_ip):
               ' onosApp = \'' + str_onosapp + '\',' + \
               ' routingTable = \'' + str_route + '\'' + \
               ' WHERE nodename = \'' + node_name + '\''
-        LOG.info('Update Vrouter info = ' + sql)
+        db_log.write_log('----- UPDATE GATEWAY INFO -----\n' + sql)
 
         if DB.sql_execute(sql, conn) != 'SUCCESS':
-            LOG.error('OPENSTACK(gateway) DB Update Fail.')
+            db_log.write_log('[FAIL] GATEWAY DB Update Fail.')
     except:
         LOG.exception()
 
     return ret_docker
 
 
-def get_gw_ratio_gateway(conn, node_name, node_ip, rx, gw_rx_sum, pre_stat):
+def get_gw_ratio_gateway(conn, db_log, node_name, node_ip, rx, gw_rx_sum, pre_stat):
     status = 'ok'
 
     try:
@@ -165,10 +174,10 @@ def get_gw_ratio_gateway(conn, node_name, node_ip, rx, gw_rx_sum, pre_stat):
             sql = 'UPDATE ' + DB.OPENSTACK_TBL + \
                   ' SET gw_ratio = \'' + strRatio + '\'' + \
                   ' WHERE nodename = \'' + node_name + '\''
-            LOG.info('Update GW Ratio info = ' + sql)
+            db_log.write_log('----- UPDATE TRAFFIC GW INFO -----\n' + sql)
 
             if DB.sql_execute(sql, conn) != 'SUCCESS':
-                LOG.error('OPENSTACK(gw_ratio) DB Update Fail.')
+                db_log.write_log('[FAIL] TRAFFIC GW DB Update Fail.')
         except:
             LOG.exception()
 
@@ -185,7 +194,7 @@ def get_gw_ratio_gateway(conn, node_name, node_ip, rx, gw_rx_sum, pre_stat):
     return status, pre_stat
 
 
-def get_gw_ratio_compute(conn, node_name, node_ip, pre_stat):
+def get_gw_ratio_compute(conn, db_log, node_name, node_ip, pre_stat):
     status = 'ok'
 
     try:
@@ -277,10 +286,10 @@ def get_gw_ratio_compute(conn, node_name, node_ip, pre_stat):
             sql = 'UPDATE ' + DB.OPENSTACK_TBL + \
                   ' SET gw_ratio = \'' + strRatio + '\'' + \
                   ' WHERE nodename = \'' + node_name + '\''
-            LOG.info('Update GW Ratio info = ' + sql)
+            db_log.write_log('----- UPDATE TRAFFIC GW INFO -----\n' + sql)
 
             if DB.sql_execute(sql, conn) != 'SUCCESS':
-                LOG.error('OPENSTACK(gw_ratio) DB Update Fail.')
+                db_log.write_log('[FAIL] TRAFFIC GW DB Update Fail.')
         except:
             LOG.exception()
 
@@ -356,7 +365,7 @@ def rx_tx_check(user_name, node_ip):
     return -1, -1, err_dict, -1
 
 
-def get_node_traffic(conn, node_name, rx_dic, tx_dic, total_rx, total_tx, err_info, pre_stat):
+def get_node_traffic(conn, db_log, node_name, rx_dic, tx_dic, total_rx, total_tx, err_info, pre_stat):
     try:
         status = 'ok'
 
@@ -410,10 +419,10 @@ def get_node_traffic(conn, node_name, rx_dic, tx_dic, total_rx, total_tx, err_in
             sql = 'UPDATE ' + DB.OPENSTACK_TBL + \
                   ' SET vxlan_traffic = \'' + strRatio + '\'' + \
                   ' WHERE nodename = \'' + node_name + '\''
-            LOG.info('Update Node Traffic Ratio info = ' + sql)
+            db_log.write_log('----- UPDATE VXLAN STAT INFO -----\n' + sql)
 
             if DB.sql_execute(sql, conn) != 'SUCCESS':
-                LOG.error('DB Update Fail.')
+                db_log.write_log('[FAIL] VXLAN STAT DB Update Fail.')
         except:
             LOG.exception()
 
@@ -434,7 +443,7 @@ def get_node_traffic(conn, node_name, rx_dic, tx_dic, total_rx, total_tx, err_in
         return 'fail', pre_stat
 
 
-def get_internal_traffic(conn, node_name, node_ip, user_name, sub_type, rx_count, patch_tx, pre_stat):
+def get_internal_traffic(conn, db_log, node_name, node_ip, user_name, sub_type, rx_count, patch_tx, pre_stat):
     try:
         status = 'ok'
         in_packet = 0
@@ -506,10 +515,10 @@ def get_internal_traffic(conn, node_name, node_ip, user_name, sub_type, rx_count
             sql = 'UPDATE ' + DB.OPENSTACK_TBL + \
                   ' SET internal_traffic = \'' + strmsg + '\'' + \
                   ' WHERE nodename = \'' + node_name + '\''
-            LOG.info('Update Internal Traffic info = ' + sql)
+            db_log.write_log('----- UPDATE INTERNAL TRAFFIC INFO -----\n' + sql)
 
             if DB.sql_execute(sql, conn) != 'SUCCESS':
-                LOG.error('OPENSTACK(internal_traffic) DB Update Fail.')
+                db_log.write_log('[FAIL] INTERNAL TRAFFIC DB Update Fail.')
         except:
             LOG.exception()
 

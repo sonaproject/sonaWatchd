@@ -19,10 +19,10 @@ from api.sona_log import LOG
 from api.watcherdb import DB
 
 
-def periodic(conn, pre_stat):
+def periodic(conn, pre_stat, db_log):
     try:
         cur_info = {}
-        LOG.info("Periodic checking...%s", str(CONF.watchdog()['check_system']))
+        LOG.info('-------------------------- Periodic checking %s', str(CONF.watchdog()['check_system']) + ' --------------------------')
 
         try:
             node_list = cmd_proc.get_node_list('all', 'nodename, ip_addr, username, type, sub_type')
@@ -36,7 +36,8 @@ def periodic(conn, pre_stat):
 
         # Read cur alarm status
         sql = 'SELECT nodename, item, grade FROM ' + DB.EVENT_TBL
-        LOG.info(sql)
+
+        db_log.write_log(sql)
         cur_grade = conn.cursor().execute(sql).fetchall()
 
         for nodename, item, grade in cur_grade:
@@ -46,7 +47,7 @@ def periodic(conn, pre_stat):
             cur_info[nodename][item] = grade
 
         # check HA, once
-        ha_dic = chk_ha.onos_ha_check(conn)
+        ha_dic = chk_ha.onos_ha_check(conn, db_log)
         global_ha_svc, global_ha_ratio = chk_ha.get_ha_stats(ha_dic)
 
         # check GW ratio
@@ -60,6 +61,7 @@ def periodic(conn, pre_stat):
         openstack_tx_dic = dict()
         rx_tx_err_info = dict()
         patch_tx_dic = dict()
+
         for node_name, node_ip, user_name, type, sub_type in node_list:
             if type.upper() == 'OPENSTACK':
                 openstack_rx_dic[node_name], openstack_tx_dic[node_name], rx_tx_err_info[node_name], patch_tx_dic[node_name] = chk_openstack.rx_tx_check(user_name, node_ip)
@@ -96,7 +98,6 @@ def periodic(conn, pre_stat):
             openstack_node = 'fail'
 
             onos_of = 'fail'
-            onos_ovsdb = 'fail'
             onos_cluster = 'fail'
 
             traffic_gw = 'fail'
@@ -107,19 +108,19 @@ def periodic(conn, pre_stat):
             if network == 'ok':
                 if type.upper() == 'ONOS':
                     # check node
-                    openstack_node = chk_onos.onos_node_check(conn, node_name, node_ip)
+                    openstack_node = chk_onos.onos_node_check(conn, db_log, node_name, node_ip)
 
                     # check app
-                    onos_app = check_app(conn, node_name, node_ip, user_name, type)
+                    onos_app = chk_onos.onos_app_check(conn, db_log, node_name, node_ip)
 
                     # check connection
-                    onos_of, onos_cluster = chk_onos.onos_conn_check(conn, node_name, node_ip)
+                    onos_of, onos_cluster = chk_onos.onos_conn_check(conn, db_log, node_name, node_ip)
 
                     # check web
-                    onos_rest = chk_onos.onos_web_check(conn, node_name, node_ip)
+                    onos_rest = chk_onos.onos_rest_check(conn, db_log, node_name, node_ip)
 
                     # check controller traffic
-                    traffic_controller, pre_stat = chk_onos.controller_traffic_check(conn, node_name, node_ip, pre_stat)
+                    traffic_controller, pre_stat = chk_onos.controller_traffic_check(conn, db_log, node_name, node_ip, pre_stat)
                 elif type.upper() == 'HA':
                     ha_svc = global_ha_svc
                     ha_ratio = global_ha_ratio
@@ -128,21 +129,18 @@ def periodic(conn, pre_stat):
                     swarm_svc, swarm_node = chk_swarm.swarm_check(conn, node_name, user_name, node_ip)
                 # check vrouter, gw_ratio
                 elif type.upper() == 'OPENSTACK':
-                    port_stat_vxlan, pre_stat = chk_openstack.get_node_traffic(conn, node_name, openstack_rx_dic,
+                    port_stat_vxlan, pre_stat = chk_openstack.get_node_traffic(conn, db_log, node_name, openstack_rx_dic,
                                                                   openstack_tx_dic, rx_total, tx_total, rx_tx_err_info[node_name], pre_stat)
-                    traffic_internal, pre_stat = chk_openstack.get_internal_traffic(conn, node_name, node_ip, user_name, sub_type,
+                    traffic_internal, pre_stat = chk_openstack.get_internal_traffic(conn, db_log, node_name, node_ip, user_name, sub_type,
                                                                           openstack_rx_dic[node_name], patch_tx_dic[node_name], pre_stat)
                     if sub_type.upper() == 'GATEWAY':
-                        v_router = chk_openstack.vrouter_check(conn, node_name, user_name, node_ip)
-                        traffic_gw, pre_stat = chk_openstack.get_gw_ratio_gateway(conn, node_name, node_ip, openstack_rx_dic[node_name], gw_total, pre_stat)
+                        v_router = chk_openstack.vrouter_check(conn, db_log, node_name, user_name, node_ip)
+                        traffic_gw, pre_stat = chk_openstack.get_gw_ratio_gateway(conn, db_log, node_name, node_ip, openstack_rx_dic[node_name], gw_total, pre_stat)
                     elif sub_type.upper() == 'COMPUTE':
-                        traffic_gw, pre_stat = chk_openstack.get_gw_ratio_compute(conn, node_name, node_ip, pre_stat)
-                else:
-                    # check app
-                    onos_app = check_app(conn, node_name, node_ip, user_name, type)
+                        traffic_gw, pre_stat = chk_openstack.get_gw_ratio_compute(conn, db_log, node_name, node_ip, pre_stat)
 
                 # check resource
-                cpu, memory, disk = chk_resource.check_resource(conn, node_name, user_name, node_ip)
+                cpu, memory, disk = chk_resource.check_resource(conn, db_log, node_name, user_name, node_ip)
 
             # occur event (rest)
             # 1. ping check
@@ -239,10 +237,10 @@ def periodic(conn, pre_stat):
                       ' TRAFFIC_INTERNAL = \'' + traffic_internal + '\',' + \
                       ' time = \'' + str(datetime.now()) + '\'' + \
                       ' WHERE nodename = \'' + node_name + '\''
-                LOG.info('Update Status info = ' + sql)
+                db_log.write_log('----- UPDATE TOTAL SYSTEM INFO -----\n' + sql)
 
                 if DB.sql_execute(sql, conn) != 'SUCCESS':
-                    LOG.error('DB Update Fail.')
+                    db_log.write_log('[FAIL] TOTAL SYSTEM INFO DB Update Fail.')
             except:
                 LOG.exception()
     except:
@@ -269,43 +267,3 @@ def net_check(node):
                 return 'ok'
     except:
         LOG.exception()
-
-
-def check_app(conn, node_name, node_ip, user_name, type):
-    try:
-        app = 'nok'
-
-        if type.upper() == 'ONOS':
-            app, app_list = chk_onos.onos_app_check(node_ip)
-
-            try:
-                sql = 'UPDATE ' + DB.ONOS_TBL + \
-                      ' SET applist = \'' + app_list + '\'' \
-                                                       ' WHERE nodename = \'' + node_name + '\''
-                LOG.info('Update app info = ' + sql)
-
-                if DB.sql_execute(sql, conn) != 'SUCCESS':
-                    LOG.error('DB Update Fail.')
-            except:
-                LOG.exception()
-
-        elif type.upper() == 'XOS':
-            app = xos_app_check(node_ip)
-        elif type.upper() == 'OPENSTACK':
-            app = openstack_app_check(node_ip)
-
-        return app
-    except:
-        LOG.exception()
-        return 'fail'
-
-
-# TODO xos app check
-def xos_app_check(node):
-    return 'nok'
-
-
-# TODO openstack app check
-def openstack_app_check(node):
-    return 'nok'
-

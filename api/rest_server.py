@@ -101,6 +101,11 @@ class RestHandler(BaseHTTPRequestHandler):
     def auth_pw(self, cli_pw):
         try:
             id_pw_list = CONF.rest()['user_password']
+
+            strBasic = 'Basic '
+            if str(cli_pw).startswith(strBasic):
+                cli_pw = cli_pw[len(strBasic):]
+
             cli_pw = base64.b64decode(cli_pw)
 
             for id_pw in id_pw_list:

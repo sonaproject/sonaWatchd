@@ -37,6 +37,7 @@ OFF = '\033[0m'
 
 MAIN_WIDTH = 50
 
+
 class SCREEN():
     main_scr = None
 
@@ -114,10 +115,11 @@ class SCREEN():
             time_color = curses.color_pair(3)
 
             str_time = 'Last Check Time [' + SYS.last_check_time.split('.')[0] + ']'
-            cls.set_main_str(SYS.get_sys_line_count() + 2 + 3 + len(menu_list) + 2 + 1, MAIN_WIDTH - len(str_time), str_time, time_color)
+            cls.set_main_str(SYS.get_sys_line_count() + 2 + 3 + len(menu_list) + 2 + 1, MAIN_WIDTH - len(str_time),
+                             str_time, time_color)
         except:
             LOG.exception_err_write()
-            
+
     @classmethod
     def draw_trace_warning(cls):
         try:
@@ -174,7 +176,7 @@ class SCREEN():
         return box_type
 
     @classmethod
-    def draw_event(cls, type = 'default'):
+    def draw_event(cls, type='default'):
         try:
             warn_color = curses.color_pair(3)
 
@@ -205,27 +207,26 @@ class SCREEN():
         except:
             LOG.exception_err_write()
 
-
     @classmethod
     def display_header(cls, menu):
         try:
             width = 60
             print BG_WHITE + "+%s+" % ('-' * width).ljust(width) + ENDC
             print BG_WHITE + '|' + BG_BLUEW + BOLD + \
-                    ("{0:^" + str(width) + "}").format(menu) + BG_WHITE + '|' + ENDC
+                  ("{0:^" + str(width) + "}").format(menu) + BG_WHITE + '|' + ENDC
             print BG_WHITE + "+%s+" % ('-' * width).ljust(width) + ENDC
         except:
             LOG.exception_err_write()
-
 
     @classmethod
     def display_status(cls):
         onos_list = ['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK', 'ONOS_APP', 'ONOS_REST', 'ONOS_OPENFLOW',
                      'ONOS_CLUSTER', 'OPENSTACK_NODE', 'TRAFFIC_CONTROLLER']
         swarm_list = ['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK', 'SWARM_SVC', 'SWARM_NODE']
-        openstack_list = ['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK', 'GATEWAY', 'TRAFFIC_GW', 'PORT_STAT_VXLAN', 'TRAFFIC_INTERNAL']
+        openstack_list = ['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK', 'GATEWAY', 'TRAFFIC_GW', 'PORT_STAT_VXLAN',
+                          'TRAFFIC_INTERNAL']
         xos_list = ['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK']
-        ha_list=['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK', 'HA_SVC', 'HA_RATIO']
+        ha_list = ['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK', 'HA_SVC', 'HA_RATIO']
 
         try:
             print ''
@@ -237,9 +238,8 @@ class SCREEN():
         except:
             LOG.exception_err_write()
 
-
     @classmethod
-    def display_event(cls, cnt = 10):
+    def display_event(cls, cnt=10):
         try:
             cmd = 'tail -n ' + str(cnt) + ' log/evt_history.log'
             result = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
@@ -254,7 +254,6 @@ class SCREEN():
                 print output
         except:
             LOG.exception_err_write()
-
 
     @staticmethod
     def draw_grid(sys_type, list):
@@ -271,13 +270,16 @@ class SCREEN():
 
             status = 'OK'
             for item in list:
-                if item in ['TYPE', 'IP']:
+                if item in ['TYPE']:
                     continue
 
                 value = SYS.sys_list[sys][item]
 
                 if (dict)(SYS.sys_list[sys]).has_key(item):
                     line.append(value)
+
+                    if item in ['IP']:
+                        continue
 
                     if value == 'none':
                         status = 'loading'
@@ -304,7 +306,7 @@ class SCREEN():
         header.append(col_status)
 
         for item in list:
-            if item in ['TYPE', 'IP']:
+            if item in ['TYPE']:
                 continue
 
             if str(item).startswith(sys_type):
@@ -313,9 +315,12 @@ class SCREEN():
             col = dict()
             col['title'] = item
 
-            size = len(item)
-            if size < 8:
-                size = 8
+            if item == 'IP':
+                size = 16
+            else:
+                size = len(item)
+                if size < 8:
+                    size = 8
 
             col['size'] = str(size)
 
@@ -326,7 +331,7 @@ class SCREEN():
         print ''
 
     @classmethod
-    def display_sys(cls, header = False):
+    def display_sys(cls, header=False):
         try:
             width = 60
 
@@ -334,7 +339,9 @@ class SCREEN():
                 print "+%s+" % ('-' * width).ljust(width) + ENDC
 
             print '| SYSTEM INFO | TIME : ' + SYS.last_check_time.split('.')[0] + \
-                  ("{0:>" + str(width - len(SYS.last_check_time.split('.')[0]) - len('SYSTEM INFO | TIME : ')) + "}").format('|') + ENDC
+                  ("{0:>" + str(
+                      width - len(SYS.last_check_time.split('.')[0]) - len('SYSTEM INFO | TIME : ')) + "}").format(
+                      '|') + ENDC
             print "+%s+" % ('-' * width).ljust(width) + ENDC
 
             sorted_list = sorted(SYS.sys_list.keys())
@@ -447,6 +454,7 @@ class SCREEN():
 
         return box_sys
 
+
 class FlowTraceView(Frame):
     trace_history = []
     real_trace = []
@@ -456,7 +464,7 @@ class FlowTraceView(Frame):
             super(FlowTraceView, self).__init__(screen,
                                                 screen.height,
                                                 screen.width,
-                                                x = 0, y = 0,
+                                                x=0, y=0,
                                                 hover_focus=True,
                                                 title=" FLOW TRACE ",
                                                 reduce_cpu=True)
@@ -529,6 +537,7 @@ class FlowTraceView(Frame):
             LOG.exception_err_write()
 
     isKeypad = False
+
     def process_event(self, event):
         if isinstance(event, KeyboardEvent):
             c = event.key_code
@@ -555,7 +564,8 @@ class FlowTraceView(Frame):
             # press enter at trace history
             if self._list_view._has_focus and c == 10:
                 self.save()
-                self.start_trace((self.trace_history[len(self.trace_history) - self._list_view.value])[0], self.real_trace[self._list_view.value - 1])
+                self.start_trace((self.trace_history[len(self.trace_history) - self._list_view.value])[0],
+                                 self.real_trace[self._list_view.value - 1])
 
         return super(FlowTraceView, self).process_event(event)
 
@@ -602,7 +612,9 @@ class FlowTraceView(Frame):
                 return
 
             if not (TRACE.compute_list.has_key(self.data['COMPUTE'].strip())):
-                self._scene.add_effect(PopUpDialog(self._screen, 'No ' + self.data["COMPUTE"].strip() + '(COMPUTE NODE) registered', ["OK"]))
+                self._scene.add_effect(
+                    PopUpDialog(self._screen, 'No ' + self.data["COMPUTE"].strip() + '(COMPUTE NODE) registered',
+                                ["OK"]))
                 return
 
             if len(saved_data) == 0:
@@ -623,12 +635,10 @@ class FlowTraceView(Frame):
         except:
             LOG.exception_err_write()
 
-
     @staticmethod
     def _menu():
         SCREEN.menu_flag = True
         raise StopApplication("User terminated app")
-
 
     @staticmethod
     def _quit():
