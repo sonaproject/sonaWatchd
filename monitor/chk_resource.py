@@ -21,7 +21,6 @@ def get_cpu_usage(username, node_ip, only_value = False):
             return {'CPU': 'Command fail'}
         else:
             if 'cpu ' in cmd_rt:
-                LOG.info("cmd_rt: %s", cmd_rt)
                 try:
                     f = cmd_rt.split()
                     ratio = (float(f[1]) + float(f[3])) * 100 / \
@@ -30,7 +29,7 @@ def get_cpu_usage(username, node_ip, only_value = False):
                     LOG.exception()
 
         result = {'CPU': {'RATIO': float(format(ratio, '.2f')), 'Description': cmd_rt}}
-        LOG.info(" CPU check ... %s", result)
+        LOG.info("CPU : %s", str(format(ratio, '.2f')))
 
         if only_value:
             return float(format(ratio, '.2f'))
@@ -56,7 +55,6 @@ def get_mem_usage(username, node_ip, only_value = False):
             return {'MEMORY': 'Command fail'}
         else:
             if 'Mem' in cmd_rt:
-                LOG.info("cmd_rt %s", cmd_rt)
                 try:
                     f = cmd_rt.split()
                     ratio = float(f[2]) * 100 / float(f[1])
@@ -64,7 +62,7 @@ def get_mem_usage(username, node_ip, only_value = False):
                     LOG.exception()
 
         result = {'MEMORY': {'RATIO': float(format(ratio, '.2f')), 'Description': cmd_rt}}
-        LOG.info(" Memory check ... %s", result)
+        LOG.info("MEMORY : %s", str(format(ratio, '.2f')))
 
         if only_value:
             return float(format(ratio, '.2f'))
@@ -90,14 +88,13 @@ def get_disk_usage(username, node_ip, only_value = False):
             return {'DISK': 'Command fail'}
         else:
             if '/' in cmd_rt:
-                LOG.info("cmd_rt %s", cmd_rt)
                 try:
                     ratio = float(cmd_rt.split()[-2].replace('%', ''))
                 except:
                     LOG.exception()
 
         result = {'DISK': {'RATIO': float(format(ratio, '.2f')), 'Description': cmd_rt}}
-        LOG.info(" Disk check ... %s", result)
+        LOG.info("DISK : %s", str(format(ratio, '.2f')))
 
         if only_value:
             return float(format(ratio, '.2f'))
@@ -108,7 +105,7 @@ def get_disk_usage(username, node_ip, only_value = False):
         return -1
 
 
-def check_resource(conn, node_name, user_name, node_ip):
+def check_resource(conn, db_log, node_name, user_name, node_ip):
     try:
         cpu = str(get_cpu_usage(user_name, node_ip, True))
         mem = str(get_mem_usage(user_name, node_ip, True))
@@ -119,11 +116,11 @@ def check_resource(conn, node_name, user_name, node_ip):
                   ' SET cpu = \'' + cpu + '\',' + \
                   ' memory = \'' + mem + '\',' + \
                   ' disk = \'' + disk + '\'' \
-                                        ' WHERE nodename = \'' + node_name + '\''
-            LOG.info('Update Resource info = ' + sql)
+                  ' WHERE nodename = \'' + node_name + '\''
+            db_log.write_log('----- UPDATE RESOURCE INFO -----\n' + sql)
 
             if DB.sql_execute(sql, conn) != 'SUCCESS':
-                LOG.error('DB Update Fail.')
+                db_log.write_log('[FAIL] RESOURCE DB Update Fail.')
         except:
             LOG.exception()
 
@@ -131,7 +128,6 @@ def check_resource(conn, node_name, user_name, node_ip):
     except:
         LOG.exception()
         return -1, -1, -1
-
 
 
 PARAM_MAP = {'cpu': get_cpu_usage,

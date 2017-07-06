@@ -1,16 +1,16 @@
-from subprocess import Popen, PIPE
-import csv
-
 from api.sona_log import LOG
 from api.watcherdb import DB
 from api.config import CONF
 from api.sbapi import SshCommand
 
 
-def onos_app_check(node):
+def onos_app_check(conn, db_log, node_name, node_ip):
     try:
-        app_rt = SshCommand.onos_ssh_exec(node, 'apps -a -s')
 
+        app_rt = SshCommand.onos_ssh_exec(node_ip, 'apps -a -s')
+
+        status = 'ok'
+        applist = ''
         app_active_list = list()
         if app_rt is not None:
             for line in app_rt.splitlines():
@@ -19,22 +19,79 @@ def onos_app_check(node):
             if not 'cpman' in app_active_list:
                 # activate cpman
                 LOG.info('Cpman does not exist. Activate cpman')
-                SshCommand.onos_ssh_exec(node, 'app activate org.onosproject.cpman')
+                SshCommand.onos_ssh_exec(node_ip, 'app activate org.onosproject.cpman')
 
-            if set(CONF.onos()['app_list']).issubset(app_active_list):
-                return 'ok', app_rt
-            else:
-                LOG.error("\'%s\' Application Check Error", node)
-                return 'nok', app_rt
+            for app in CONF.onos()['app_list']:
+                if app in app_active_list:
+                    applist = applist + str(app).ljust(30) + '[ok]\n'
+                else:
+                    applist = applist + str(app).ljust(30) + '[nok]\n'
+                    status = 'nok'
         else:
-            LOG.error("\'%s\' Application Check Error", node)
-            return 'nok', 'fail'
+            LOG.error("\'%s\' ONOS Application Check Error", node_ip)
+            status = 'fail'
+            applist = 'fail'
+
+        try:
+            sql = 'UPDATE ' + DB.ONOS_TBL + \
+                  ' SET applist = \'' + applist + '\'' +\
+                  ' WHERE nodename = \'' + node_name + '\''
+            db_log.write_log('----- UPDATE ONOS APP INFO -----\n' + sql)
+
+            if DB.sql_execute(sql, conn) != 'SUCCESS':
+                db_log.write_log('[FAIL] ONOS APP DB Update Fail.')
+        except:
+            LOG.exception()
     except:
         LOG.exception()
-        return 'nok', 'fail'
+        status = 'fail'
+
+    return status
 
 
-def onos_conn_check(conn, node_name, node_ip):
+def onos_rest_check(conn, db_log, node_name, node_ip):
+    try:
+        weblist = ''
+        web_status = 'ok'
+
+        web_rt = SshCommand.onos_ssh_exec(node_ip, 'web:list')
+
+        if web_rt is not None:
+            for app in CONF.onos()['rest_list']:
+                for line in web_rt.splitlines():
+                    if line.startswith('ID') or line.startswith('--'):
+                        continue
+
+                    if ' ' + app + ' ' in line:
+                        if not ('Active' in line and 'Deployed' in line):
+                            weblist = weblist + str(app).ljust(30) + '[nok]\n'
+                            web_status = 'nok'
+                        else:
+                            weblist = weblist + str(app).ljust(30) + '[ok]\n'
+
+        else:
+            LOG.error("\'%s\' ONOS Rest Check Error", node_ip)
+            web_status = 'fail'
+            weblist = 'fail'
+
+        try:
+            sql = 'UPDATE ' + DB.ONOS_TBL + \
+                  ' SET weblist = \'' + weblist + '\'' +\
+                  ' WHERE nodename = \'' + node_name + '\''
+            db_log.write_log('----- UPDATE ONOS REST INFO -----\n' + sql)
+
+            if DB.sql_execute(sql, conn) != 'SUCCESS':
+                db_log.write_log('[FAIL] ONOS REST DB Update Fail.')
+        except:
+            LOG.exception()
+
+        return web_status
+    except:
+        LOG.exception()
+        return 'fail'
+
+
+def onos_conn_check(conn, db_log, node_name, node_ip):
     try:
         device_rt = SshCommand.onos_ssh_exec(node_ip, 'devices')
         nodes_rt = SshCommand.onos_ssh_exec(node_ip, 'nodes')
@@ -77,10 +134,10 @@ def onos_conn_check(conn, node_name, node_ip):
                   ' SET openflow = \'' + str_of + '\',' + \
                   ' cluster = \'' + str(nodes_rt) + '\'' \
                   ' WHERE nodename = \'' + node_name + '\''
-            LOG.info('Update Connection info = ' + sql)
+            db_log.write_log('----- UPDATE ONOS CONNECTION INFO -----\n' + sql)
 
             if DB.sql_execute(sql, conn) != 'SUCCESS':
-                LOG.error('ONOS(conn) DB Update Fail.')
+                db_log.write_log('[FAIL] ONOS CONNECTION DB Update Fail.')
         except:
             LOG.exception()
 
@@ -90,40 +147,7 @@ def onos_conn_check(conn, node_name, node_ip):
         return 'fail', 'fail'
 
 
-def onos_web_check(conn, node_name, node_ip):
-    try:
-        web_rt = SshCommand.onos_ssh_exec(node_ip, 'web:list')
-
-        if web_rt is not None:
-            web_status = 'ok'
-            for line in web_rt.splitlines():
-                if line.startswith('ID') or line.startswith('--'):
-                    continue
-
-                if not ('Active' in line and 'Deployed' in line):
-                    web_status = 'nok'
-        else:
-            LOG.error("\'%s\' Web Check Error", node_ip)
-            web_status = 'fail'
-
-        try:
-            sql = 'UPDATE ' + DB.ONOS_TBL + \
-                  ' SET weblist = \'' + str(web_rt) + '\'' +\
-                  ' WHERE nodename = \'' + node_name + '\''
-            LOG.info('Update Resource info = ' + sql)
-
-            if DB.sql_execute(sql, conn) != 'SUCCESS':
-                LOG.error('ONOS(web) DB Update Fail.')
-        except:
-            LOG.exception()
-
-        return web_status
-    except:
-        LOG.exception()
-        return 'fail'
-
-
-def onos_node_check(conn, node_name, node_ip):
+def onos_node_check(conn, db_log, node_name, node_ip):
     try:
         node_rt = SshCommand.onos_ssh_exec(node_ip, 'openstack-nodes')
 
@@ -178,10 +202,10 @@ def onos_node_check(conn, node_name, node_ip):
                   ' SET nodelist = \'' + str(node_rt) + '\',' + \
                   ' port = \'' + str_port + '\'' \
                   ' WHERE nodename = \'' + node_name + '\''
-            LOG.info('Update Resource info = ' + sql)
+            db_log.write_log('----- UPDATE ONOS NODE INFO -----\n' + sql)
 
             if DB.sql_execute(sql, conn) != 'SUCCESS':
-                LOG.error('ONOS(node) DB Update Fail.')
+                db_log.write_log('[FAIL] ONOS NODE Update Fail.')
         except:
             LOG.exception()
 
@@ -191,7 +215,7 @@ def onos_node_check(conn, node_name, node_ip):
         return 'fail'
 
 
-def controller_traffic_check(conn, node_name, node_ip, pre_stat):
+def controller_traffic_check(conn, db_log, node_name, node_ip, pre_stat):
     try:
         summary_rt = SshCommand.onos_ssh_exec(node_ip, 'summary')
 
@@ -281,10 +305,10 @@ def controller_traffic_check(conn, node_name, node_ip, pre_stat):
             sql = 'UPDATE ' + DB.ONOS_TBL + \
                   ' SET traffic_stat = \'' + str_info.rstrip('\n') + '\'' + \
                   ' WHERE nodename = \'' + node_name + '\''
-            LOG.info('Update Controller Traffic info = ' + sql)
+            db_log.write_log('----- UPDATE CONTROLLER TRAFFIC INFO -----\n' + sql)
 
             if DB.sql_execute(sql, conn) != 'SUCCESS':
-                LOG.error('ONOS(traffic_stat) DB Update Fail.')
+                db_log.write_log('[FAIL] CONTROLLER TRAFFIC Update Fail.')
         except:
             LOG.exception()
 

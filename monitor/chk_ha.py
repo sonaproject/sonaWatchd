@@ -6,7 +6,7 @@ from api.watcherdb import DB
 from api.config import CONF
 
 
-def onos_ha_check(conn):
+def onos_ha_check(conn, db_log):
     try:
         stats_url = CONF.ha()['ha_proxy_server']
         account = CONF.ha()['ha_proxy_account']
@@ -41,10 +41,10 @@ def onos_ha_check(conn):
             sql = 'UPDATE ' + DB.HA_TBL + \
                   ' SET stats = \"' + str_dic_stat + '\"' + \
                   ' WHERE ha_key = \"' + 'HA' + '\"'
-            LOG.info('Update HA info = ' + sql)
+            db_log.write_log('----- UPDATE HA INFO -----\n' + sql)
 
             if DB.sql_execute(sql, conn) != 'SUCCESS':
-                LOG.error('HA DB Update Fail.')
+                db_log.write_log('[FAIL] HA DB Update Fail.')
         except:
             LOG.exception()
 

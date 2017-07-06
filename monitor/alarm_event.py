@@ -53,13 +53,14 @@ def get_grade(item, value):
         return 'fail'
 
 
-def occur_event(conn, node_name, item, pre_value, cur_value):
+def occur_event(conn, node_name, item, pre_grade, cur_grade, reason = '-'):
     try:
         time = str(datetime.now())
-        desc = pre_value + ' -> ' + cur_value
+        desc = pre_grade + ' -> ' + cur_grade
         sql = 'UPDATE ' + DB.EVENT_TBL + \
-              ' SET grade = \'' + cur_value + '\'' + ',' + \
+              ' SET grade = \'' + cur_grade + '\'' + ',' + \
               ' desc = \'' + desc + '\'' + ',' + \
+              ' reason = \'' + reason + '\'' + ',' + \
               ' time = \'' + time + '\'' + \
               ' WHERE nodename = \'' + node_name + '\' and item = \'' + item + '\''
         LOG.info('Update alarm info = ' + sql)
@@ -67,7 +68,7 @@ def occur_event(conn, node_name, item, pre_value, cur_value):
         if DB.sql_execute(sql, conn) != 'SUCCESS':
             LOG.error('DB Update Fail.')
 
-        push_event(node_name, item, cur_value, desc, time)
+        push_event(node_name, item, cur_grade, desc, reason, time)
     except:
         LOG.exception()
 
@@ -78,11 +79,11 @@ def set_history_log(log):
     history_log = log
 
 
-def push_event(node_name, item, grade, desc, time):
+def push_event(node_name, item, grade, desc, reason, time):
     global history_log
 
     try:
-        history_log.write_log('[%s][%s][%s] %s', node_name, item, grade, desc)
+        history_log.write_log('[%s][%s][%s][%s] %s', node_name, item, grade, desc, reason)
 
         sql = 'SELECT * FROM ' + DB.REGI_SYS_TBL
 
@@ -93,7 +94,7 @@ def push_event(node_name, item, grade, desc, time):
 
         for url, auth in url_list:
             header = {'Content-Type': 'application/json', 'Authorization': auth}
-            req_body = {'system': node_name, 'item': item, 'grade': grade, 'desc': desc, 'time': time}
+            req_body = {'system': node_name, 'item': item, 'grade': grade, 'desc': desc, 'reason': reason, 'time': time}
             req_body_json = json.dumps(req_body)
 
             try:

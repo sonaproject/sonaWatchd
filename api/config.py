@@ -82,6 +82,7 @@ class ConfReader:
             value['list'] = self.__list_opt(self.conf_map['ONOS']['list'])
             value['account'] = str(self.conf_map['ONOS']['account'])
             value['app_list'] = self.__list_opt(self.conf_map['ONOS']['app_list'])
+            value['rest_list'] = self.__list_opt(self.conf_map['ONOS']['rest_list'])
 
             if self.config.has_option('ONOS', 'alarm_off_list'):
                 value['alarm_off_list'] = self.__list_opt(self.conf_map['ONOS']['alarm_off_list'])
@@ -138,6 +139,8 @@ class ConfReader:
             value['gateway_list'] = self.__list_opt(self.conf_map['OPENSTACK']['gateway_list'])
             value['compute_list'] = self.__list_opt(self.conf_map['OPENSTACK']['compute_list'])
             value['account'] = str(self.conf_map['OPENSTACK']['account'])
+            value['docker_list'] = self.__list_opt(self.conf_map['OPENSTACK']['docker_list'])
+            value['onos_vrouter_app_list'] = self.__list_opt(self.conf_map['OPENSTACK']['onos_vrouter_app_list'])
 
             if self.config.has_option('OPENSTACK', 'alarm_off_list'):
                 value['alarm_off_list'] = self.__list_opt(self.conf_map['OPENSTACK']['alarm_off_list'])
