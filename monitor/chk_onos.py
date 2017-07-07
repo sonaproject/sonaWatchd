@@ -11,6 +11,7 @@ def onos_app_check(conn, db_log, node_name, node_ip):
 
         status = 'ok'
         applist = ''
+        fail_reason = ''
         app_active_list = list()
         if app_rt is not None:
             for line in app_rt.splitlines():
@@ -26,6 +27,7 @@ def onos_app_check(conn, db_log, node_name, node_ip):
                     applist = applist + str(app).ljust(30) + '[ok]\n'
                 else:
                     applist = applist + str(app).ljust(30) + '[nok]\n'
+                    fail_reason = fail_reason + str(app) + '[nok],'
                     status = 'nok'
         else:
             LOG.error("\'%s\' ONOS Application Check Error", node_ip)
@@ -45,14 +47,16 @@ def onos_app_check(conn, db_log, node_name, node_ip):
     except:
         LOG.exception()
         status = 'fail'
+        fail_reason = 'fail'
 
-    return status
+    return status, fail_reason.rstrip(',')
 
 
 def onos_rest_check(conn, db_log, node_name, node_ip):
     try:
         weblist = ''
         web_status = 'ok'
+        fail_reason = ''
 
         web_rt = SshCommand.onos_ssh_exec(node_ip, 'web:list')
 
@@ -65,6 +69,7 @@ def onos_rest_check(conn, db_log, node_name, node_ip):
                     if ' ' + app + ' ' in line:
                         if not ('Active' in line and 'Deployed' in line):
                             weblist = weblist + str(app).ljust(30) + '[nok]\n'
+                            fail_reason = fail_reason + str(app) + '[nok],'
                             web_status = 'nok'
                         else:
                             weblist = weblist + str(app).ljust(30) + '[ok]\n'
@@ -85,10 +90,12 @@ def onos_rest_check(conn, db_log, node_name, node_ip):
         except:
             LOG.exception()
 
-        return web_status
     except:
         LOG.exception()
-        return 'fail'
+        web_status = 'fail'
+        fail_reason = 'fail'
+
+    return web_status, fail_reason.rstrip(',')
 
 
 def onos_conn_check(conn, db_log, node_name, node_ip):
@@ -98,13 +105,13 @@ def onos_conn_check(conn, db_log, node_name, node_ip):
 
         str_of = ''
 
+        of_fail_reason = ''
+        cluster_fail_reason = ''
+
         if device_rt is not None:
             of_status = 'ok'
             for line in device_rt.splitlines():
                 if line.startswith('id=of'):
-                    if not ('available=true' in line):
-                        of_status = 'nok'
-
                     of_id = line.split(',')[0].split('=')[1]
 
                     try:
@@ -115,16 +122,22 @@ def onos_conn_check(conn, db_log, node_name, node_ip):
                     except:
                         LOG.exception()
 
+                    if not ('available=true' in line):
+                        of_status = 'nok'
+                        of_fail_reason = of_fail_reason + str(node_info[0]) + '[nok],'
+
                     str_of = str_of + line + '\n'
         else:
             LOG.error("\'%s\' Connection Check Error(devices)", node_ip)
             of_status = 'fail'
+            of_fail_reason = 'fail'
 
         if nodes_rt is not None:
             cluster_status = 'ok'
             for line in nodes_rt.splitlines():
                 if not ('state=READY' in line):
                     cluster_status = 'nok'
+                    cluster_fail_reason = cluster_fail_reason + line.split(',')[0].split('=')[0] + '[nok],'
         else:
             LOG.error("\'%s\' Connection Check Error(nodes)", node_ip)
             cluster_status = 'fail'
@@ -140,11 +153,13 @@ def onos_conn_check(conn, db_log, node_name, node_ip):
                 db_log.write_log('[FAIL] ONOS CONNECTION DB Update Fail.')
         except:
             LOG.exception()
-
-        return of_status, cluster_status
     except:
         LOG.exception()
-        return 'fail', 'fail'
+        of_status = 'fail'
+        cluster_status = 'fail'
+
+    return of_status, cluster_status, of_fail_reason, cluster_fail_reason
+
 
 
 def onos_node_check(conn, db_log, node_name, node_ip):
@@ -152,20 +167,24 @@ def onos_node_check(conn, db_log, node_name, node_ip):
         node_rt = SshCommand.onos_ssh_exec(node_ip, 'openstack-nodes')
 
         node_status = 'ok'
+        fail_reason = ''
 
         str_port = ''
 
         if node_rt is not None:
             for line in node_rt.splitlines():
                 if not (line.startswith('Total') or line.startswith('Hostname')):
-                    if not 'COMPLETE' in line:
-                        node_status = 'nok'
-
                     new_line = " ".join(line.split())
 
                     tmp = new_line.split(' ')
                     host_name = tmp[0]
                     of_id = tmp[2]
+
+                    fail_flag = False
+
+                    if not 'COMPLETE' in line:
+                        node_status = 'nok'
+                        fail_flag = True
 
                     try:
                         sql = 'INSERT OR REPLACE INTO ' + DB.OF_TBL + '(hostname, of_id)' + \
@@ -189,13 +208,18 @@ def onos_node_check(conn, db_log, node_name, node_ip):
 
                             if not port_line.startswith('OK'):
                                 node_status = 'nok'
+                                fail_flag = True
                     else:
                         node_status = 'nok'
                         str_port = 'fail'
+
+                    if fail_flag:
+                        fail_reason = fail_reason + host_name + '[nok],'
         else:
             LOG.error("\'%s\' ONOS Node Check Error", node_ip)
-            node_status = 'nok'
+            node_status = 'fail'
             node_rt = 'fail'
+            fail_reason = 'fail'
 
         try:
             sql = 'UPDATE ' + DB.ONOS_TBL + \
@@ -208,11 +232,12 @@ def onos_node_check(conn, db_log, node_name, node_ip):
                 db_log.write_log('[FAIL] ONOS NODE Update Fail.')
         except:
             LOG.exception()
-
-        return node_status
     except:
         LOG.exception()
-        return 'fail'
+        node_status = 'fail'
+        fail_reason = 'fail'
+
+    return node_status, fail_reason.rstrip(',')
 
 
 def controller_traffic_check(conn, db_log, node_name, node_ip, pre_stat):
@@ -223,6 +248,7 @@ def controller_traffic_check(conn, db_log, node_name, node_ip, pre_stat):
         out_packet = 0
         str_info = ''
         controller_traffic = 'ok'
+        reason = ''
 
         if summary_rt is not None:
             data_ip = str(summary_rt).split(',')[0].split('=')[1]
@@ -250,10 +276,8 @@ def controller_traffic_check(conn, db_log, node_name, node_ip, pre_stat):
 
                                 if type == 'INBOUND_PACKET':
                                     in_packet = in_packet + avg_cnt
-                                    LOG.info('[CPMAN] HOST_NAME = ' + hostname + ', IN_PACKET = ' + str(avg_cnt))
                                 elif type == 'OUTBOUND_PACKET':
                                     out_packet = out_packet + avg_cnt
-                                    LOG.info('[CPMAN] HOST_NAME = ' + hostname + ', OUT_PACKET = ' + str(avg_cnt))
 
                             str_info = str_info + '\n'
 
@@ -273,7 +297,9 @@ def controller_traffic_check(conn, db_log, node_name, node_ip, pre_stat):
                     out_packet = out_packet - int(dict(pre_stat)[node_name]['out_packet'])
 
                     if in_packet <= CONF.alarm()['controller_traffic_minimum_inbound']:
-                        str_info = str_info + ' * Minimum increment for status check = ' + str(CONF.alarm()['controller_traffic_minimum_inbound'])
+                        reason = ' * Minimum increment for status check = ' + str(
+                            CONF.alarm()['controller_traffic_minimum_inbound'])
+                        str_info = str_info + reason
                         controller_traffic = '-'
                     else:
                         if in_packet == 0 and out_packet == 0:
@@ -289,6 +315,7 @@ def controller_traffic_check(conn, db_log, node_name, node_ip, pre_stat):
 
                         if ratio < float(CONF.alarm()['controller_traffic_ratio']):
                             controller_traffic = 'nok'
+                            reason = 'controller traffic ratio : ' + str(format(ratio, '.2f'))
 
                         in_out_dic = dict()
                         in_out_dic['in_packet'] = for_save_in
@@ -297,9 +324,11 @@ def controller_traffic_check(conn, db_log, node_name, node_ip, pre_stat):
                         pre_stat[node_name] = in_out_dic
             except:
                 LOG.exception()
-                controller_traffic = 'nok'
+                controller_traffic = 'fail'
+                reason = 'fail'
         else:
-            controller_traffic = 'nok'
+            controller_traffic = 'fail'
+            reason = 'fail'
 
         try:
             sql = 'UPDATE ' + DB.ONOS_TBL + \
@@ -311,8 +340,8 @@ def controller_traffic_check(conn, db_log, node_name, node_ip, pre_stat):
                 db_log.write_log('[FAIL] CONTROLLER TRAFFIC Update Fail.')
         except:
             LOG.exception()
-
-        return controller_traffic, pre_stat
     except:
-        LOG.exception()
-        return 'fail'
+        controller_traffic = 'fail'
+        reason = 'fail'
+
+    return controller_traffic, pre_stat, reason

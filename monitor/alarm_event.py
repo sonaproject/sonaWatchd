@@ -7,12 +7,14 @@ from api.watcherdb import DB
 from api.config import CONF
 
 
-def process_event(conn, node_name, type, id, pre_value, cur_value):
+def process_event(conn, db_log, node_name, type, id, pre_value, cur_value, reason = '-'):
     try:
         if not is_monitor_item(type, id):
             return '-'
         elif pre_value != cur_value:
-            occur_event(conn, node_name, id, pre_value, cur_value)
+            if reason in ['-', '']:
+                reason = 'normal'
+            occur_event(conn, db_log, node_name, id, pre_value, cur_value, reason)
 
         return cur_value
     except:
@@ -53,7 +55,7 @@ def get_grade(item, value):
         return 'fail'
 
 
-def occur_event(conn, node_name, item, pre_grade, cur_grade, reason = '-'):
+def occur_event(conn, db_log, node_name, item, pre_grade, cur_grade, reason = '-'):
     try:
         time = str(datetime.now())
         desc = pre_grade + ' -> ' + cur_grade
@@ -63,10 +65,10 @@ def occur_event(conn, node_name, item, pre_grade, cur_grade, reason = '-'):
               ' reason = \'' + reason + '\'' + ',' + \
               ' time = \'' + time + '\'' + \
               ' WHERE nodename = \'' + node_name + '\' and item = \'' + item + '\''
-        LOG.info('Update alarm info = ' + sql)
+        db_log.write_log('----- UPDATE EVENT INFO -----\n' + sql)
 
         if DB.sql_execute(sql, conn) != 'SUCCESS':
-            LOG.error('DB Update Fail.')
+            db_log.write_log('[FAIL] EVENT INFO DB Update Fail.')
 
         push_event(node_name, item, cur_grade, desc, reason, time)
     except:

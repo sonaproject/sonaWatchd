@@ -29,7 +29,7 @@ class _Log:
 
         # Ref) formatter = logging.Formatter('%(asctime)s %(name)s %(levelname)s %(message)s')
         formatter = logging.Formatter('%(asctime)s.%(msecs)03d %(message)s',
-                                      datefmt='(%m/%d) %H:%M:%S')
+                                      datefmt='%H:%M:%S')
         handler = TimedRotatingFileHandler(log_file_name,
                                            when=CONF.base()['log_rotate_time'],
                                            backupCount=CONF.base()['log_backup_count'])

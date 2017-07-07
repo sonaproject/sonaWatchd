@@ -29,11 +29,11 @@ class RestHandler(BaseHTTPRequestHandler):
                 LOG.debug_log('[REST-SERVER] ' + self.path + ' not found')
 
             elif self.auth_pw(self.headers.getheader('Authorization')):
-                global_history_log.write_history('[%s][%s][%s][%s] %s', request_obj['system'], request_obj['item'], request_obj['grade'], request_obj['reason'], request_obj['desc'])
+                global_history_log.write_history('[%s][%s][%s][%s] %s', request_obj['system'], request_obj['item'], request_obj['grade'], request_obj['desc'], request_obj['reason'])
 
                 if request_obj['system'] == 'sonawatcher' and request_obj['item'] == 'SONAWATCHER_DISCONNECT':
                     global_conn_evt.set()
-                    LOG.debug_log('[REST-SERVER] ' + request_obj['desc'])
+                    LOG.debug_log('[REST-SERVER] ' + request_obj['reason'])
                 else:
                     global_evt.set()
             else:
