@@ -8,6 +8,8 @@ def vrouter_check(conn, db_log, node_name, user_name, node_ip):
     str_docker = ''
     ret_docker = 'ok'
 
+    fail_reason = ''
+
     onos_id = ''
 
     docker_rt = SshCommand.ssh_exec(user_name, node_ip, 'sudo docker ps')
@@ -24,6 +26,7 @@ def vrouter_check(conn, db_log, node_name, user_name, node_ip):
                     if ' ' + docker in line:
                          if not 'Up' in line:
                             str_docker = str_docker + str(docker).ljust(30) + '[nok]\n'
+                            fail_reason = fail_reason + str(docker) + '[nok],'
                             ret_docker = 'nok'
                          else:
                             str_docker = str_docker + str(docker).ljust(30) + '[ok]\n'
@@ -36,6 +39,7 @@ def vrouter_check(conn, db_log, node_name, user_name, node_ip):
         LOG.error("\'%s\' Vrouter Node Check Error", node_ip)
         ret_docker = 'fail'
         str_docker = 'fail'
+        fail_reason = 'fail'
 
     str_onosapp = ''
     str_route = ''
@@ -64,6 +68,7 @@ def vrouter_check(conn, db_log, node_name, user_name, node_ip):
                         str_onosapp = str_onosapp + str(app).ljust(30) + '[ok]\n'
                     else:
                         str_onosapp = str_onosapp + str(app).ljust(30) + '[nok]\n'
+                        fail_reason = fail_reason + str(app) + '[nok],'
                         ret_docker = 'nok'
 
                 str_route = SshCommand.ssh_pexpect(user_name, node_ip, onos_ip, 'routes')
@@ -87,11 +92,12 @@ def vrouter_check(conn, db_log, node_name, user_name, node_ip):
     except:
         LOG.exception()
 
-    return ret_docker
+    return ret_docker, fail_reason
 
 
 def get_gw_ratio_gateway(conn, db_log, node_name, node_ip, rx, gw_rx_sum, pre_stat):
     status = 'ok'
+    reason = ''
 
     try:
         sql = 'SELECT ' + DB.ONOS_TBL + '.nodename, nodelist, ip_addr' + ' FROM ' + DB.ONOS_TBL + \
@@ -169,7 +175,7 @@ def get_gw_ratio_gateway(conn, db_log, node_name, node_ip, rx, gw_rx_sum, pre_st
 
             if ratio < float(CONF.alarm()['gw_ratio']) or cur_rx < cur_packet:
                 status = 'nok'
-
+                reason = 'gw ratio : ' + str(format(ratio, '.2f'))
         try:
             sql = 'UPDATE ' + DB.OPENSTACK_TBL + \
                   ' SET gw_ratio = \'' + strRatio + '\'' + \
@@ -189,13 +195,14 @@ def get_gw_ratio_gateway(conn, db_log, node_name, node_ip, rx, gw_rx_sum, pre_st
         pre_stat[node_name + '_GW'] = in_out_dic
     except:
         LOG.exception()
-        status = 'fail', pre_stat
+        status = 'fail'
 
-    return status, pre_stat
+    return status, pre_stat, reason
 
 
 def get_gw_ratio_compute(conn, db_log, node_name, node_ip, pre_stat):
     status = 'ok'
+    reason = ''
 
     try:
         sql = 'SELECT ' + DB.ONOS_TBL + '.nodename, nodelist, ip_addr' + ' FROM ' + DB.ONOS_TBL + \
@@ -266,7 +273,7 @@ def get_gw_ratio_compute(conn, db_log, node_name, node_ip, pre_stat):
                 cur_total = total_cnt - pre_stat[node_name + '_GW']['gw_total']
 
                 if cur_gw == 0 and cur_total == 0:
-                    ratio = 100
+                    ratio = 100/len(gw_list)
                 elif cur_gw <= 0 or cur_total < 0:
                     ratio = 0
                 else:
@@ -278,9 +285,10 @@ def get_gw_ratio_compute(conn, db_log, node_name, node_ip, pre_stat):
 
                 if ratio < float(CONF.alarm()['gw_ratio']):
                     status = 'nok'
+                    reason = 'gw ratio : ' + str(format(ratio, '.2f'))
 
             strRatio = 'GW_RATIO = ' + str_ratio.rstrip(':') + '\n'
-            LOG.info('[COMPUTE] GW Ratio = ' + strRatio)
+            LOG.info('[COMPUTE] ' + 'GW_RATIO = ' + str_ratio.rstrip(':'))
 
         try:
             sql = 'UPDATE ' + DB.OPENSTACK_TBL + \
@@ -301,9 +309,9 @@ def get_gw_ratio_compute(conn, db_log, node_name, node_ip, pre_stat):
 
     except:
         LOG.exception()
-        status = 'fail', pre_stat
+        status = 'fail'
 
-    return status, pre_stat
+    return status, pre_stat, reason
 
 
 def rx_tx_check(user_name, node_ip):
@@ -368,6 +376,7 @@ def rx_tx_check(user_name, node_ip):
 def get_node_traffic(conn, db_log, node_name, rx_dic, tx_dic, total_rx, total_tx, err_info, pre_stat):
     try:
         status = 'ok'
+        reason = ''
 
         pre_total_rx = total_rx
         pre_total_tx = total_tx
@@ -396,22 +405,27 @@ def get_node_traffic(conn, db_log, node_name, rx_dic, tx_dic, total_rx, total_tx
             strRatio = strRatio + '* [LAST ' + str(CONF.watchdog()['interval']) + ' Sec] Ratio of success for all nodes = ' + str(ratio)  + ' (' + str(total_rx) + ' / ' + str(total_tx) + ')'
 
             if ratio < float(CONF.alarm()['node_traffic_ratio']):
+                reason = reason + 'vxlan port ratio : ' + str(format(ratio, '.2f')) + ','
                 LOG.info('[NODE TRAFFIC] ratio nok')
                 status = 'nok'
 
             if err_info['rx_drop'] - int(dict(pre_stat)['VXLAN']['rx_drop']) > 0:
+                reason = reason + 'rx_drop[nok],'
                 LOG.info('[NODE TRAFFIC] rx_drop nok')
                 status = 'nok'
 
             if err_info['rx_err'] - int(dict(pre_stat)['VXLAN']['rx_err']) > 0:
+                reason = reason + 'rx_err[nok],'
                 LOG.info('[NODE TRAFFIC] rx_err nok')
                 status = 'nok'
 
             if err_info['tx_drop'] - int(dict(pre_stat)['VXLAN']['tx_drop']) > 0:
+                reason = reason + 'tx_drop[nok],'
                 LOG.info('[NODE TRAFFIC] tx_drop nok')
                 status = 'nok'
 
             if err_info['tx_err'] - int(dict(pre_stat)['VXLAN']['tx_err']) > 0:
+                reason = reason + 'tx_err[nok],'
                 LOG.info('[NODE TRAFFIC] tx_err nok')
                 status = 'nok'
 
@@ -436,11 +450,11 @@ def get_node_traffic(conn, db_log, node_name, rx_dic, tx_dic, total_rx, total_tx
         in_out_dic['tx_err'] = err_info['tx_err']
 
         pre_stat['VXLAN'] = in_out_dic
-
-        return status, pre_stat
     except:
         LOG.exception()
-        return 'fail', pre_stat
+        status = 'fail'
+
+    return status, pre_stat, reason.rstrip(',')
 
 
 def get_internal_traffic(conn, db_log, node_name, node_ip, user_name, sub_type, rx_count, patch_tx, pre_stat):
@@ -448,6 +462,8 @@ def get_internal_traffic(conn, db_log, node_name, node_ip, user_name, sub_type, 
         status = 'ok'
         in_packet = 0
         out_packet = 0
+
+        reason = ''
 
         if sub_type == 'COMPUTE':
             flow_rt = SshCommand.ssh_exec(user_name, node_ip, 'sudo ovs-ofctl -O OpenFlow13 dump-flows br-int')
@@ -473,12 +489,13 @@ def get_internal_traffic(conn, db_log, node_name, node_ip, user_name, sub_type, 
             else:
                 status = 'fail'
                 strmsg = 'fail'
+                reason = 'fail'
 
         else:
             strmsg = 'IN[vxlan rx = ' + str(rx_count) + '], OUT[patch-integ tx = ' + str(patch_tx) + ']'
 
             if patch_tx == -1:
-                status = 'nok'
+                status = 'fail'
             else:
                 in_packet = rx_count
                 out_packet = patch_tx
@@ -505,6 +522,7 @@ def get_internal_traffic(conn, db_log, node_name, node_ip, user_name, sub_type, 
 
             if ratio < float(CONF.alarm()['internal_traffic_ratio']):
                 status = 'nok'
+                reason = 'internal traffic ratio : ' + str(format(ratio, '.2f'))
 
         in_out_dic = dict()
         in_out_dic['in_packet'] = for_save_in
@@ -521,10 +539,9 @@ def get_internal_traffic(conn, db_log, node_name, node_ip, user_name, sub_type, 
                 db_log.write_log('[FAIL] INTERNAL TRAFFIC DB Update Fail.')
         except:
             LOG.exception()
-
-        return status, pre_stat
     except:
         LOG.exception()
-        return 'fail', pre_stat
+        status = 'fail'
 
+    return status, pre_stat, reason
 

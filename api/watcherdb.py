@@ -122,7 +122,7 @@ class DB(object):
         try:
             for node in node_list:
                 name, ip = str(node).split(':')
-                LOG.info('Insert node [%s %s %s %s]', name, ip, username, type)
+                db_log.write_log('Insert node [%s %s %s %s]', name, ip, username, type)
                 sql = 'INSERT INTO ' + cls.NODE_INFO_TBL + \
                       ' VALUES (\'' + name + '\', \'' + ip + '\', \'' + username + '\', \'' + type.upper() + '\', \'' + sub_type.upper() + '\')'
                 sql_rt = cls.sql_execute(sql)
@@ -142,7 +142,7 @@ class DB(object):
                 # add Alarm Items
                 evt_list = DB.get_event_list(type)
                 for item in evt_list:
-                    LOG.info('Insert item [%s %s]', name, item)
+                    db_log.write_log('Insert item [%s %s]', name, item)
                     sql = 'INSERT INTO ' + cls.EVENT_TBL + \
                           ' VALUES (\'' + name + '\',\'' + item + '\', \'none\', \'none\', \'none\', \'none\')'
                     sql_rt = cls.sql_execute(sql)

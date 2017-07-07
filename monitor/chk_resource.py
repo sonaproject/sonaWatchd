@@ -29,7 +29,7 @@ def get_cpu_usage(username, node_ip, only_value = False):
                     LOG.exception()
 
         result = {'CPU': {'RATIO': float(format(ratio, '.2f')), 'Description': cmd_rt}}
-        LOG.info("CPU : %s", str(format(ratio, '.2f')))
+        LOG.info(" > CPU : %s", str(format(ratio, '.2f')))
 
         if only_value:
             return float(format(ratio, '.2f'))
@@ -62,7 +62,7 @@ def get_mem_usage(username, node_ip, only_value = False):
                     LOG.exception()
 
         result = {'MEMORY': {'RATIO': float(format(ratio, '.2f')), 'Description': cmd_rt}}
-        LOG.info("MEMORY : %s", str(format(ratio, '.2f')))
+        LOG.info(" > MEMORY : %s", str(format(ratio, '.2f')))
 
         if only_value:
             return float(format(ratio, '.2f'))
@@ -94,7 +94,7 @@ def get_disk_usage(username, node_ip, only_value = False):
                     LOG.exception()
 
         result = {'DISK': {'RATIO': float(format(ratio, '.2f')), 'Description': cmd_rt}}
-        LOG.info("DISK : %s", str(format(ratio, '.2f')))
+        LOG.info(" > DISK : %s", str(format(ratio, '.2f')))
 
         if only_value:
             return float(format(ratio, '.2f'))

@@ -22,7 +22,7 @@ from api.watcherdb import DB
 def periodic(conn, pre_stat, db_log):
     try:
         cur_info = {}
-        LOG.info('-------------------------- Periodic checking %s', str(CONF.watchdog()['check_system']) + ' --------------------------')
+        LOG.info('Periodic checking %s', str(CONF.watchdog()['check_system']))
 
         try:
             node_list = cmd_proc.get_node_list('all', 'nodename, ip_addr, username, type, sub_type')
@@ -48,7 +48,7 @@ def periodic(conn, pre_stat, db_log):
 
         # check HA, once
         ha_dic = chk_ha.onos_ha_check(conn, db_log)
-        global_ha_svc, global_ha_ratio = chk_ha.get_ha_stats(ha_dic)
+        global_ha_svc, global_ha_ratio, global_svc_reason, global_ha_ratio_reason = chk_ha.get_ha_stats(ha_dic)
 
         # check GW ratio
         gw_total = 0
@@ -77,8 +77,7 @@ def periodic(conn, pre_stat, db_log):
                         gw_total = gw_total + openstack_rx_dic[node_name]
 
         for node_name, node_ip, user_name, type, sub_type in node_list:
-            # check ping
-            network = net_check(node_ip)
+            LOG.info('------------------------------------ ' + node_name + ' START ------------------------------------')
 
             cpu = '-1'
             memory = '-1'
@@ -105,50 +104,109 @@ def periodic(conn, pre_stat, db_log):
             traffic_controller = 'fail'
             traffic_internal = 'fail'
 
+            # check ping
+            network = net_check(node_ip)
+
+            # occur event (rest)
+            # 1. ping check
+            if network == 'nok':
+                reason = 'ping transmit faild'
+            else:
+                reason = '-'
+
+            network = alarm_event.process_event(conn, db_log, node_name, type, 'NETWORK', cur_info[node_name]['NETWORK'], network, reason)
+
             if network == 'ok':
                 if type.upper() == 'ONOS':
                     # check node
-                    openstack_node = chk_onos.onos_node_check(conn, db_log, node_name, node_ip)
+                    openstack_node, reason = chk_onos.onos_node_check(conn, db_log, node_name, node_ip)
+                    openstack_node = alarm_event.process_event(conn, db_log, node_name, type, 'OPENSTACK_NODE',
+                                                               cur_info[node_name]['OPENSTACK_NODE'], openstack_node, reason)
+                    LOG.info('[' + node_name + '][OPENSTACK_NODE][' + openstack_node + ']' + reason)
 
                     # check app
-                    onos_app = chk_onos.onos_app_check(conn, db_log, node_name, node_ip)
+                    onos_app, reason = chk_onos.onos_app_check(conn, db_log, node_name, node_ip)
+                    onos_app = alarm_event.process_event(conn, db_log, node_name, type, 'ONOS_APP',
+                                                         cur_info[node_name]['ONOS_APP'], onos_app, reason)
+                    LOG.info('[' + node_name + '][ONOS_APP][' + onos_app + ']' + reason)
 
                     # check connection
-                    onos_of, onos_cluster = chk_onos.onos_conn_check(conn, db_log, node_name, node_ip)
+                    onos_of, onos_cluster, of_reason, cluster_reason = chk_onos.onos_conn_check(conn, db_log, node_name, node_ip)
+                    onos_of = alarm_event.process_event(conn, db_log, node_name, type, 'ONOS_OPENFLOW',
+                                                        cur_info[node_name]['ONOS_OPENFLOW'], onos_of, of_reason)
+                    onos_cluster = alarm_event.process_event(conn, db_log, node_name, type, 'ONOS_CLUSTER',
+                                                             cur_info[node_name]['ONOS_CLUSTER'], onos_cluster, cluster_reason)
+                    LOG.info('[' + node_name + '][ONOS_OPENFLOW][' + onos_of + ']' + of_reason)
+                    LOG.info('[' + node_name + '][ONOS_CLUSTER][' + onos_cluster + ']' + cluster_reason)
 
                     # check web
-                    onos_rest = chk_onos.onos_rest_check(conn, db_log, node_name, node_ip)
+                    onos_rest, reason = chk_onos.onos_rest_check(conn, db_log, node_name, node_ip)
+                    onos_rest = alarm_event.process_event(conn, db_log, node_name, type, 'ONOS_REST',
+                                                          cur_info[node_name]['ONOS_REST'], onos_rest, reason)
+                    LOG.info('[' + node_name + '][ONOS_REST][' + onos_rest + ']' + reason)
 
                     # check controller traffic
-                    traffic_controller, pre_stat = chk_onos.controller_traffic_check(conn, db_log, node_name, node_ip, pre_stat)
+                    traffic_controller, pre_stat, reason = chk_onos.controller_traffic_check(conn, db_log, node_name, node_ip, pre_stat)
+                    traffic_controller = alarm_event.process_event(conn, db_log, node_name, type, 'TRAFFIC_CONTROLLER',
+                                                                   cur_info[node_name]['TRAFFIC_CONTROLLER'],
+                                                                   traffic_controller, reason)
+                    LOG.info('[' + node_name + '][ONOS_TRAFFIC_CONTROLLER][' + traffic_controller + ']' + reason)
+
                 elif type.upper() == 'HA':
                     ha_svc = global_ha_svc
+                    ha_svc = alarm_event.process_event(conn, db_log, node_name, type, 'HA_SVC', cur_info[node_name]['HA_SVC'],
+                                                       ha_svc, global_svc_reason)
+                    LOG.info('[' + node_name + '][HA_SVC][' + ha_svc + ']' + global_svc_reason)
+
                     ha_ratio = global_ha_ratio
+                    ha_ratio = alarm_event.process_event(conn, db_log, node_name, type, 'HA_RATIO', cur_info[node_name]['HA_RATIO'],
+                                                         ha_ratio, global_ha_ratio_reason)
+                    LOG.info('[' + node_name + '][HA_SVC][' + ha_ratio + ']' + global_ha_ratio_reason)
+
                 # check swarm (app/node)
                 elif type.upper() == 'SWARM':
-                    swarm_svc, swarm_node = chk_swarm.swarm_check(conn, node_name, user_name, node_ip)
+                    swarm_svc, swarm_node = chk_swarm.swarm_check(conn, db_log, node_name, user_name, node_ip)
+
+                    # add reason
+                    swarm_svc = alarm_event.process_event(conn, db_log, node_name, type, 'SWARM_SVC',
+                                                          cur_info[node_name]['SWARM_SVC'], swarm_svc)
+                    swarm_node = alarm_event.process_event(conn, db_log, node_name, type, 'SWARM_NODE',
+                                                           cur_info[node_name]['SWARM_NODE'], swarm_node)
                 # check vrouter, gw_ratio
                 elif type.upper() == 'OPENSTACK':
-                    port_stat_vxlan, pre_stat = chk_openstack.get_node_traffic(conn, db_log, node_name, openstack_rx_dic,
+                    port_stat_vxlan, pre_stat, reason = chk_openstack.get_node_traffic(conn, db_log, node_name, openstack_rx_dic,
                                                                   openstack_tx_dic, rx_total, tx_total, rx_tx_err_info[node_name], pre_stat)
-                    traffic_internal, pre_stat = chk_openstack.get_internal_traffic(conn, db_log, node_name, node_ip, user_name, sub_type,
+                    port_stat_vxlan = alarm_event.process_event(conn, db_log, node_name, type, 'PORT_STAT_VXLAN',
+                                                                cur_info[node_name]['PORT_STAT_VXLAN'], port_stat_vxlan, reason)
+                    LOG.info('[' + node_name + '][PORT_STAT_VXLAN][' + port_stat_vxlan + ']' + reason)
+
+                    traffic_internal, pre_stat, reason = chk_openstack.get_internal_traffic(conn, db_log, node_name, node_ip, user_name, sub_type,
                                                                           openstack_rx_dic[node_name], patch_tx_dic[node_name], pre_stat)
+                    traffic_internal = alarm_event.process_event(conn, db_log, node_name, type, 'TRAFFIC_INTERNAL',
+                                                                 cur_info[node_name]['TRAFFIC_INTERNAL'],
+                                                                 traffic_internal, reason)
+                    LOG.info('[' + node_name + '][TRAFFIC_INTERNAL][' + traffic_internal + ']' + reason)
+
                     if sub_type.upper() == 'GATEWAY':
-                        v_router = chk_openstack.vrouter_check(conn, db_log, node_name, user_name, node_ip)
-                        traffic_gw, pre_stat = chk_openstack.get_gw_ratio_gateway(conn, db_log, node_name, node_ip, openstack_rx_dic[node_name], gw_total, pre_stat)
+                        v_router, reason = chk_openstack.vrouter_check(conn, db_log, node_name, user_name, node_ip)
+                        v_router = alarm_event.process_event(conn, db_log, node_name, type, 'GATEWAY',
+                                                             cur_info[node_name]['GATEWAY'], v_router, reason)
+                        LOG.info('[' + node_name + '][GATEWAY][' + v_router + ']' + reason)
+
+                        traffic_gw, pre_stat, reason = chk_openstack.get_gw_ratio_gateway(conn, db_log, node_name, node_ip, openstack_rx_dic[node_name], gw_total, pre_stat)
+
                     elif sub_type.upper() == 'COMPUTE':
-                        traffic_gw, pre_stat = chk_openstack.get_gw_ratio_compute(conn, db_log, node_name, node_ip, pre_stat)
+                        v_router = '-'
+                        traffic_gw, pre_stat, reason = chk_openstack.get_gw_ratio_compute(conn, db_log, node_name, node_ip, pre_stat)
+
+                    traffic_gw = alarm_event.process_event(conn, db_log, node_name, type, 'TRAFFIC_GW',
+                                                           cur_info[node_name]['TRAFFIC_GW'], traffic_gw, reason)
+                    LOG.info('[' + node_name + '][TRAFFIC_GW][' + traffic_gw + ']' + reason)
 
                 # check resource
                 cpu, memory, disk = chk_resource.check_resource(conn, db_log, node_name, user_name, node_ip)
 
-            # occur event (rest)
-            # 1. ping check
-            LOG.info(node_name)
-            LOG.info(str(cur_info[node_name]))
-
-            network = alarm_event.process_event(conn, node_name, type, 'NETWORK', cur_info[node_name]['NETWORK'], network)
-
+            reason = ''
             # 3. resource check (CPU/MEM/DISK)
             cpu_grade = 'fail'
             if CONF.alarm().has_key('cpu'):
@@ -157,9 +215,11 @@ def periodic(conn, pre_stat, db_log):
                 else:
                     cpu_grade = alarm_event.get_grade('cpu', cpu)
                     if cur_info[node_name]['CPU'] != cpu_grade:
-                        alarm_event.occur_event(conn, node_name, 'CPU', cur_info[node_name]['CPU'], cpu_grade)
+                        reason = 'cpu usage : ' + str(cpu)
+                        alarm_event.occur_event(conn, db_log, node_name, 'CPU', cur_info[node_name]['CPU'], cpu_grade, reason)
+                LOG.info('[' + node_name + '][CPU][' + cpu_grade + ']' + reason)
 
-
+            reason = ''
             mem_grade = 'fail'
             if CONF.alarm().has_key('memory'):
                 if not alarm_event.is_monitor_item(type, 'MEMORY'):
@@ -167,8 +227,11 @@ def periodic(conn, pre_stat, db_log):
                 else:
                     mem_grade = alarm_event.get_grade('memory', memory)
                     if cur_info[node_name]['MEMORY'] != mem_grade:
-                        alarm_event.occur_event(conn, node_name, 'MEMORY', cur_info[node_name]['MEMORY'], mem_grade)
+                        reason = 'memory usage : ' + str(memory)
+                        alarm_event.occur_event(conn, db_log, node_name, 'MEMORY', cur_info[node_name]['MEMORY'], mem_grade, reason)
+                LOG.info('[' + node_name + '][MEMORY][' + mem_grade + ']' + reason)
 
+            reason = ''
             disk_grade = 'fail'
             if CONF.alarm().has_key('disk'):
                 if not alarm_event.is_monitor_item(type, 'DISK'):
@@ -176,44 +239,10 @@ def periodic(conn, pre_stat, db_log):
                 else:
                     disk_grade = alarm_event.get_grade('disk', disk)
                     if cur_info[node_name]['DISK'] != disk_grade:
-                        alarm_event.occur_event(conn, node_name, 'DISK', cur_info[node_name]['DISK'], disk_grade)
+                        reason = 'disk usage : ' + str(disk)
+                        alarm_event.occur_event(conn, db_log, node_name, 'DISK', cur_info[node_name]['DISK'], disk_grade, reason)
+                LOG.info('[' + node_name + '][DISK][' + disk_grade + ']' + reason)
 
-            # 2. app check
-            # 4. Connection check (ovsdb, of, cluster) (ONOS)
-            # 5. Web check (ONOS)
-            # 8. HA Status (ONOS)
-            # 9. Node check (ONOS)
-            if type.upper() == 'ONOS':
-                onos_app = alarm_event.process_event(conn, node_name, type, 'ONOS_APP', cur_info[node_name]['ONOS_APP'], onos_app)
-                onos_of = alarm_event.process_event(conn, node_name, type, 'ONOS_OPENFLOW', cur_info[node_name]['ONOS_OPENFLOW'], onos_of)
-                onos_cluster = alarm_event.process_event(conn, node_name, type, 'ONOS_CLUSTER', cur_info[node_name]['ONOS_CLUSTER'], onos_cluster)
-                onos_rest = alarm_event.process_event(conn, node_name, type, 'ONOS_REST', cur_info[node_name]['ONOS_REST'], onos_rest)
-                openstack_node = alarm_event.process_event(conn, node_name, type, 'OPENSTACK_NODE', cur_info[node_name]['OPENSTACK_NODE'], openstack_node)
-                traffic_controller = alarm_event.process_event(conn, node_name, type, 'TRAFFIC_CONTROLLER', cur_info[node_name]['TRAFFIC_CONTROLLER'], traffic_controller)
-
-            elif type.upper == 'HA':
-                ha_svc = alarm_event.process_event(conn, node_name, type, 'HA_SVC', cur_info[node_name]['HA_SVC'], ha_svc)
-                ha_ratio = alarm_event.process_event(conn, node_name, type, 'HA_RATIO', cur_info[node_name]['HA_RATIO'], ha_ratio)
-
-            # 6. Swarm Check
-            elif type.upper() == 'SWARM':
-                # 2. app check
-                swarm_svc = alarm_event.process_event(conn, node_name, type, 'SWARM_SVC', cur_info[node_name]['SWARM_SVC'], swarm_svc)
-                swarm_node = alarm_event.process_event(conn, node_name, type, 'SWARM_NODE', cur_info[node_name]['SWARM_NODE'], swarm_node)
-
-            # 7. Vrouter Check
-            elif type.upper() == 'OPENSTACK':
-                traffic_internal = alarm_event.process_event(conn, node_name, type, 'TRAFFIC_INTERNAL',
-                                                             cur_info[node_name]['TRAFFIC_INTERNAL'], traffic_internal)
-                traffic_gw = alarm_event.process_event(conn, node_name, type, 'TRAFFIC_GW',
-                                                       cur_info[node_name]['TRAFFIC_GW'], traffic_gw)
-
-                if sub_type.upper() == 'GATEWAY':
-                    v_router = alarm_event.process_event(conn, node_name, type, 'GATEWAY', cur_info[node_name]['GATEWAY'], v_router)
-                elif sub_type.upper() == 'COMPUTE':
-                    v_router = '-'
-
-                port_stat_vxlan = alarm_event.process_event(conn, node_name, type, 'PORT_STAT_VXLAN', cur_info[node_name]['PORT_STAT_VXLAN'], port_stat_vxlan)
 
             try:
                 sql = 'UPDATE ' + DB.STATUS_TBL + \

@@ -658,8 +658,8 @@ class CLI():
             cls.HISTORY_LOG.write_history("--- Current Event History Start ---")
 
             for line in res['Event list']:
-                cls.HISTORY_LOG.write_history('[OCCUR_TIME : %s][%s][%s][%s] %s', line['time'], line['system'], line['item'],
-                                          line['grade'], line['desc'])
+                cls.HISTORY_LOG.write_history('[OCCUR_TIME : %s][%s][%s][%s][%s] %s', line['time'], line['system'], line['item'],
+                                          line['grade'], line['desc'], line['reason'])
 
             cls.HISTORY_LOG.write_history("--- Current Event History END ---")
 

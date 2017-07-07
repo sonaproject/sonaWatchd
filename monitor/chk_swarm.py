@@ -3,7 +3,7 @@ from api.watcherdb import DB
 from api.sbapi import SshCommand
 from api.config import CONF
 
-def swarm_check(conn, node_name, user_name, node_ip):
+def swarm_check(conn, db_log, node_name, user_name, node_ip):
     str_node = ''
     str_service = ''
     str_ps = ''
@@ -105,10 +105,10 @@ def swarm_check(conn, node_name, user_name, node_ip):
               ' service = \'' + str_service + '\',' + \
               ' ps = \'' + str_ps + '\'' + \
               ' WHERE nodename = \'' + node_name + '\''
-        LOG.info('Update Swarm info = ' + sql)
+        db_log.write_log('----- UPDATE SWARM INFO -----\n' + sql)
 
         if DB.sql_execute(sql, conn) != 'SUCCESS':
-            LOG.error('SWARM DB Update Fail.')
+            db_log.write_log('[FAIL] SWARN DB Update Fail.')
     except:
         LOG.exception()
 
