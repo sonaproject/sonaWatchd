@@ -165,6 +165,7 @@ def onos_conn_check(conn, db_log, node_name, node_ip):
 def onos_node_check(conn, db_log, node_name, node_ip):
     try:
         node_rt = SshCommand.onos_ssh_exec(node_ip, 'openstack-nodes')
+        str_node_list = ''
 
         node_status = 'ok'
         fail_reason = ''
@@ -172,49 +173,60 @@ def onos_node_check(conn, db_log, node_name, node_ip):
         str_port = ''
 
         if node_rt is not None:
-            for line in node_rt.splitlines():
-                if not (line.startswith('Total') or line.startswith('Hostname')):
-                    new_line = " ".join(line.split())
+            for ip in CONF.openstack()['compute_list'] + CONF.openstack()['gateway_list']:
+                ip = str(ip).split(':')[1]
 
-                    tmp = new_line.split(' ')
-                    host_name = tmp[0]
-                    of_id = tmp[2]
+                find_flag = False
 
-                    fail_flag = False
+                for line in node_rt.splitlines():
+                    if (not (line.startswith('Total') or line.startswith('Hostname'))) and ' ' + ip + ' ' in line:
+                        find_flag = True
+                        fail_flag = False
+                        new_line = " ".join(line.split())
+                        str_node_list = str_node_list + new_line + '\n'
 
-                    if not 'COMPLETE' in line:
-                        node_status = 'nok'
-                        fail_flag = True
+                        tmp = new_line.split(' ')
+                        host_name = tmp[0]
+                        of_id = tmp[2]
 
-                    try:
-                        sql = 'INSERT OR REPLACE INTO ' + DB.OF_TBL + '(hostname, of_id)' + \
-                              ' VALUES (\'' + host_name + '\',\'' + of_id + '\')'
+                        if not 'COMPLETE' in line:
+                            node_status = 'nok'
+                            fail_flag = True
 
-                        if DB.sql_execute(sql, conn) != 'SUCCESS':
-                            LOG.error('OF(node) DB Update Fail.')
-                    except:
-                        LOG.exception()
+                        try:
+                            sql = 'INSERT OR REPLACE INTO ' + DB.OF_TBL + '(hostname, of_id)' + \
+                                  ' VALUES (\'' + host_name + '\',\'' + of_id + '\')'
 
-                    port_rt = SshCommand.onos_ssh_exec(node_ip, 'openstack-node-check ' + host_name)
+                            if DB.sql_execute(sql, conn) != 'SUCCESS':
+                                LOG.error('OF(node) DB Update Fail.')
+                        except:
+                            LOG.exception()
 
-                    str_port = str_port + '\n* ' + host_name + '\n'
+                        port_rt = SshCommand.onos_ssh_exec(node_ip, 'openstack-node-check ' + host_name)
 
-                    if port_rt is not None:
-                        for port_line in port_rt.splitlines():
-                            str_port = str_port + port_line + '\n'
+                        str_port = str_port + '\n* ' + host_name + '\n'
 
-                            if port_line.startswith('[') or port_line.strip() == '':
-                                continue
+                        if port_rt is not None:
+                            for port_line in port_rt.splitlines():
+                                str_port = str_port + port_line + '\n'
 
-                            if not port_line.startswith('OK'):
-                                node_status = 'nok'
-                                fail_flag = True
-                    else:
-                        node_status = 'nok'
-                        str_port = 'fail'
+                                if port_line.startswith('[') or port_line.strip() == '':
+                                    continue
 
-                    if fail_flag:
-                        fail_reason = fail_reason + host_name + '[nok],'
+                                if not port_line.startswith('OK'):
+                                    node_status = 'nok'
+                                    fail_flag = True
+                        else:
+                            node_status = 'nok'
+                            str_port = 'fail'
+
+                        if fail_flag:
+                            fail_reason = fail_reason + host_name + '[nok],'
+
+                if not find_flag:
+                    node_status = 'nok'
+                    fail_reason = fail_reason + ip + '[nok],'
+                    str_node_list = str_node_list + ip + ' - - - - NO_EXIST' + '\n'
         else:
             LOG.error("\'%s\' ONOS Node Check Error", node_ip)
             node_status = 'fail'
@@ -223,7 +235,7 @@ def onos_node_check(conn, db_log, node_name, node_ip):
 
         try:
             sql = 'UPDATE ' + DB.ONOS_TBL + \
-                  ' SET nodelist = \'' + str(node_rt) + '\',' + \
+                  ' SET nodelist = \'' + str_node_list + '\',' + \
                   ' port = \'' + str_port + '\'' \
                   ' WHERE nodename = \'' + node_name + '\''
             db_log.write_log('----- UPDATE ONOS NODE INFO -----\n' + sql)

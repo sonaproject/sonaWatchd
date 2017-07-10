@@ -233,7 +233,7 @@ def get_gw_ratio_compute(conn, db_log, node_name, node_ip, pre_stat):
 
         if hostname == '':
             LOG.info('Can not find hostname')
-            return 'fail', pre_stat
+            return 'fail', pre_stat, reason
 
         try:
             sql = 'SELECT of_id FROM ' + DB.OF_TBL + ' WHERE hostname = \'' + hostname + '\''
@@ -244,7 +244,7 @@ def get_gw_ratio_compute(conn, db_log, node_name, node_ip, pre_stat):
         except:
             LOG.exception()
             LOG.info('Can not find of_id')
-            return 'fail', pre_stat
+            return 'fail', pre_stat, reason
 
         group_rt = SshCommand.onos_ssh_exec(manage_ip, 'groups')
 

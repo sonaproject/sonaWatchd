@@ -188,24 +188,30 @@ class DB(object):
 
     @classmethod
     def sql_execute(cls, sql, conn = None):
-        try:
-            if conn == None:
-                with cls.connection() as conn:
+        i = 0
+        retry_cnt = 3
+
+        while i < retry_cnt:
+            i = i + 1
+
+            try:
+                if conn == None:
+                    with cls.connection() as conn:
+                        conn.cursor().execute(sql)
+                        conn.commit()
+
+                    conn.close()
+                else:
                     conn.cursor().execute(sql)
                     conn.commit()
 
-                conn.close()
-            else:
-                conn.cursor().execute(sql)
-                conn.commit()
+                return 'SUCCESS'
+            except sqlite3.OperationalError, err:
+                LOG.error(err.message)
+            except:
+                LOG.exception()
 
-            return 'SUCCESS'
-        except sqlite3.OperationalError, err:
-            LOG.error(err.message)
-            return err.message
-        except:
-            LOG.exception()
-            return 'FAIL'
+        return 'FAIL'
 
 DB_CONN = DB().connection()
 
