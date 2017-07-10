@@ -4,8 +4,10 @@
 # SONA Monitoring Solutions.
 
 
+import os
 import sys
 import time
+import requests
 
 import monitor.alarm_event as alarm_event
 import monitor.watchdog as watchdog
@@ -16,11 +18,30 @@ from api.sona_log import USER_LOG
 from api.watcherdb import DB
 from daemon import Daemon
 from datetime import datetime
+from signal import SIGTERM
 
 PIDFILE = CONF.get_pid_file()
 
-
 class SonaWatchD(Daemon):
+    def exit(self):
+        try:
+            pf = file(PIDFILE, 'r')
+            pid = int(pf.read().strip())
+            pf.close()
+
+            LOG.info("--- Daemon STOP [fail to check rest server] ---")
+
+            try:
+                LOG.info('PID = ' + str(pid))
+                os.killpg(pid, SIGTERM)
+            except OSError, err:
+                err = str(err)
+                if err.find("No such process") > 0:
+                    if os.path.exists(self.pidfile):
+                        os.remove(self.pidfile)
+        except:
+            LOG.exception()
+
     def run(self):
         db_log = USER_LOG()
         db_log.set_log('db.log', CONF.base()['log_rotate_time'], CONF.base()['log_backup_count'])
@@ -36,7 +57,7 @@ class SonaWatchD(Daemon):
         except:
             print 'Rest Server failed to start'
             LOG.exception()
-            sys.exit(1)
+            self.exit()
 
         # Periodic monitoring
         if CONF.watchdog()['interval'] == 0:
@@ -49,8 +70,35 @@ class SonaWatchD(Daemon):
 
             conn = DB.connection()
 
+            exitFlag = False
             while True:
                 try:
+                    i = 0
+                    while i < 3:
+                        i = i + 1
+                        # check rest server
+                        try:
+                            url = 'http://localhost:' + str(CONF.rest()['rest_server_port']) + '/alive-check'
+                            myResponse = requests.get(url, timeout=2)
+                            LOG.info('[REST_SERVER_CHECK] Response code = ' + str(myResponse.status_code))
+                            break
+                        except:
+                            LOG.info('REST SERVER CHECK FAIL [' + str(i) + ']')
+                            LOG.exception()
+
+                            if i == 3:
+                                LOG.info('fail to check rest server.')
+                                alarm_event.push_event('sonawatcher', 'SONAWATCHER_DISCONNECT', 'critical',
+                                                       'sonawatcher server shutdown', 'sonawatcher server shutdown',
+                                                       str(datetime.now()))
+                                conn.close()
+                                exitFlag = True
+                                self.exit()
+                                break
+
+                    if exitFlag:
+                        break
+
                     pre_stat = watchdog.periodic(conn, pre_stat, db_log)
 
                     time.sleep(CONF.watchdog()['interval'])
@@ -58,7 +106,6 @@ class SonaWatchD(Daemon):
                     alarm_event.push_event('sonawatcher', 'SONAWATCHER_DISCONNECT', 'critical', 'sonawatcher server shutdown', 'sonawatcher server shutdown', str(datetime.now()))
                     conn.close()
                     LOG.exception()
-                    sys.exit(1)
 
 
 if __name__ == "__main__":

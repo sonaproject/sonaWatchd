@@ -23,6 +23,12 @@ class RestHandler(BaseHTTPRequestHandler):
         LOG.info('[REST-SERVER] RESPONSE CODE = ' + str(res_code))
 
     def do_GET(self):
+        # health check
+        if self.path.startswith('/alive-check'):
+            self.do_HEAD(200)
+            self.wfile.write('ok')
+            return
+
         request_sz = int(self.headers["Content-length"])
         request_str = self.rfile.read(request_sz)
         request_obj = json.loads(request_str)

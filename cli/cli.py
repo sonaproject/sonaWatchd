@@ -272,13 +272,9 @@ class CLI():
                                 data = []
 
                                 for row in sys_ret.splitlines():
-                                    if str(row).startswith('Total') or str(row).startswith('Hostname'):
-                                        continue
-
                                     line = []
 
-                                    new_line = " ".join(row.split())
-                                    tmp = new_line.split(' ')
+                                    tmp = row.split(' ')
 
                                     line.append(tmp[0])
                                     line.append(tmp[1])
