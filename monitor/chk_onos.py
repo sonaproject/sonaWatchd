@@ -196,9 +196,25 @@ def onos_node_check(conn, db_log, node_name, node_ip):
                         try:
                             sql = 'INSERT OR REPLACE INTO ' + DB.OF_TBL + '(hostname, of_id)' + \
                                   ' VALUES (\'' + host_name + '\',\'' + of_id + '\')'
+                            db_log.write_log('----- UPDATE OF_ID INFO -----\n' + sql)
 
                             if DB.sql_execute(sql, conn) != 'SUCCESS':
-                                LOG.error('OF(node) DB Update Fail.')
+                                db_log.write_log('[FAIL] OF_ID Update Fail.')
+                        except:
+                            LOG.exception()
+
+                        if tmp[3].startswith('of:'):
+                            manage_ip = tmp[4]
+                        else:
+                            manage_ip = tmp[3]
+                        try:
+                            sql = 'UPDATE ' + DB.OPENSTACK_TBL + \
+                                  ' SET manage_ip = \'' + manage_ip + '\'' + \
+                                  ' WHERE nodename = \'' + node_name + '\''
+                            db_log.write_log('----- UPDATE OPENSTACK MANAGE IP INFO -----\n' + sql)
+
+                            if DB.sql_execute(sql, conn) != 'SUCCESS':
+                                db_log.write_log('[FAIL] OPENSTACK MANAGE IP Update Fail.')
                         except:
                             LOG.exception()
 
@@ -230,7 +246,7 @@ def onos_node_check(conn, db_log, node_name, node_ip):
         else:
             LOG.error("\'%s\' ONOS Node Check Error", node_ip)
             node_status = 'fail'
-            node_rt = 'fail'
+            str_node_list = 'fail'
             fail_reason = 'fail'
 
         try:

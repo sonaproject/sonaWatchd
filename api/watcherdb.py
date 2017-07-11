@@ -83,7 +83,7 @@ class DB(object):
                         'CREATE TABLE ' + cls.REGI_SYS_TBL + '(url text primary key, auth)',
                         'CREATE TABLE ' + cls.ONOS_TBL + '(nodename text primary key, applist, weblist, nodelist, port, openflow, cluster, traffic_stat)',
                         'CREATE TABLE ' + cls.SWARM_TBL + '(nodename text primary key, node, service, ps)',
-                        'CREATE TABLE ' + cls.OPENSTACK_TBL + '(nodename text primary key, sub_type, docker, onosApp, routingTable, gw_ratio, vxlan_traffic, internal_traffic)',
+                        'CREATE TABLE ' + cls.OPENSTACK_TBL + '(nodename text primary key, sub_type, manage_ip, docker, onosApp, routingTable, gw_ratio, vxlan_traffic, internal_traffic)',
                         'CREATE TABLE ' + cls.HA_TBL + '(ha_key text primary key, stats)',
                         'CREATE TABLE ' + cls.OF_TBL + '(hostname text primary key, of_id)',
                         'CREATE TABLE ' + cls.EVENT_TBL + '(nodename, item, grade, desc, reason, time, PRIMARY KEY (nodename, item))']
@@ -177,7 +177,7 @@ class DB(object):
                 elif type.upper() == 'OPENSTACK':
                     # set vrouter tbl
                     sql = 'INSERT INTO ' + cls.OPENSTACK_TBL + \
-                          ' VALUES (\'' + name + '\', \'' + sub_type + '\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\')'
+                          ' VALUES (\'' + name + '\', \'' + sub_type + '\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\')'
                     sql_rt = cls.sql_execute(sql)
                     if sql_rt != 'SUCCESS':
                         db_log.write_log(" [VROUTER TABLE] Node data insert fail \n%s", sql_rt)

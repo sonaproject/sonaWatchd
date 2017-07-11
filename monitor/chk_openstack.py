@@ -381,12 +381,34 @@ def get_node_traffic(conn, db_log, node_name, rx_dic, tx_dic, total_rx, total_tx
         pre_total_rx = total_rx
         pre_total_tx = total_tx
 
+        # check minimum packet count
+        sql = 'SELECT manage_ip FROM ' + DB.OPENSTACK_TBL + ' WHERE nodename = \'' + node_name + '\''
+        manage_ip = conn.cursor().execute(sql).fetchone()[0]
+
+        sql = 'SELECT ip_addr FROM ' + DB.NODE_INFO_TBL + ' WHERE type = \'ONOS\''
+        nodes_info = conn.cursor().execute(sql).fetchall()
+
+        min_rx = 0
+        if len(nodes_info) == 0:
+            LOG.info('Fail to load onos list')
+            status = 'fail'
+        else:
+            for ip in nodes_info:
+                flows_rt = SshCommand.onos_ssh_exec(ip[0], '\"flows --filter \'{tunnelDst=' + manage_ip + '}\' --short\"')
+
+                if flows_rt is not None:
+                    for line in flows_rt.splitlines():
+                        if 'tunnelDst' in line:
+                            min_rx = min_rx + int(line.split(',')[2].split('=')[1])
+                    break
+
         if not dict(pre_stat).has_key('VXLAN'):
             status = '-'
             ratio = -1
         else:
             total_rx = total_rx - int(dict(pre_stat)['VXLAN']['total_rx'])
             total_tx = total_tx - int(dict(pre_stat)['VXLAN']['total_tx'])
+            cur_min = min_rx - int(dict(pre_stat)['VXLAN']['min_rx'])
 
             if total_rx == 0 and total_tx == 0:
                 ratio = 100
@@ -398,7 +420,7 @@ def get_node_traffic(conn, db_log, node_name, rx_dic, tx_dic, total_rx, total_tx
 
         LOG.info('Node Traffic Ratio = ' + str(ratio))
 
-        strRatio = 'rx = ' + str(rx_dic[node_name]) + ', drop = ' + str(err_info['rx_drop']) + ', errs = ' + str(err_info['rx_err']) + '\n'
+        strRatio = 'rx = ' + str(rx_dic[node_name]) + ', min_rx = ' + str(min_rx) + ', drop = ' + str(err_info['rx_drop']) + ', errs = ' + str(err_info['rx_err']) + '\n'
         strRatio = strRatio + 'tx = ' + str(tx_dic[node_name]) + ', drop = ' + str(err_info['tx_drop']) + ', errs = ' + str(err_info['tx_err']) + '\n'
 
         if not status == '-':
@@ -407,6 +429,11 @@ def get_node_traffic(conn, db_log, node_name, rx_dic, tx_dic, total_rx, total_tx
             if ratio < float(CONF.alarm()['node_traffic_ratio']):
                 reason = reason + 'vxlan port ratio : ' + str(format(ratio, '.2f')) + ','
                 LOG.info('[NODE TRAFFIC] ratio nok')
+                status = 'nok'
+
+            if total_rx < cur_min:
+                LOG.info('CUR_MIN_RX = ' + str(cur_min) + ', CUR_RX = ' + str(total_rx) + ', Less than rx minimum.')
+                reason = reason + 'Less than rx minimum,'
                 status = 'nok'
 
             if err_info['rx_drop'] - int(dict(pre_stat)['VXLAN']['rx_drop']) > 0:
@@ -443,6 +470,8 @@ def get_node_traffic(conn, db_log, node_name, rx_dic, tx_dic, total_rx, total_tx
         in_out_dic = dict()
         in_out_dic['total_rx'] = pre_total_rx
         in_out_dic['total_tx'] = pre_total_tx
+
+        in_out_dic['min_rx'] = min_rx
 
         in_out_dic['rx_drop'] = err_info['rx_drop']
         in_out_dic['rx_err'] = err_info['rx_err']
