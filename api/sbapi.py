@@ -30,18 +30,19 @@ class SshCommand:
             LOG.exception()
 
     @classmethod
-    def onos_ssh_exec(cls, node, command):
-
+    def onos_ssh_exec(cls, node_ip, command):
         local_ssh_options = cls.ssh_options + " -p 8101"
 
-        cmd = 'ssh %s %s %s' % (local_ssh_options, node, command)
+        cmd = 'ssh %s %s %s' % (local_ssh_options, node_ip, command)
+
+        LOG.info('command = ' + cmd)
 
         try:
             result = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
             output, error = result.communicate()
 
             if result.returncode != 0:
-                LOG.error("ONOS(%s) SSH_Cmd Fail, cause => %s", node, error)
+                LOG.error("ONOS(%s) SSH_Cmd Fail, cause => %s", node_ip, error)
                 return
             else:
                 # LOG.info("ONOS ssh command execute successful \n%s", output)

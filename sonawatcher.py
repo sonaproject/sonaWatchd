@@ -100,6 +100,9 @@ class SonaWatchD(Daemon):
                                     exitFlag = True
                                     self.exit()
                                     break
+                            else:
+                                break
+
                         except:
                             LOG.exception()
 
