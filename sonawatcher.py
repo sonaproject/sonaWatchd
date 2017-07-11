@@ -7,7 +7,9 @@
 import os
 import sys
 import time
+import socket
 import requests
+from subprocess import Popen, PIPE
 
 import monitor.alarm_event as alarm_event
 import monitor.watchdog as watchdog
@@ -78,23 +80,28 @@ class SonaWatchD(Daemon):
                         i = i + 1
                         # check rest server
                         try:
-                            url = 'http://localhost:' + str(CONF.rest()['rest_server_port']) + '/alive-check'
-                            myResponse = requests.get(url, timeout=2)
-                            LOG.info('[REST_SERVER_CHECK] Response code = ' + str(myResponse.status_code))
-                            break
-                        except:
-                            LOG.info('REST SERVER CHECK FAIL [' + str(i) + ']')
-                            LOG.exception()
+                            url = 'http://' + socket.gethostbyname(socket.gethostname()) + ':' + str(
+                                CONF.rest()['rest_server_port']) + '/alive-check'
 
-                            if i == 3:
-                                LOG.info('fail to check rest server.')
-                                alarm_event.push_event('sonawatcher', 'SONAWATCHER_DISCONNECT', 'critical',
-                                                       'sonawatcher server shutdown', 'sonawatcher server shutdown',
-                                                       str(datetime.now()))
-                                conn.close()
-                                exitFlag = True
-                                self.exit()
-                                break
+                            cmd = 'curl -X GET \"' + url + '\"'
+                            LOG.info('cmd = ' + cmd)
+                            result = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
+                            output, error = result.communicate()
+
+                            if result.returncode != 0:
+                                LOG.info('REST SERVER CHECK FAIL [' + str(i) + ']')
+
+                                if i == 3:
+                                    LOG.info('fail to check rest server.')
+                                    alarm_event.push_event('sonawatcher', 'SONAWATCHER_DISCONNECT', 'critical',
+                                                           'sonawatcher server shutdown', 'sonawatcher server shutdown',
+                                                           str(datetime.now()))
+                                    conn.close()
+                                    exitFlag = True
+                                    self.exit()
+                                    break
+                        except:
+                            LOG.exception()
 
                     if exitFlag:
                         break
