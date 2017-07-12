@@ -236,7 +236,7 @@ def get_gw_ratio_compute(conn, db_log, node_name, node_ip, pre_stat):
             return 'fail', pre_stat, reason
 
         try:
-            sql = 'SELECT of_id FROM ' + DB.OF_TBL + ' WHERE hostname = \'' + hostname + '\''
+            sql = 'SELECT of_id FROM ' + DB.OPENSTACK_TBL + ' WHERE hostname = \'' + hostname + '\''
             LOG.info(sql)
             node_info = conn.cursor().execute(sql).fetchone()
 
@@ -382,8 +382,8 @@ def get_node_traffic(conn, db_log, node_name, rx_dic, tx_dic, total_rx, total_tx
         pre_total_tx = total_tx
 
         # check minimum packet count
-        sql = 'SELECT manage_ip FROM ' + DB.OPENSTACK_TBL + ' WHERE nodename = \'' + node_name + '\''
-        manage_ip = conn.cursor().execute(sql).fetchone()[0]
+        sql = 'SELECT data_ip FROM ' + DB.OPENSTACK_TBL + ' WHERE nodename = \'' + node_name + '\''
+        data_ip = conn.cursor().execute(sql).fetchone()[0]
 
         sql = 'SELECT ip_addr FROM ' + DB.NODE_INFO_TBL + ' WHERE type = \'ONOS\''
         nodes_info = conn.cursor().execute(sql).fetchall()
@@ -394,7 +394,7 @@ def get_node_traffic(conn, db_log, node_name, rx_dic, tx_dic, total_rx, total_tx
             status = 'fail'
         else:
             for ip in nodes_info:
-                flows_rt = SshCommand.onos_ssh_exec(ip[0], '\"flows --filter \'{tunnelDst=' + manage_ip + '}\' --short\"')
+                flows_rt = SshCommand.onos_ssh_exec(ip[0], '\"flows --filter \'{tunnelDst=' + data_ip + '}\' --short\"')
 
                 if flows_rt is not None:
                     for line in flows_rt.splitlines():
@@ -402,13 +402,14 @@ def get_node_traffic(conn, db_log, node_name, rx_dic, tx_dic, total_rx, total_tx
                             min_rx = min_rx + int(line.split(',')[2].split('=')[1])
                     break
 
-        if not dict(pre_stat).has_key('VXLAN'):
+        if not dict(pre_stat).has_key(node_name + '_VXLAN'):
             status = '-'
             ratio = -1
         else:
-            total_rx = total_rx - int(dict(pre_stat)['VXLAN']['total_rx'])
-            total_tx = total_tx - int(dict(pre_stat)['VXLAN']['total_tx'])
-            cur_min = min_rx - int(dict(pre_stat)['VXLAN']['min_rx'])
+            total_rx = total_rx - int(dict(pre_stat)[node_name + '_VXLAN']['total_rx'])
+            total_tx = total_tx - int(dict(pre_stat)[node_name + '_VXLAN']['total_tx'])
+            LOG.info('VALUE = ' + str(dict(pre_stat)[node_name + '_VXLAN']))
+            cur_min = min_rx - int(dict(pre_stat)[node_name + '_VXLAN']['min_rx'])
 
             if total_rx == 0 and total_tx == 0:
                 ratio = 100
@@ -436,22 +437,22 @@ def get_node_traffic(conn, db_log, node_name, rx_dic, tx_dic, total_rx, total_tx
                 reason = reason + 'Less than rx minimum,'
                 status = 'nok'
 
-            if err_info['rx_drop'] - int(dict(pre_stat)['VXLAN']['rx_drop']) > 0:
+            if err_info['rx_drop'] - int(dict(pre_stat)[node_name + '_VXLAN']['rx_drop']) > 0:
                 reason = reason + 'rx_drop[nok],'
                 LOG.info('[NODE TRAFFIC] rx_drop nok')
                 status = 'nok'
 
-            if err_info['rx_err'] - int(dict(pre_stat)['VXLAN']['rx_err']) > 0:
+            if err_info['rx_err'] - int(dict(pre_stat)[node_name + '_VXLAN']['rx_err']) > 0:
                 reason = reason + 'rx_err[nok],'
                 LOG.info('[NODE TRAFFIC] rx_err nok')
                 status = 'nok'
 
-            if err_info['tx_drop'] - int(dict(pre_stat)['VXLAN']['tx_drop']) > 0:
+            if err_info['tx_drop'] - int(dict(pre_stat)[node_name + '_VXLAN']['tx_drop']) > 0:
                 reason = reason + 'tx_drop[nok],'
                 LOG.info('[NODE TRAFFIC] tx_drop nok')
                 status = 'nok'
 
-            if err_info['tx_err'] - int(dict(pre_stat)['VXLAN']['tx_err']) > 0:
+            if err_info['tx_err'] - int(dict(pre_stat)[node_name + '_VXLAN']['tx_err']) > 0:
                 reason = reason + 'tx_err[nok],'
                 LOG.info('[NODE TRAFFIC] tx_err nok')
                 status = 'nok'
@@ -478,7 +479,7 @@ def get_node_traffic(conn, db_log, node_name, rx_dic, tx_dic, total_rx, total_tx
         in_out_dic['tx_drop'] = err_info['tx_drop']
         in_out_dic['tx_err'] = err_info['tx_err']
 
-        pre_stat['VXLAN'] = in_out_dic
+        pre_stat[node_name + '_VXLAN'] = in_out_dic
     except:
         LOG.exception()
         status = 'fail'

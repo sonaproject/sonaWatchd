@@ -35,8 +35,6 @@ class SshCommand:
 
         cmd = 'ssh %s %s %s' % (local_ssh_options, node_ip, command)
 
-        LOG.info('command = ' + cmd)
-
         try:
             result = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
             output, error = result.communicate()
