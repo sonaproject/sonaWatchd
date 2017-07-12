@@ -6,13 +6,14 @@ from api.sbapi import SshCommand
 
 def onos_app_check(conn, db_log, node_name, node_ip):
     try:
-
         app_rt = SshCommand.onos_ssh_exec(node_ip, 'apps -a -s')
 
         status = 'ok'
-        applist = ''
-        fail_reason = ''
         app_active_list = list()
+
+        app_list = []
+        fail_reason = []
+
         if app_rt is not None:
             for line in app_rt.splitlines():
                 app_active_list.append(line.split(".")[2].split()[0])
@@ -24,19 +25,25 @@ def onos_app_check(conn, db_log, node_name, node_ip):
 
             for app in CONF.onos()['app_list']:
                 if app in app_active_list:
-                    applist = applist + str(app).ljust(30) + '[ok]\n'
+                    app_json = {'name': app, 'status': 'ok', 'monitor_item': True}
+                    app_active_list.remove(app)
                 else:
-                    applist = applist + str(app).ljust(30) + '[nok]\n'
-                    fail_reason = fail_reason + str(app) + '[nok],'
                     status = 'nok'
+                    app_json = {'name': app, 'status': 'nok', 'monitor_item': True}
+                    fail_reason.append(app_json)
+                app_list.append(app_json)
+
+            for app in app_active_list:
+                app_json = {'name': app, 'status': 'ok', 'monitor_item': False}
+                app_list.append(app_json)
         else:
             LOG.error("\'%s\' ONOS Application Check Error", node_ip)
             status = 'fail'
-            applist = 'fail'
+            app_list = 'fail'
 
         try:
             sql = 'UPDATE ' + DB.ONOS_TBL + \
-                  ' SET applist = \'' + applist + '\'' +\
+                  ' SET applist = \"' + str(app_list) + '\"' +\
                   ' WHERE nodename = \'' + node_name + '\''
             db_log.write_log('----- UPDATE ONOS APP INFO -----\n' + sql)
 
@@ -49,39 +56,56 @@ def onos_app_check(conn, db_log, node_name, node_ip):
         status = 'fail'
         fail_reason = 'fail'
 
-    return status, fail_reason.rstrip(',')
+    return status, str(fail_reason)
 
 
 def onos_rest_check(conn, db_log, node_name, node_ip):
     try:
-        weblist = ''
         web_status = 'ok'
-        fail_reason = ''
+
+        web_list = []
+        fail_reason = []
 
         web_rt = SshCommand.onos_ssh_exec(node_ip, 'web:list')
 
         if web_rt is not None:
-            for app in CONF.onos()['rest_list']:
+            for web in CONF.onos()['rest_list']:
                 for line in web_rt.splitlines():
                     if line.startswith('ID') or line.startswith('--'):
                         continue
 
-                    if ' ' + app + ' ' in line:
+                    if ' ' + web + ' ' in line:
                         if not ('Active' in line and 'Deployed' in line):
-                            weblist = weblist + str(app).ljust(30) + '[nok]\n'
-                            fail_reason = fail_reason + str(app) + '[nok],'
+                            rest_json = {'name': web, 'status': 'nok', 'monitor_item': True}
+                            fail_reason.append(rest_json)
                             web_status = 'nok'
                         else:
-                            weblist = weblist + str(app).ljust(30) + '[ok]\n'
+                            rest_json = {'name': web, 'status': 'ok', 'monitor_item': True}
+
+                    web_list.append(rest_json)
+
+            for line in web_rt.splitlines():
+                if line.startswith('ID') or line.startswith('--'):
+                    continue
+
+                if not ' ' + web + ' ' in line:
+                    if not ('Active' in line and 'Deployed' in line):
+                        rest_json = {'name': web, 'status': 'nok', 'monitor_item': False}
+                        web_status = 'nok'
+                    else:
+                        rest_json = {'name': web, 'status': 'ok', 'monitor_item': False}
+
+                web_list.append(rest_json)
 
         else:
             LOG.error("\'%s\' ONOS Rest Check Error", node_ip)
             web_status = 'fail'
-            weblist = 'fail'
+            web_list = 'fail'
+            fail_reason = 'fail'
 
         try:
             sql = 'UPDATE ' + DB.ONOS_TBL + \
-                  ' SET weblist = \'' + weblist + '\'' +\
+                  ' SET weblist = \'' + str(web_list) + '\'' +\
                   ' WHERE nodename = \'' + node_name + '\''
             db_log.write_log('----- UPDATE ONOS REST INFO -----\n' + sql)
 
@@ -95,7 +119,7 @@ def onos_rest_check(conn, db_log, node_name, node_ip):
         web_status = 'fail'
         fail_reason = 'fail'
 
-    return web_status, fail_reason.rstrip(',')
+    return web_status, str(fail_reason)
 
 
 def onos_conn_check(conn, db_log, node_name, node_ip):

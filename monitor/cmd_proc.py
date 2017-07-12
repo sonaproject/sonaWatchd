@@ -156,11 +156,11 @@ def proc_dis_onos(node, param):
             return {'fail': 'This is not a command on the target system.'}
 
         res_result = dict()
-        for nodename, list in nodes_info:
-            if list == 'fail' or list == 'none':
+        for nodename, app_rest_list in nodes_info:
+            if app_rest_list == 'fail' or app_rest_list == 'none':
                 res_result[nodename] = 'FAIL'
             else:
-                res_result[nodename] = list
+                res_result[nodename] = eval(app_rest_list)
 
         return res_result
     except:
