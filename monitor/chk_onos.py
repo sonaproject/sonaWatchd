@@ -115,7 +115,7 @@ def onos_conn_check(conn, db_log, node_name, node_ip):
                     of_id = line.split(',')[0].split('=')[1]
 
                     try:
-                        sql = 'SELECT hostname FROM ' + DB.OF_TBL + ' WHERE of_id = \'' + of_id + '\''
+                        sql = 'SELECT hostname FROM ' + DB.OPENSTACK_TBL + ' WHERE of_id = \'' + of_id + '\''
                         node_info = conn.cursor().execute(sql).fetchone()
 
                         line = line.replace(of_id, node_info[0] + '(' + of_id + ')')
@@ -194,24 +194,20 @@ def onos_node_check(conn, db_log, node_name, node_ip):
                             fail_flag = True
 
                         try:
-                            sql = 'INSERT OR REPLACE INTO ' + DB.OF_TBL + '(hostname, of_id)' + \
-                                  ' VALUES (\'' + host_name + '\',\'' + of_id + '\')'
-                            db_log.write_log('----- UPDATE OF_ID INFO -----\n' + sql)
+                            sql = 'SELECT nodename FROM ' + DB.NODE_INFO_TBL + ' WHERE ip_addr = \'' + ip + '\''
+                            openstack_nodename = conn.cursor().execute(sql).fetchone()[0]
 
-                            if DB.sql_execute(sql, conn) != 'SUCCESS':
-                                db_log.write_log('[FAIL] OF_ID Update Fail.')
-                        except:
-                            LOG.exception()
+                            if tmp[3].startswith('of:'):
+                                data_ip = tmp[5]
+                            else:
+                                data_ip = tmp[4]
 
-                        if tmp[3].startswith('of:'):
-                            manage_ip = tmp[4]
-                        else:
-                            manage_ip = tmp[3]
-                        try:
                             sql = 'UPDATE ' + DB.OPENSTACK_TBL + \
-                                  ' SET manage_ip = \'' + manage_ip + '\'' + \
-                                  ' WHERE nodename = \'' + node_name + '\''
-                            db_log.write_log('----- UPDATE OPENSTACK MANAGE IP INFO -----\n' + sql)
+                                  ' SET data_ip = \'' + data_ip + '\',' + \
+                                  ' hostname = \'' + host_name + '\',' + \
+                                  ' of_id = \'' + of_id + '\'' + \
+                                  ' WHERE nodename = \'' + openstack_nodename + '\''
+                            db_log.write_log('----- UPDATE OPENSTACK INFO -----\n' + sql)
 
                             if DB.sql_execute(sql, conn) != 'SUCCESS':
                                 db_log.write_log('[FAIL] OPENSTACK MANAGE IP Update Fail.')
@@ -282,7 +278,7 @@ def controller_traffic_check(conn, db_log, node_name, node_ip, pre_stat):
             data_ip = str(summary_rt).split(',')[0].split('=')[1]
 
             try:
-                sql = 'SELECT hostname, of_id FROM ' + DB.OF_TBL
+                sql = 'SELECT hostname, of_id FROM ' + DB.OPENSTACK_TBL
                 nodes_info = conn.cursor().execute(sql).fetchall()
 
                 str_info = ''
