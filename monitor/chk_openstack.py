@@ -274,7 +274,7 @@ def get_gw_ratio_compute(conn, db_log, node_name, node_ip, pre_stat):
 
                 if cur_gw == 0 and cur_total == 0:
                     ratio = 100/len(gw_list)
-                elif cur_gw <= 0 or cur_total < 0:
+                elif cur_gw <= 0 or cur_total <= 0:
                     ratio = 0
                 else:
                     ratio = float(cur_gw) * 100 / cur_total

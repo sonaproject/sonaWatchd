@@ -82,21 +82,21 @@ def onos_rest_check(conn, db_log, node_name, node_ip):
                         else:
                             rest_json = {'name': web, 'status': 'ok', 'monitor_item': True}
 
-                    web_list.append(rest_json)
+                        web_list.append(rest_json)
 
             for line in web_rt.splitlines():
                 if line.startswith('ID') or line.startswith('--'):
                     continue
 
-                if not ' ' + web + ' ' in line:
+                name = " ".join(line.split()).split(' ')[10]
+
+                if not name in CONF.onos()['rest_list']:
                     if not ('Active' in line and 'Deployed' in line):
-                        rest_json = {'name': web, 'status': 'nok', 'monitor_item': False}
-                        web_status = 'nok'
+                        rest_json = {'name': name, 'status': 'nok', 'monitor_item': False}
                     else:
-                        rest_json = {'name': web, 'status': 'ok', 'monitor_item': False}
+                        rest_json = {'name': name, 'status': 'ok', 'monitor_item': False}
 
-                web_list.append(rest_json)
-
+                    web_list.append(rest_json)
         else:
             LOG.error("\'%s\' ONOS Rest Check Error", node_ip)
             web_status = 'fail'
@@ -105,7 +105,7 @@ def onos_rest_check(conn, db_log, node_name, node_ip):
 
         try:
             sql = 'UPDATE ' + DB.ONOS_TBL + \
-                  ' SET weblist = \'' + str(web_list) + '\'' +\
+                  ' SET weblist = \"' + str(web_list) + '\"' +\
                   ' WHERE nodename = \'' + node_name + '\''
             db_log.write_log('----- UPDATE ONOS REST INFO -----\n' + sql)
 
@@ -122,35 +122,74 @@ def onos_rest_check(conn, db_log, node_name, node_ip):
     return web_status, str(fail_reason)
 
 
+def parse_openflow(line, hostname, is_monitor):
+    of_id = line.split(',')[0].split('=')[1]
+    available = line.split(',')[1].split('=')[1]
+    status = line.split(',')[2].split('=')[1].split(' ')[0]
+    role = line.split(',')[3].split('=')[1]
+    type = line.split(',')[4].split('=')[1]
+
+    rest_json = {'hostname': hostname, 'available': available, 'status': status,
+                 'role': role, 'type': type, 'monitor_item': is_monitor}
+
+    return rest_json
+
 def onos_conn_check(conn, db_log, node_name, node_ip):
     try:
         device_rt = SshCommand.onos_ssh_exec(node_ip, 'devices')
         nodes_rt = SshCommand.onos_ssh_exec(node_ip, 'nodes')
 
-        str_of = ''
+        of_status = 'ok'
 
-        of_fail_reason = ''
+        of_list = []
+        of_fail_reason = []
+
         cluster_fail_reason = ''
 
+        find_list = []
         if device_rt is not None:
-            of_status = 'ok'
-            for line in device_rt.splitlines():
-                if line.startswith('id=of'):
-                    of_id = line.split(',')[0].split('=')[1]
+            try:
+                sql = 'SELECT hostname, of_id FROM ' + DB.OPENSTACK_TBL
+                nodes_info = conn.cursor().execute(sql).fetchall()
 
-                    try:
-                        sql = 'SELECT hostname FROM ' + DB.OPENSTACK_TBL + ' WHERE of_id = \'' + of_id + '\''
-                        node_info = conn.cursor().execute(sql).fetchone()
+                for hostname, switch_id in nodes_info:
+                    for line in device_rt.splitlines():
+                        if line.startswith('id=of'):
+                            find_list.append(of_id)
+                            of_id = line.split(',')[0].split('=')[1]
+                            available = line.split(',')[1].split('=')[1]
+                            status = line.split(',')[2].split('=')[1].split(' ')[0]
+                            role = line.split(',')[3].split('=')[1]
+                            type = line.split(',')[4].split('=')[1]
 
-                        line = line.replace(of_id, node_info[0] + '(' + of_id + ')')
-                    except:
-                        LOG.exception()
+                            if switch_id == of_id:
+                                rest_json = {'hostname': hostname, 'available': available, 'status': status,
+                                             'role': role, 'type': type, 'monitor_item': True}
 
-                    if not ('available=true' in line):
-                        of_status = 'nok'
-                        of_fail_reason = of_fail_reason + str(node_info[0]) + '[nok],'
+                                if available == 'true':
+                                    of_status = 'nok'
+                                    of_fail_reason.append(rest_json)
 
-                    str_of = str_of + line + '\n'
+                                of_list.append(rest_json)
+
+                for line in device_rt.splitlines():
+                    if line.startswith('id=of'):
+                        of_id = line.split(',')[0].split('=')[1]
+                        available = line.split(',')[1].split('=')[1]
+                        status = line.split(',')[2].split('=')[1].split(' ')[0]
+                        role = line.split(',')[3].split('=')[1]
+                        type = line.split(',')[4].split('=')[1]
+
+                        if not of_id in find_list:
+                            rest_json = {'hostname': hostname, 'available': available, 'status': status,
+                                         'role': role, 'type': type, 'monitor_item': False}
+                            of_list.append(rest_json)
+
+            except:
+                LOG.exception()
+                LOG.error("\'%s\' Connection Check Error(devices)", node_ip)
+                of_status = 'fail'
+                of_fail_reason = 'fail'
         else:
             LOG.error("\'%s\' Connection Check Error(devices)", node_ip)
             of_status = 'fail'
@@ -168,7 +207,7 @@ def onos_conn_check(conn, db_log, node_name, node_ip):
 
         try:
             sql = 'UPDATE ' + DB.ONOS_TBL + \
-                  ' SET openflow = \'' + str_of + '\',' + \
+                  ' SET openflow = \"' + str(of_list) + '\",' + \
                   ' cluster = \'' + str(nodes_rt) + '\'' \
                   ' WHERE nodename = \'' + node_name + '\''
             db_log.write_log('----- UPDATE ONOS CONNECTION INFO -----\n' + sql)
@@ -182,7 +221,7 @@ def onos_conn_check(conn, db_log, node_name, node_ip):
         of_status = 'fail'
         cluster_status = 'fail'
 
-    return of_status, cluster_status, of_fail_reason, cluster_fail_reason
+    return of_status, cluster_status, str(of_fail_reason), cluster_fail_reason
 
 
 
