@@ -375,7 +375,7 @@ def proc_dis_connection(node, param):
             if value == 'none':
                 res_result[nodename] = 'FAIL'
             else:
-                res_result[nodename] = value
+                res_result[nodename] = eval(value)
 
         return res_result
     except:

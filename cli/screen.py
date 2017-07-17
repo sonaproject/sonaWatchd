@@ -528,8 +528,8 @@ class FlowTraceView(Frame):
 
             self.palette["selected_focus_field"] = (Screen.COLOUR_WHITE, Screen.A_BOLD, Screen.COLOUR_YELLOW)
             self.palette["title"] = (Screen.COLOUR_WHITE, Screen.A_BOLD, Screen.COLOUR_CYAN)
-            self.palette["edit_text"] = (Screen.COLOUR_BLUE, Screen.A_BOLD, Screen.COLOUR_CYAN)
-            self.palette["focus_edit_text"] = (Screen.COLOUR_BLUE, Screen.A_BOLD, Screen.COLOUR_YELLOW)
+            self.palette["edit_text"] = (Screen.COLOUR_BLACK, Screen.A_BOLD, Screen.COLOUR_CYAN)
+            self.palette["focus_edit_text"] = (Screen.COLOUR_BLACK, Screen.A_BOLD, Screen.COLOUR_YELLOW)
             self.palette["focus_button"] = (Screen.COLOUR_WHITE, Screen.A_BOLD, Screen.COLOUR_YELLOW)
             self.palette["label"] = (Screen.COLOUR_WHITE, Screen.A_BOLD, Screen.COLOUR_CYAN)
 
