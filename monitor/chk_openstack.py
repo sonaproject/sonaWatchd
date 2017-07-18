@@ -95,7 +95,7 @@ def vrouter_check(conn, db_log, node_name, user_name, node_ip):
     return ret_docker, fail_reason
 
 
-def get_gw_ratio_gateway(conn, db_log, node_name, node_ip, rx, gw_rx_sum, pre_stat):
+def get_gw_ratio_gateway(conn, db_log, node_name, rx, gw_rx_sum, pre_stat):
     status = 'ok'
     reason = ''
 
@@ -115,16 +115,11 @@ def get_gw_ratio_gateway(conn, db_log, node_name, node_ip, rx, gw_rx_sum, pre_st
         cpt_to_gw_packet = 0
         for nodename, nodelist, ip in nodes_info:
             if not nodelist == 'none':
-                for line in str(nodelist).splitlines():
-                    if (not (line.startswith('Total') or line.startswith('Hostname'))) and node_ip + ' ' in line:
-                        new_line = " ".join(line.split())
-
-                        tmp = new_line.split(' ')
-                        if tmp[3].startswith('of:'):
-                            data_ip = tmp[5]
-                        else:
-                            data_ip = tmp[4]
-                        manage_ip = ip
+                for node_info in eval(nodelist):
+                    try:
+                        manage_ip = dict(node_info)['management_ip']
+                    except:
+                        manage_ip = ''
 
                     if not manage_ip == '':
                         break
@@ -133,7 +128,7 @@ def get_gw_ratio_gateway(conn, db_log, node_name, node_ip, rx, gw_rx_sum, pre_st
 
         if data_ip == '':
             LOG.info('Can not find data ip')
-            return 'fail', pre_stat
+            return 'fail', pre_stat, reason
 
         group_rt = SshCommand.onos_ssh_exec(manage_ip, 'groups')
 
@@ -146,11 +141,12 @@ def get_gw_ratio_gateway(conn, db_log, node_name, node_ip, rx, gw_rx_sum, pre_st
                         if 'packets=' in col:
                             cpt_to_gw_packet = cpt_to_gw_packet + int(col.split('=')[1])
 
-        strRatio = 'Received packet count = ' + str(rx) + '\n'
-        strRatio = strRatio + 'compute nodes -> ' + node_name + ' Packet count = ' + str(cpt_to_gw_packet) + '\n'
-
         if not dict(pre_stat).has_key(node_name + '_GW'):
             status = '-'
+            json_ratio = {'current_rx': '-', 'current_compute_tx': '-', 'current_total': '-',
+                          'ratio': '-',
+                          'period': CONF.watchdog()['interval'], 'status': status, 'packet_loss': False,
+                          'description': ''}
         else:
             cur_rx = rx - int(dict(pre_stat)[node_name + '_GW']['rx'])
             cur_total = gw_rx_sum - int(dict(pre_stat)[node_name + '_GW']['gw_rx_sum'])
@@ -163,22 +159,25 @@ def get_gw_ratio_gateway(conn, db_log, node_name, node_ip, rx, gw_rx_sum, pre_st
             else:
                 ratio = float(cur_rx) * 100 / cur_total
 
-            strRatio = strRatio + '[LAST ' + str(CONF.watchdog()['interval']) + ' Sec] GW RATIO = ' + str(ratio) + ' (' + str(cur_rx) + ' / ' + str(cur_total) + ')'
+            desc = 'GW RATIO = ' + str(ratio) + ' (' + str(cur_rx) + ' / ' + str(cur_total) + ')'
 
+            loss_flag = False
             if cur_rx < cur_packet:
                 LOG.info('GW Ratio Fail. (Data loss)')
-                strRatio = strRatio + '(packet loss)'
-            else:
-                strRatio = strRatio + '(no packet loss)'
+                loss_flag = True
 
             LOG.info('GW Ratio = ' + str(ratio))
 
             if ratio < float(CONF.alarm()['gw_ratio']) or cur_rx < cur_packet:
                 status = 'nok'
                 reason = 'gw ratio : ' + str(format(ratio, '.2f'))
+
+            json_ratio = {'current_rx': cur_rx, 'current_compute_tx': cur_packet, 'current_total': cur_total, 'ratio': format(ratio, '.2f'),
+                          'period':CONF.watchdog()['interval'], 'status': status, 'packet_loss': loss_flag, 'description': desc}
+
         try:
             sql = 'UPDATE ' + DB.OPENSTACK_TBL + \
-                  ' SET gw_ratio = \'' + strRatio + '\'' + \
+                  ' SET gw_ratio = \"' + str(json_ratio) + '\"' + \
                   ' WHERE nodename = \'' + node_name + '\''
             db_log.write_log('----- UPDATE TRAFFIC GW INFO -----\n' + sql)
 
@@ -200,7 +199,7 @@ def get_gw_ratio_gateway(conn, db_log, node_name, node_ip, rx, gw_rx_sum, pre_st
     return status, pre_stat, reason
 
 
-def get_gw_ratio_compute(conn, db_log, node_name, node_ip, pre_stat):
+def get_gw_ratio_compute(conn, db_log, node_name, pre_stat):
     status = 'ok'
     reason = ''
 
@@ -218,13 +217,11 @@ def get_gw_ratio_compute(conn, db_log, node_name, node_ip, pre_stat):
         hostname = ''
         for nodename, nodelist, ip in nodes_info:
             if not nodelist == 'none':
-                for line in str(nodelist).splitlines():
-                    if (not (line.startswith('Total') or line.startswith('Hostname'))) and node_ip + ' ' in line:
-                        new_line = " ".join(line.split())
-                        tmp = new_line.split(' ')
-
-                        hostname = tmp[0]
-                        manage_ip = ip
+                for node_info in eval(nodelist):
+                    try:
+                        manage_ip = dict(node_info)['management_ip']
+                    except:
+                        manage_ip = ''
 
                     if not manage_ip == '':
                         break
@@ -264,8 +261,8 @@ def get_gw_ratio_compute(conn, db_log, node_name, node_ip, pre_stat):
         gw_ratio_list = []
 
         if not dict(pre_stat).has_key(node_name + '_GW'):
-            strRatio = '-'
             status = '-'
+            json_ratio = {'ratio': '-', 'status': status}
         else:
             i = 0
             for gw in gw_list:
@@ -287,12 +284,12 @@ def get_gw_ratio_compute(conn, db_log, node_name, node_ip, pre_stat):
                     status = 'nok'
                     reason = 'gw ratio : ' + str(format(ratio, '.2f'))
 
-            strRatio = 'GW_RATIO = ' + str_ratio.rstrip(':') + '\n'
+            json_ratio = {'ratio': str_ratio.rstrip(':'), 'status': status}
             LOG.info('[COMPUTE] ' + 'GW_RATIO = ' + str_ratio.rstrip(':'))
 
         try:
             sql = 'UPDATE ' + DB.OPENSTACK_TBL + \
-                  ' SET gw_ratio = \'' + strRatio + '\'' + \
+                  ' SET gw_ratio = \"' + str(json_ratio) + '\"' + \
                   ' WHERE nodename = \'' + node_name + '\''
             db_log.write_log('----- UPDATE TRAFFIC GW INFO -----\n' + sql)
 
@@ -376,7 +373,7 @@ def rx_tx_check(user_name, node_ip):
 def get_node_traffic(conn, db_log, node_name, rx_dic, tx_dic, total_rx, total_tx, err_info, pre_stat):
     try:
         status = 'ok'
-        reason = ''
+        reason_list = []
 
         pre_total_rx = total_rx
         pre_total_tx = total_tx
@@ -408,7 +405,6 @@ def get_node_traffic(conn, db_log, node_name, rx_dic, tx_dic, total_rx, total_tx
         else:
             total_rx = total_rx - int(dict(pre_stat)[node_name + '_VXLAN']['total_rx'])
             total_tx = total_tx - int(dict(pre_stat)[node_name + '_VXLAN']['total_tx'])
-            LOG.info('VALUE = ' + str(dict(pre_stat)[node_name + '_VXLAN']))
             cur_min = min_rx - int(dict(pre_stat)[node_name + '_VXLAN']['min_rx'])
 
             if total_rx == 0 and total_tx == 0:
@@ -421,52 +417,37 @@ def get_node_traffic(conn, db_log, node_name, rx_dic, tx_dic, total_rx, total_tx
 
         LOG.info('Node Traffic Ratio = ' + str(ratio))
 
-        strRatio = 'rx = ' + str(rx_dic[node_name]) + ', min_rx = ' + str(min_rx) + ', drop = ' + str(err_info['rx_drop']) + ', errs = ' + str(err_info['rx_err']) + '\n'
-        strRatio = strRatio + 'tx = ' + str(tx_dic[node_name]) + ', drop = ' + str(err_info['tx_drop']) + ', errs = ' + str(err_info['tx_err']) + '\n'
+        port_json = {'rx': rx_dic[node_name], 'minimum_rx': min_rx, 'rx_drop': err_info['rx_drop'], 'rx_errs': err_info['rx_err'],
+                      'tx': tx_dic[node_name], 'tx_drop': err_info['tx_drop'], 'tx_errs': err_info['tx_err']}
+
+        description = ''
 
         if not status == '-':
-            strRatio = strRatio + '* [LAST ' + str(CONF.watchdog()['interval']) + ' Sec] Ratio of success for all nodes = ' + str(ratio)  + ' (' + str(total_rx) + ' / ' + str(total_tx) + ')'
+            description = 'Ratio of success for all nodes = ' + str(ratio)  + ' (' + str(total_rx) + ' / ' + str(total_tx) + ')'
 
             if ratio < float(CONF.alarm()['node_traffic_ratio']):
-                reason = reason + 'vxlan port ratio : ' + str(format(ratio, '.2f')) + ','
                 LOG.info('[NODE TRAFFIC] ratio nok')
                 status = 'nok'
 
             if total_rx < cur_min:
                 LOG.info('CUR_MIN_RX = ' + str(cur_min) + ', CUR_RX = ' + str(total_rx) + ', Less than rx minimum.')
-                reason = reason + 'Less than rx minimum,'
                 status = 'nok'
 
             if err_info['rx_drop'] - int(dict(pre_stat)[node_name + '_VXLAN']['rx_drop']) > 0:
-                reason = reason + 'rx_drop[nok],'
                 LOG.info('[NODE TRAFFIC] rx_drop nok')
                 status = 'nok'
 
             if err_info['rx_err'] - int(dict(pre_stat)[node_name + '_VXLAN']['rx_err']) > 0:
-                reason = reason + 'rx_err[nok],'
                 LOG.info('[NODE TRAFFIC] rx_err nok')
                 status = 'nok'
 
             if err_info['tx_drop'] - int(dict(pre_stat)[node_name + '_VXLAN']['tx_drop']) > 0:
-                reason = reason + 'tx_drop[nok],'
                 LOG.info('[NODE TRAFFIC] tx_drop nok')
                 status = 'nok'
 
             if err_info['tx_err'] - int(dict(pre_stat)[node_name + '_VXLAN']['tx_err']) > 0:
-                reason = reason + 'tx_err[nok],'
                 LOG.info('[NODE TRAFFIC] tx_err nok')
                 status = 'nok'
-
-        try:
-            sql = 'UPDATE ' + DB.OPENSTACK_TBL + \
-                  ' SET vxlan_traffic = \'' + strRatio + '\'' + \
-                  ' WHERE nodename = \'' + node_name + '\''
-            db_log.write_log('----- UPDATE VXLAN STAT INFO -----\n' + sql)
-
-            if DB.sql_execute(sql, conn) != 'SUCCESS':
-                db_log.write_log('[FAIL] VXLAN STAT DB Update Fail.')
-        except:
-            LOG.exception()
 
         in_out_dic = dict()
         in_out_dic['total_rx'] = pre_total_rx
@@ -484,7 +465,25 @@ def get_node_traffic(conn, db_log, node_name, rx_dic, tx_dic, total_rx, total_tx
         LOG.exception()
         status = 'fail'
 
-    return status, pre_stat, reason.rstrip(',')
+    vxlan_json = {'port_stat_vxlan': port_json, 'period': CONF.watchdog()['interval'],
+                  'ratio': format(ratio, '.2f'), 'current_rx': total_rx, 'current_tx': total_tx,
+                  'description': description, 'threshold': CONF.alarm()['node_traffic_ratio'], 'status': status}
+
+    try:
+        sql = 'UPDATE ' + DB.OPENSTACK_TBL + \
+              ' SET vxlan_traffic = \"' + str(vxlan_json) + '\"' + \
+              ' WHERE nodename = \'' + node_name + '\''
+        db_log.write_log('----- UPDATE VXLAN STAT INFO -----\n' + sql)
+
+        if DB.sql_execute(sql, conn) != 'SUCCESS':
+            db_log.write_log('[FAIL] VXLAN STAT DB Update Fail.')
+    except:
+        LOG.exception()
+
+    if not status == 'ok':
+        reason_list.append(vxlan_json)
+
+    return status, pre_stat, str(reason_list)
 
 
 def get_internal_traffic(conn, db_log, node_name, node_ip, user_name, sub_type, rx_count, patch_tx, pre_stat):
@@ -493,7 +492,8 @@ def get_internal_traffic(conn, db_log, node_name, node_ip, user_name, sub_type, 
         in_packet = 0
         out_packet = 0
 
-        reason = ''
+        reason_list = []
+        desc = ''
 
         if sub_type == 'COMPUTE':
             flow_rt = SshCommand.ssh_exec(user_name, node_ip, 'sudo ovs-ofctl -O OpenFlow13 dump-flows br-int')
@@ -515,14 +515,13 @@ def get_internal_traffic(conn, db_log, node_name, node_ip, user_name, sub_type, 
                 in_packet = inport_cnt + rx_count
                 out_packet = gw_cnt + output_cnt
 
-                strmsg = 'IN[vm_tx = ' + str(inport_cnt) + ', vxlan_rx = ' + str(rx_count) + '], OUT[gw = ' + str(gw_cnt) + ', output = ' + str(output_cnt) + ']'
+                port_json = {'vm_tx': inport_cnt, 'vxlan_rx': rx_count, 'out_gw': gw_cnt, 'output': output_cnt}
             else:
+                port_json = {'vm_tx': -1, 'vxlan_rx': -1, 'out_gw': -1, 'output': -1}
                 status = 'fail'
-                strmsg = 'fail'
-                reason = 'fail'
 
         else:
-            strmsg = 'IN[vxlan rx = ' + str(rx_count) + '], OUT[patch-integ tx = ' + str(patch_tx) + ']'
+            port_json = {'vxlan_rx': rx_count, 'patch-integ': patch_tx}
 
             if patch_tx == -1:
                 status = 'fail'
@@ -535,6 +534,9 @@ def get_internal_traffic(conn, db_log, node_name, node_ip, user_name, sub_type, 
 
         if not dict(pre_stat).has_key(node_name + '_internal'):
             status = '-'
+            vxlan_json = {'port_stat_in_out': port_json, 'period': CONF.watchdog()['interval'],
+                          'ratio': 0, 'current_rx': -1, 'current_tx': -1,
+                          'description': desc, 'threshold': CONF.alarm()['internal_traffic_ratio'], 'status': status}
         elif status == 'ok':
             in_packet = in_packet - int(dict(pre_stat)[node_name + '_internal']['in_packet'])
             out_packet = out_packet - int(dict(pre_stat)[node_name + '_internal']['out_packet'])
@@ -548,11 +550,14 @@ def get_internal_traffic(conn, db_log, node_name, node_ip, user_name, sub_type, 
                 ratio = float(out_packet) * 100 / in_packet
 
             LOG.info('Internal Traffic Ratio = ' + str(ratio))
-            strmsg = strmsg + '\n\n* [LAST ' + str(CONF.watchdog()['interval']) + ' Sec] Internal Traffic Ratio = ' + str(ratio) + '(' + str(out_packet) + '/' + str(in_packet) + ')\n'
+            desc = 'Internal Traffic Ratio = ' + str(ratio) + '(' + str(out_packet) + '/' + str(in_packet) + ')'
 
             if ratio < float(CONF.alarm()['internal_traffic_ratio']):
                 status = 'nok'
-                reason = 'internal traffic ratio : ' + str(format(ratio, '.2f'))
+
+            vxlan_json = {'port_stat_in_out': port_json, 'period': CONF.watchdog()['interval'],
+                          'ratio': format(ratio, '.2f'), 'current_rx': in_packet, 'current_tx': out_packet,
+                          'description': desc, 'threshold': CONF.alarm()['internal_traffic_ratio'], 'status': status}
 
         in_out_dic = dict()
         in_out_dic['in_packet'] = for_save_in
@@ -561,7 +566,7 @@ def get_internal_traffic(conn, db_log, node_name, node_ip, user_name, sub_type, 
 
         try:
             sql = 'UPDATE ' + DB.OPENSTACK_TBL + \
-                  ' SET internal_traffic = \'' + strmsg + '\'' + \
+                  ' SET internal_traffic = \"' + str(vxlan_json) + '\"' + \
                   ' WHERE nodename = \'' + node_name + '\''
             db_log.write_log('----- UPDATE INTERNAL TRAFFIC INFO -----\n' + sql)
 
@@ -573,5 +578,8 @@ def get_internal_traffic(conn, db_log, node_name, node_ip, user_name, sub_type, 
         LOG.exception()
         status = 'fail'
 
-    return status, pre_stat, reason
+    if not status == 'ok':
+        reason_list.append(vxlan_json)
+
+    return status, pre_stat, str(reason_list)
 

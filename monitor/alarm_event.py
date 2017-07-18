@@ -62,7 +62,7 @@ def occur_event(conn, db_log, node_name, item, pre_grade, cur_grade, reason = '-
         sql = 'UPDATE ' + DB.EVENT_TBL + \
               ' SET grade = \'' + cur_grade + '\'' + ',' + \
               ' desc = \'' + desc + '\'' + ',' + \
-              ' reason = \'' + reason + '\'' + ',' + \
+              ' reason = \"' + reason + '\"' + ',' + \
               ' time = \'' + time + '\'' + \
               ' WHERE nodename = \'' + node_name + '\' and item = \'' + item + '\''
         db_log.write_log('----- UPDATE EVENT INFO -----\n' + sql)

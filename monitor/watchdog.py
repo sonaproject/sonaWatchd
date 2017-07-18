@@ -193,11 +193,11 @@ def periodic(conn, pre_stat, db_log):
                                                              cur_info[node_name]['GATEWAY'], v_router, reason)
                         LOG.info('[' + node_name + '][GATEWAY][' + v_router + ']' + reason)
 
-                        traffic_gw, pre_stat, reason = chk_openstack.get_gw_ratio_gateway(conn, db_log, node_name, node_ip, openstack_rx_dic[node_name], gw_total, pre_stat)
+                        traffic_gw, pre_stat, reason = chk_openstack.get_gw_ratio_gateway(conn, db_log, node_name, openstack_rx_dic[node_name], gw_total, pre_stat)
 
                     elif sub_type.upper() == 'COMPUTE':
                         v_router = '-'
-                        traffic_gw, pre_stat, reason = chk_openstack.get_gw_ratio_compute(conn, db_log, node_name, node_ip, pre_stat)
+                        traffic_gw, pre_stat, reason = chk_openstack.get_gw_ratio_compute(conn, db_log, node_name, pre_stat)
 
                     traffic_gw = alarm_event.process_event(conn, db_log, node_name, type, 'TRAFFIC_GW',
                                                            cur_info[node_name]['TRAFFIC_GW'], traffic_gw, reason)

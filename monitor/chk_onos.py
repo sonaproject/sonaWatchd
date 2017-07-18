@@ -279,12 +279,14 @@ def onos_conn_check(conn, db_log, node_name, node_ip):
 def onos_node_check(conn, db_log, node_name, node_ip):
     try:
         node_rt = SshCommand.onos_ssh_exec(node_ip, 'openstack-nodes')
-        str_node_list = ''
+
+        node_list = []
+        port_list = []
+
+        fail_reason = []
+        ip_list = []
 
         node_status = 'ok'
-        fail_reason = ''
-
-        str_port = ''
 
         if node_rt is not None:
             for ip in CONF.openstack()['compute_list'] + CONF.openstack()['gateway_list']:
@@ -297,10 +299,10 @@ def onos_node_check(conn, db_log, node_name, node_ip):
                         find_flag = True
                         fail_flag = False
                         new_line = " ".join(line.split())
-                        str_node_list = str_node_list + new_line + '\n'
 
                         tmp = new_line.split(' ')
                         host_name = tmp[0]
+                        node_type = tmp[1]
                         of_id = tmp[2]
 
                         if not 'COMPLETE' in line:
@@ -312,9 +314,13 @@ def onos_node_check(conn, db_log, node_name, node_ip):
                             openstack_nodename = conn.cursor().execute(sql).fetchone()[0]
 
                             if tmp[3].startswith('of:'):
+                                manage_ip = tmp[4]
                                 data_ip = tmp[5]
+                                state = tmp[6]
                             else:
+                                manage_ip = tmp[3]
                                 data_ip = tmp[4]
+                                state = tmp[5]
 
                             sql = 'UPDATE ' + DB.OPENSTACK_TBL + \
                                   ' SET data_ip = \'' + data_ip + '\',' + \
@@ -330,39 +336,76 @@ def onos_node_check(conn, db_log, node_name, node_ip):
 
                         port_rt = SshCommand.onos_ssh_exec(node_ip, 'openstack-node-check ' + host_name)
 
-                        str_port = str_port + '\n* ' + host_name + '\n'
-
+                        host_port_list = []
+                        port_status = 'ok'
                         if port_rt is not None:
                             for port_line in port_rt.splitlines():
-                                str_port = str_port + port_line + '\n'
-
                                 if port_line.startswith('[') or port_line.strip() == '':
                                     continue
 
+                                tmp = port_line.split(' ')
+
                                 if not port_line.startswith('OK'):
-                                    node_status = 'nok'
+                                    rest_json = {'port_name': tmp[1].split('=')[0], 'status': 'nok'}
                                     fail_flag = True
+                                    port_status = 'nok'
+                                    node_status = 'nok'
+                                else:
+                                    rest_json = {'port_name': tmp[1].split('=')[0], 'status': 'ok'}
+
+                                host_port_list.append(rest_json)
                         else:
                             node_status = 'nok'
-                            str_port = 'fail'
+                            port_status = 'nok'
+
+                        port_json = {'hostname': host_name, 'port_list': host_port_list}
+                        port_list.append(port_json)
+
+                        rest_json = {'hostname': host_name, 'type': node_type, 'of_id': of_id,
+                                     'management_ip': manage_ip, 'data_ip': data_ip, 'state': state,
+                                     'port_status': port_status, 'monitor_item': True}
+                        node_list.append(rest_json)
+                        ip_list.append(manage_ip)
 
                         if fail_flag:
-                            fail_reason = fail_reason + host_name + '[nok],'
+                            fail_reason.append(rest_json)
 
                 if not find_flag:
+                    rest_json = {'hostname': '-', 'type': '-', 'of_id': '-', 'port_status': 'nok',
+                                 'management_ip': ip, 'data_ip': '-', 'state': 'NO_EXIST', 'monitor_item': True}
+                    node_list.append(rest_json)
                     node_status = 'nok'
-                    fail_reason = fail_reason + ip + '[nok],'
-                    str_node_list = str_node_list + ip + ' - - - - NO_EXIST' + '\n'
+                    fail_reason.append(rest_json)
+
+            for line in node_rt.splitlines():
+                if not (line.startswith('Total') or line.startswith('Hostname')):
+                    new_line = " ".join(line.split())
+                    tmp = new_line.split(' ')
+
+                    if tmp[3].startswith('of:'):
+                        manage_ip = tmp[4]
+                        data_ip = tmp[5]
+                        state = tmp[6]
+                    else:
+                        manage_ip = tmp[3]
+                        data_ip = tmp[4]
+                        state = tmp[5]
+
+                    if not manage_ip in ip_list:
+                        rest_json = {'hostname': tmp[0], 'type': tmp[1], 'of_id': tmp[2],
+                                     'management_ip': manage_ip, 'data_ip': data_ip, 'state': state,
+                                     'monitor_item': False}
+                        node_list.append(rest_json)
         else:
             LOG.error("\'%s\' ONOS Node Check Error", node_ip)
             node_status = 'fail'
-            str_node_list = 'fail'
+            node_list = 'fail'
             fail_reason = 'fail'
 
         try:
             sql = 'UPDATE ' + DB.ONOS_TBL + \
-                  ' SET nodelist = \'' + str_node_list + '\',' + \
-                  ' port = \'' + str_port + '\'' \
+                  ' SET nodelist = \"' + str(node_list) + '\",' + \
+                  ' port = \"' + str(port_list) + '\"' \
                   ' WHERE nodename = \'' + node_name + '\''
             db_log.write_log('----- UPDATE ONOS NODE INFO -----\n' + sql)
 
@@ -375,7 +418,7 @@ def onos_node_check(conn, db_log, node_name, node_ip):
         node_status = 'fail'
         fail_reason = 'fail'
 
-    return node_status, fail_reason.rstrip(',')
+    return node_status, str(fail_reason)
 
 
 def controller_traffic_check(conn, db_log, node_name, node_ip, pre_stat):
@@ -455,7 +498,7 @@ def controller_traffic_check(conn, db_log, node_name, node_ip, pre_stat):
                     out_packet = out_packet - int(dict(pre_stat)[node_name]['out_packet'])
 
                     if in_packet <= CONF.alarm()['controller_traffic_minimum_inbound']:
-                        desc = ' * Minimum increment for status check = ' + str(
+                        desc = 'Minimum increment for status check = ' + str(
                             CONF.alarm()['controller_traffic_minimum_inbound'])
                         controller_traffic = '-'
                     else:
@@ -468,11 +511,10 @@ def controller_traffic_check(conn, db_log, node_name, node_ip, pre_stat):
                             ratio = float(out_packet) * 100 / in_packet
 
                         LOG.info('[CPMAN][' + node_name + '] Controller Traffic Ratio = ' + str(ratio) + '(' + str(out_packet) + '/' + str(in_packet) + ')')
-                        desc = ' * Controller Traffic Ratio = ' + str(ratio) + '(' + str(out_packet) + '/' + str(in_packet) + ')\n'
+                        desc = 'Controller Traffic Ratio = ' + str(ratio) + '(' + str(out_packet) + '/' + str(in_packet) + ')\n'
 
                         if ratio < float(CONF.alarm()['controller_traffic_ratio']):
                             controller_traffic = 'nok'
-                            desc = 'controller traffic ratio : ' + str(format(ratio, '.2f'))
 
                         in_out_dic = dict()
                         in_out_dic['in_packet'] = for_save_in
@@ -485,22 +527,17 @@ def controller_traffic_check(conn, db_log, node_name, node_ip, pre_stat):
         else:
             controller_traffic = 'fail'
 
-        #controller_json = {'stat_list': cpman_stat_list, 'minimum_inbound_packet': CONF.alarm()['controller_traffic_minimum_inbound'], 'current_inbound_packet': in_packet,
-                     #'period': CONF.watchdog()['interval'], 'ratio_test': 'test', 'des': 'TEST', 'threshold': CONF.alarm()['controller_traffic_ratio']}
-
-        controller_json = {'minimum_inbound_packet': str(CONF.alarm()['controller_traffic_minimum_inbound']), 'current_inbound_packet': str(in_packet),
-                     'period': str(CONF.watchdog()['interval']), 'desc': str('test')}
+        controller_json = {'status': controller_traffic, 'stat_list': cpman_stat_list, 'minimum_inbound_packet': CONF.alarm()['controller_traffic_minimum_inbound'], 'current_inbound_packet': in_packet,
+                     'current_outbound_packet': out_packet, 'period': CONF.watchdog()['interval'], 'ratio': format(ratio, '.2f'), 'description': desc, 'threshold': CONF.alarm()['controller_traffic_ratio']}
 
         if not controller_traffic == 'ok':
             reason.append(controller_json)
 
         try:
             sql = 'UPDATE ' + DB.ONOS_TBL + \
-                  ' SET traffic_stat = \"' + str(controller_json).replace('{', '\{').replace('}', '\}') + '\"' + \
+                  ' SET traffic_stat = \"' + str(controller_json) + '\"' + \
                   ' WHERE nodename = \'' + node_name + '\''
             db_log.write_log('----- UPDATE CONTROLLER TRAFFIC INFO -----\n' + sql)
-
-            LOG.info(sql)
 
             if DB.sql_execute(sql, conn) != 'SUCCESS':
                 db_log.write_log('[FAIL] CONTROLLER TRAFFIC Update Fail.')

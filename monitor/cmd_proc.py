@@ -16,6 +16,7 @@ def parse_command(req_obj):
             res_body['param'] = req_obj['param']
         except:
             res_body['param'] = ''
+            req_obj['param'] = ''
 
         ret = COMMAND_MAP[req_obj['command']](req_obj['system'], req_obj['param'])
         res_body['result'] = ret
@@ -231,7 +232,7 @@ def proc_dis_gwratio(node, dummy):
             if list == 'fail' or ratio == 'none':
                 res_result[nodename] = 'FAIL'
             else:
-                res_result[nodename] = ratio
+                res_result[nodename] = eval(ratio)
 
         return res_result
     except:
@@ -251,7 +252,7 @@ def proc_dis_traffic_vxlan(node, dummy):
             if list == 'fail' or ratio == 'none':
                 res_result[nodename] = 'FAIL'
             else:
-                res_result[nodename] = ratio
+                res_result[nodename] = eval(ratio)
 
         return res_result
     except:
@@ -271,7 +272,7 @@ def proc_dis_traffic_internal(node, dummy):
             if list == 'fail' or ratio == 'none':
                 res_result[nodename] = 'FAIL'
             else:
-                res_result[nodename] = ratio
+                res_result[nodename] = eval(ratio)
 
         return res_result
     except:
@@ -291,7 +292,7 @@ def proc_dis_traffic_controller(node, dummy):
             if list == 'fail' or stat == 'none':
                 res_result[nodename] = 'FAIL'
             else:
-                res_result[nodename] = stat
+                res_result[nodename] = eval(stat)
 
         return res_result
     except:
@@ -355,7 +356,7 @@ def proc_dis_node(node, param):
             if value == 'none':
                 res_result[nodename] = 'FAIL'
             else:
-                res_result[nodename] = value
+                res_result[nodename] = eval(value)
 
         return res_result
     except:
