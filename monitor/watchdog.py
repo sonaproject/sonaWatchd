@@ -109,10 +109,9 @@ def periodic(conn, pre_stat, db_log):
 
             # occur event (rest)
             # 1. ping check
+            reason = []
             if network == 'nok':
-                reason = 'ping transmit faild'
-            else:
-                reason = '-'
+                reason.append('ping transmit faild')
 
             network = alarm_event.process_event(conn, db_log, node_name, type, 'NETWORK', cur_info[node_name]['NETWORK'], network, reason)
 
@@ -122,13 +121,13 @@ def periodic(conn, pre_stat, db_log):
                     openstack_node, reason = chk_onos.onos_node_check(conn, db_log, node_name, node_ip)
                     openstack_node = alarm_event.process_event(conn, db_log, node_name, type, 'OPENSTACK_NODE',
                                                                cur_info[node_name]['OPENSTACK_NODE'], openstack_node, reason)
-                    LOG.info('[' + node_name + '][OPENSTACK_NODE][' + openstack_node + ']' + reason)
+                    LOG.info('[' + node_name + '][OPENSTACK_NODE][' + openstack_node + ']' + str(reason))
 
                     # check app
                     onos_app, reason = chk_onos.onos_app_check(conn, db_log, node_name, node_ip)
                     onos_app = alarm_event.process_event(conn, db_log, node_name, type, 'ONOS_APP',
                                                          cur_info[node_name]['ONOS_APP'], onos_app, reason)
-                    LOG.info('[' + node_name + '][ONOS_APP][' + onos_app + ']' + reason)
+                    LOG.info('[' + node_name + '][ONOS_APP][' + onos_app + ']' + str(reason))
 
                     # check connection
                     onos_of, onos_cluster, of_reason, cluster_reason = chk_onos.onos_conn_check(conn, db_log, node_name, node_ip)
@@ -136,62 +135,63 @@ def periodic(conn, pre_stat, db_log):
                                                         cur_info[node_name]['ONOS_OPENFLOW'], onos_of, of_reason)
                     onos_cluster = alarm_event.process_event(conn, db_log, node_name, type, 'ONOS_CLUSTER',
                                                              cur_info[node_name]['ONOS_CLUSTER'], onos_cluster, cluster_reason)
-                    LOG.info('[' + node_name + '][ONOS_OPENFLOW][' + onos_of + ']' + of_reason)
-                    LOG.info('[' + node_name + '][ONOS_CLUSTER][' + onos_cluster + ']' + cluster_reason)
+                    LOG.info('[' + node_name + '][ONOS_OPENFLOW][' + onos_of + ']' + str(of_reason))
+                    LOG.info('[' + node_name + '][ONOS_CLUSTER][' + onos_cluster + ']' + str(cluster_reason))
 
                     # check web
                     onos_rest, reason = chk_onos.onos_rest_check(conn, db_log, node_name, node_ip)
                     onos_rest = alarm_event.process_event(conn, db_log, node_name, type, 'ONOS_REST',
                                                           cur_info[node_name]['ONOS_REST'], onos_rest, reason)
-                    LOG.info('[' + node_name + '][ONOS_REST][' + onos_rest + ']' + reason)
+                    LOG.info('[' + node_name + '][ONOS_REST][' + onos_rest + ']' + str(reason))
 
                     # check controller traffic
                     traffic_controller, pre_stat, reason = chk_onos.controller_traffic_check(conn, db_log, node_name, node_ip, pre_stat)
                     traffic_controller = alarm_event.process_event(conn, db_log, node_name, type, 'TRAFFIC_CONTROLLER',
                                                                    cur_info[node_name]['TRAFFIC_CONTROLLER'],
                                                                    traffic_controller, reason)
-                    LOG.info('[' + node_name + '][ONOS_TRAFFIC_CONTROLLER][' + traffic_controller + ']' + reason)
+                    LOG.info('[' + node_name + '][ONOS_TRAFFIC_CONTROLLER][' + traffic_controller + ']' + str(reason))
 
                 elif type.upper() == 'HA':
                     ha_svc = global_ha_svc
                     ha_svc = alarm_event.process_event(conn, db_log, node_name, type, 'HA_SVC', cur_info[node_name]['HA_SVC'],
                                                        ha_svc, global_svc_reason)
-                    LOG.info('[' + node_name + '][HA_SVC][' + ha_svc + ']' + global_svc_reason)
+                    LOG.info('[' + node_name + '][HA_SVC][' + ha_svc + ']' + str(global_svc_reason))
 
                     ha_ratio = global_ha_ratio
                     ha_ratio = alarm_event.process_event(conn, db_log, node_name, type, 'HA_RATIO', cur_info[node_name]['HA_RATIO'],
                                                          ha_ratio, global_ha_ratio_reason)
-                    LOG.info('[' + node_name + '][HA_SVC][' + ha_ratio + ']' + global_ha_ratio_reason)
+                    LOG.info('[' + node_name + '][HA_SVC][' + ha_ratio + ']' + str(global_ha_ratio_reason))
 
                 # check swarm (app/node)
                 elif type.upper() == 'SWARM':
                     swarm_svc, swarm_node = chk_swarm.swarm_check(conn, db_log, node_name, user_name, node_ip)
 
                     # add reason
+                    reason = []
                     swarm_svc = alarm_event.process_event(conn, db_log, node_name, type, 'SWARM_SVC',
-                                                          cur_info[node_name]['SWARM_SVC'], swarm_svc)
+                                                          cur_info[node_name]['SWARM_SVC'], swarm_svc, reason)
                     swarm_node = alarm_event.process_event(conn, db_log, node_name, type, 'SWARM_NODE',
-                                                           cur_info[node_name]['SWARM_NODE'], swarm_node)
+                                                           cur_info[node_name]['SWARM_NODE'], swarm_node, reason)
                 # check vrouter, gw_ratio
                 elif type.upper() == 'OPENSTACK':
                     port_stat_vxlan, pre_stat, reason = chk_openstack.get_node_traffic(conn, db_log, node_name, openstack_rx_dic,
                                                                   openstack_tx_dic, rx_total, tx_total, rx_tx_err_info[node_name], pre_stat)
                     port_stat_vxlan = alarm_event.process_event(conn, db_log, node_name, type, 'PORT_STAT_VXLAN',
                                                                 cur_info[node_name]['PORT_STAT_VXLAN'], port_stat_vxlan, reason)
-                    LOG.info('[' + node_name + '][PORT_STAT_VXLAN][' + port_stat_vxlan + ']' + reason)
+                    LOG.info('[' + node_name + '][PORT_STAT_VXLAN][' + port_stat_vxlan + ']' + str(reason))
 
                     traffic_internal, pre_stat, reason = chk_openstack.get_internal_traffic(conn, db_log, node_name, node_ip, user_name, sub_type,
                                                                           openstack_rx_dic[node_name], patch_tx_dic[node_name], pre_stat)
                     traffic_internal = alarm_event.process_event(conn, db_log, node_name, type, 'TRAFFIC_INTERNAL',
                                                                  cur_info[node_name]['TRAFFIC_INTERNAL'],
                                                                  traffic_internal, reason)
-                    LOG.info('[' + node_name + '][TRAFFIC_INTERNAL][' + traffic_internal + ']' + reason)
+                    LOG.info('[' + node_name + '][TRAFFIC_INTERNAL][' + traffic_internal + ']' + str(reason))
 
                     if sub_type.upper() == 'GATEWAY':
                         v_router, reason = chk_openstack.vrouter_check(conn, db_log, node_name, user_name, node_ip)
                         v_router = alarm_event.process_event(conn, db_log, node_name, type, 'GATEWAY',
                                                              cur_info[node_name]['GATEWAY'], v_router, reason)
-                        LOG.info('[' + node_name + '][GATEWAY][' + v_router + ']' + reason)
+                        LOG.info('[' + node_name + '][GATEWAY][' + v_router + ']' + str(reason))
 
                         traffic_gw, pre_stat, reason = chk_openstack.get_gw_ratio_gateway(conn, db_log, node_ip, node_name, openstack_rx_dic[node_name], gw_total, pre_stat)
 
@@ -201,12 +201,12 @@ def periodic(conn, pre_stat, db_log):
 
                     traffic_gw = alarm_event.process_event(conn, db_log, node_name, type, 'TRAFFIC_GW',
                                                            cur_info[node_name]['TRAFFIC_GW'], traffic_gw, reason)
-                    LOG.info('[' + node_name + '][TRAFFIC_GW][' + traffic_gw + ']' + reason)
+                    LOG.info('[' + node_name + '][TRAFFIC_GW][' + traffic_gw + ']' + str(reason))
 
                 # check resource
                 cpu, memory, disk = chk_resource.check_resource(conn, db_log, node_name, user_name, node_ip)
 
-            reason = ''
+            reason = []
             # 3. resource check (CPU/MEM/DISK)
             cpu_grade = 'fail'
             if CONF.alarm().has_key('cpu'):
@@ -215,11 +215,12 @@ def periodic(conn, pre_stat, db_log):
                 else:
                     cpu_grade = alarm_event.get_grade('cpu', cpu)
                     if cur_info[node_name]['CPU'] != cpu_grade:
-                        reason = str(cpu)
+                        reason_json = {'value' : cpu}
+                        reason.append(reason_json)
                         alarm_event.occur_event(conn, db_log, node_name, 'CPU', cur_info[node_name]['CPU'], cpu_grade, reason)
-                LOG.info('[' + node_name + '][CPU][' + cpu_grade + ']' + reason)
+                LOG.info('[' + node_name + '][CPU][' + cpu_grade + ']' + str(reason))
 
-            reason = ''
+            reason = []
             mem_grade = 'fail'
             if CONF.alarm().has_key('memory'):
                 if not alarm_event.is_monitor_item(type, 'MEMORY'):
@@ -227,11 +228,12 @@ def periodic(conn, pre_stat, db_log):
                 else:
                     mem_grade = alarm_event.get_grade('memory', memory)
                     if cur_info[node_name]['MEMORY'] != mem_grade:
-                        reason = str(memory)
+                        reason_json = {'value': memory}
+                        reason.append(reason_json)
                         alarm_event.occur_event(conn, db_log, node_name, 'MEMORY', cur_info[node_name]['MEMORY'], mem_grade, reason)
-                LOG.info('[' + node_name + '][MEMORY][' + mem_grade + ']' + reason)
+                LOG.info('[' + node_name + '][MEMORY][' + mem_grade + ']' + str(reason))
 
-            reason = ''
+            reason = []
             disk_grade = 'fail'
             if CONF.alarm().has_key('disk'):
                 if not alarm_event.is_monitor_item(type, 'DISK'):
@@ -239,10 +241,10 @@ def periodic(conn, pre_stat, db_log):
                 else:
                     disk_grade = alarm_event.get_grade('disk', disk)
                     if cur_info[node_name]['DISK'] != disk_grade:
-                        reason = str(disk)
+                        reason_json = {'value': disk}
+                        reason.append(reason_json)
                         alarm_event.occur_event(conn, db_log, node_name, 'DISK', cur_info[node_name]['DISK'], disk_grade, reason)
-                LOG.info('[' + node_name + '][DISK][' + disk_grade + ']' + reason)
-
+                LOG.info('[' + node_name + '][DISK][' + disk_grade + ']' + str(reason))
 
             try:
                 sql = 'UPDATE ' + DB.STATUS_TBL + \

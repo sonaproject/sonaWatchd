@@ -7,13 +7,11 @@ from api.watcherdb import DB
 from api.config import CONF
 
 
-def process_event(conn, db_log, node_name, type, id, pre_value, cur_value, reason = '-'):
+def process_event(conn, db_log, node_name, type, id, pre_value, cur_value, reason):
     try:
         if not is_monitor_item(type, id):
             return '-'
         elif pre_value != cur_value:
-            if reason in ['-', '']:
-                reason = 'normal'
             occur_event(conn, db_log, node_name, id, pre_value, cur_value, reason)
 
         return cur_value
@@ -55,13 +53,13 @@ def get_grade(item, value):
         return 'fail'
 
 
-def occur_event(conn, db_log, node_name, item, pre_grade, cur_grade, reason = '-'):
+def occur_event(conn, db_log, node_name, item, pre_grade, cur_grade, reason):
     try:
         time = str(datetime.now())
         sql = 'UPDATE ' + DB.EVENT_TBL + \
               ' SET grade = \'' + cur_grade + '\'' + ',' + \
               ' pre_grade = \'' + pre_grade + '\'' + ',' + \
-              ' reason = \"' + reason + '\"' + ',' + \
+              ' reason = \"' + str(reason) + '\"' + ',' + \
               ' time = \'' + time + '\'' + \
               ' WHERE nodename = \'' + node_name + '\' and item = \'' + item + '\''
         db_log.write_log('----- UPDATE EVENT INFO -----\n' + sql)

@@ -149,6 +149,49 @@ class CLI():
                     cls.draw_grid(header, data)
                     print ''
 
+                elif command == 'onos-svc':
+                    print('')
+                    for sys in sorted_list:
+                        print '[' + sys + ']'
+
+                        sys_ret = result[sys]
+                        if str(sys_ret).upper().endswith('FAIL'):
+                            sys_ret = 'fail'
+                            print sys_ret
+                        else:
+                            data = []
+
+                            for row in sys_ret:
+                                line = []
+
+                                line.append(row['name'])
+                                line.append(row['status'])
+                                line.append(row['monitor_item'])
+
+                                data.append(line)
+
+                            header = []
+
+                            col_name = dict()
+                            col_name['title'] = 'Name'
+                            col_name['size'] = '30'
+
+                            col_status = dict()
+                            col_status['title'] = 'Status'
+                            col_status['size'] = '8'
+
+                            col_monitor = dict()
+                            col_monitor['title'] = 'Monitor Item'
+                            col_monitor['size'] = '14'
+
+                            header.append(col_name)
+                            header.append(col_status)
+                            header.append(col_monitor)
+
+                            cls.draw_grid(header, data)
+
+                        print ''
+
                 elif command == 'ha-proxy':
                     print ''
                     print "+----------------------------------------------------------+"
@@ -185,27 +228,29 @@ class CLI():
                     print ''
 
                 elif command == 'traffic-controller':
-                    ratio = ''
                     print('')
                     for sys in sorted_list:
                         print '[' + sys + ']'
 
                         sys_ret = result[sys]
-                        if sys_ret.upper().endswith('FAIL'):
+                        if str(sys_ret).upper().endswith('FAIL'):
                             sys_ret = 'fail'
                             print sys_ret
                         else:
                             data = []
 
-                            for row in sys_ret.splitlines():
-                                if row.startswith(' *'):
-                                    ratio = row
-                                    continue
+                            for row in sys_ret['stat_list']:
 
                                 line = []
-                                for col in row.split(', '):
-                                    tmp = col.split('=')
-                                    line.append(tmp[1])
+
+                                line.append(row['hostname'])
+                                line.append(row['of_id'])
+                                line.append(row['inbound'])
+                                line.append(row['outbound'])
+                                line.append(row['mod'])
+                                line.append(row['removed'])
+                                line.append(row['request'])
+                                line.append(row['reply'])
 
                                 data.append(line)
 
@@ -254,8 +299,7 @@ class CLI():
 
                             cls.draw_grid(header, data)
 
-                        if not ratio == '':
-                            print ratio
+                            print ' * ' + sys_ret['description']
                         print ''
 
                 elif command == 'openstack-node':
@@ -265,28 +309,22 @@ class CLI():
                             print '[' + sys + ']'
 
                             sys_ret = result[sys]
-                            if sys_ret.upper().endswith('FAIL'):
+                            if str(sys_ret).upper().endswith('FAIL'):
                                 sys_ret = 'fail'
                                 print sys_ret
                             else:
                                 data = []
 
-                                for row in sys_ret.splitlines():
+                                for row in sys_ret:
                                     line = []
 
-                                    tmp = row.split(' ')
-
-                                    line.append(tmp[0])
-                                    line.append(tmp[1])
-
-                                    if tmp[3].startswith('of:'):
-                                        line.append(tmp[4])
-                                        line.append(tmp[5])
-                                        line.append(tmp[6])
-                                    else:
-                                        line.append(tmp[3])
-                                        line.append(tmp[4])
-                                        line.append(tmp[5])
+                                    line.append(row['hostname'])
+                                    line.append(row['type'])
+                                    line.append(row['management_ip'])
+                                    line.append(row['data_ip'])
+                                    line.append(row['state'])
+                                    line.append(row['port_status'])
+                                    line.append(row['monitor_item'])
 
                                     data.append(line)
 
@@ -309,14 +347,24 @@ class CLI():
                                 col_ip2['size'] = '12'
 
                                 col_status = dict()
-                                col_status['title'] = 'Status'
+                                col_status['title'] = 'State'
                                 col_status['size'] = '10'
+
+                                col_port = dict()
+                                col_port['title'] = 'Port'
+                                col_port['size'] = '10'
+
+                                col_monitor = dict()
+                                col_monitor['title'] = 'Monitor Item'
+                                col_monitor['size'] = '14'
 
                                 header.append(col_host)
                                 header.append(col_type)
                                 header.append(col_ip1)
                                 header.append(col_ip2)
                                 header.append(col_status)
+                                header.append(col_port)
+                                header.append(col_monitor)
 
                                 cls.draw_grid(header, data)
 
@@ -390,34 +438,34 @@ class CLI():
                             print '[' + sys + ']'
 
                             sys_ret = result[sys]
-                            if sys_ret.upper().endswith('FAIL'):
+                            if str(sys_ret).upper().endswith('FAIL'):
                                 sys_ret = 'fail'
                                 print sys_ret
                             else:
                                 data = []
 
-                                for row in sys_ret.splitlines():
+                                for row in sys_ret:
                                     line = []
-                                    for col in row.split(','):
-                                        tmp = col.split('=')
 
-                                        if str(tmp[0]).strip() in ['id', 'available', 'local-status', 'role', 'type']:
-                                            if ' ago' in str(tmp[1]):
-                                                tmp[1] = str(tmp[1]).split(' ')[0]
+                                    line.append(row['hostname'])
+                                    line.append(row['of_id'])
+                                    line.append(row['available'])
+                                    line.append(row['status'])
+                                    line.append(row['role'])
+                                    line.append(row['type'])
+                                    line.append(row['monitor_item'])
 
-                                            line.append(str(tmp[1]).strip())
                                     data.append(line)
 
                                 header = []
 
+                                col_host = dict()
+                                col_host['title'] = 'Hostname'
+                                col_host['size'] = '10'
+
                                 col_id = dict()
-                                col_id['title'] = 'ID'
-                                if param == 'openflow':
-                                    col_id['title'] = 'HOSTNAME(ID)'
-                                    col_id['size'] = '31'
-                                else:
-                                    col_id['title'] = 'ID'
-                                    col_id['size'] = '20'
+                                col_id['title'] = 'of_id'
+                                col_id['size'] = '20'
 
                                 col_avail = dict()
                                 col_avail['title'] = 'Available'
@@ -435,11 +483,17 @@ class CLI():
                                 col_type['title'] = 'Type'
                                 col_type['size'] = '12'
 
+                                col_monitor = dict()
+                                col_monitor['title'] = 'monitor_item'
+                                col_monitor['size'] = '12'
+
+                                header.append(col_host)
                                 header.append(col_id)
                                 header.append(col_avail)
                                 header.append(col_status)
                                 header.append(col_role)
                                 header.append(col_type)
+                                header.append(col_monitor)
 
                                 cls.draw_grid(header, data)
 
@@ -451,19 +505,20 @@ class CLI():
                             print '[' + sys + ']'
 
                             sys_ret = result[sys]
-                            if sys_ret.upper().endswith('FAIL'):
+                            if str(sys_ret).upper().endswith('FAIL'):
                                 sys_ret = 'fail'
                                 print sys_ret
                             else:
                                 data = []
 
-                                for row in sys_ret.splitlines():
+                                for row in sys_ret:
                                     line = []
-                                    for col in row.split(','):
-                                        tmp = col.split('=')
 
-                                        if str(tmp[0]).strip() in ['id', 'address', 'state']:
-                                            line.append(str(tmp[1]).strip())
+                                    line.append(row['id'])
+                                    line.append(row['address'])
+                                    line.append(row['status'])
+                                    line.append(row['monitor_item'])
+
                                     data.append(line)
 
                                 header = []
@@ -473,16 +528,21 @@ class CLI():
                                 col_id['size'] = '12'
 
                                 col_addr = dict()
-                                col_addr['title'] = 'address'
+                                col_addr['title'] = 'Address'
                                 col_addr['size'] = '16'
 
                                 col_state = dict()
                                 col_state['title'] = 'State'
                                 col_state['size'] = '6'
 
+                                col_monitor = dict()
+                                col_monitor['title'] = 'monitor_item'
+                                col_monitor['size'] = '12'
+
                                 header.append(col_id)
                                 header.append(col_addr)
                                 header.append(col_state)
+                                header.append(col_monitor)
 
                                 cls.draw_grid(header, data)
 
@@ -697,8 +757,8 @@ class CLI():
             cls.HISTORY_LOG.write_history("--- Current Event History Start ---")
 
             for line in res['Event list']:
-                cls.HISTORY_LOG.write_history('[OCCUR_TIME : %s][%s][%s][%s][%s] %s', line['time'], line['system'], line['item'],
-                                          line['grade'], line['pre_grade'], line['reason'])
+                cls.HISTORY_LOG.write_history('[OCCUR_TIME : %s][%s][%s][%s] %s', line['time'], line['system'], line['item'],
+                                           line['pre_grade'] + '->' + line['grade'], line['reason'])
 
             cls.HISTORY_LOG.write_history("--- Current Event History END ---")
 

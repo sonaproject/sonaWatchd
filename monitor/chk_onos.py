@@ -54,9 +54,8 @@ def onos_app_check(conn, db_log, node_name, node_ip):
     except:
         LOG.exception()
         status = 'fail'
-        fail_reason = 'fail'
 
-    return status, str(fail_reason)
+    return status, fail_reason
 
 
 def onos_rest_check(conn, db_log, node_name, node_ip):
@@ -101,7 +100,6 @@ def onos_rest_check(conn, db_log, node_name, node_ip):
             LOG.error("\'%s\' ONOS Rest Check Error", node_ip)
             web_status = 'fail'
             web_list = 'fail'
-            fail_reason = 'fail'
 
         try:
             sql = 'UPDATE ' + DB.ONOS_TBL + \
@@ -117,9 +115,8 @@ def onos_rest_check(conn, db_log, node_name, node_ip):
     except:
         LOG.exception()
         web_status = 'fail'
-        fail_reason = 'fail'
 
-    return web_status, str(fail_reason)
+    return web_status, fail_reason
 
 
 def parse_openflow(line, hostname, is_monitor):
@@ -187,11 +184,9 @@ def onos_conn_check(conn, db_log, node_name, node_ip):
                 LOG.exception()
                 LOG.error("\'%s\' Connection Check Error(devices)", node_ip)
                 of_status = 'fail'
-                of_fail_reason = 'fail'
         else:
             LOG.error("\'%s\' Connection Check Error(devices)", node_ip)
             of_status = 'fail'
-            of_fail_reason = 'fail'
 
         cluster_status = 'ok'
         if nodes_rt is not None:
@@ -272,7 +267,7 @@ def onos_conn_check(conn, db_log, node_name, node_ip):
         of_status = 'fail'
         cluster_status = 'fail'
 
-    return of_status, cluster_status, str(of_fail_reason), str(cluster_fail_reason)
+    return of_status, cluster_status, of_fail_reason, cluster_fail_reason
 
 
 
@@ -400,7 +395,6 @@ def onos_node_check(conn, db_log, node_name, node_ip):
             LOG.error("\'%s\' ONOS Node Check Error", node_ip)
             node_status = 'fail'
             node_list = 'fail'
-            fail_reason = 'fail'
 
         try:
             sql = 'UPDATE ' + DB.ONOS_TBL + \
@@ -416,9 +410,8 @@ def onos_node_check(conn, db_log, node_name, node_ip):
     except:
         LOG.exception()
         node_status = 'fail'
-        fail_reason = 'fail'
 
-    return node_status, str(fail_reason)
+    return node_status, fail_reason
 
 
 def controller_traffic_check(conn, db_log, node_name, node_ip, pre_stat):
@@ -546,6 +539,5 @@ def controller_traffic_check(conn, db_log, node_name, node_ip, pre_stat):
     except:
         LOG.exception()
         controller_traffic = 'fail'
-        reason = 'fail'
 
-    return controller_traffic, pre_stat, str(reason)
+    return controller_traffic, pre_stat, reason
