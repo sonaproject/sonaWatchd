@@ -60,7 +60,7 @@ def get_ha_stats(ha_dic):
         ha_ratio = 'ok'
 
         list_reason = []
-        ratio_reason = ''
+        ratio_reason = []
 
         frontend = 0
         backend = 0
@@ -89,11 +89,11 @@ def get_ha_stats(ha_dic):
 
         if ratio < float(CONF.alarm()['ha_proxy']):
             ha_ratio = 'nok'
-            ratio_reason = str(format(ratio, '.2f'))
+            ratio_reason.append(str(format(ratio, '.2f')))
     except:
         LOG.exception()
         ha_status = 'fail'
         ha_ratio = 'fail'
 
-    return ha_status, ha_ratio, str(list_reason), ratio_reason
+    return ha_status, ha_ratio, list_reason, ratio_reason
 

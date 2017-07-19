@@ -104,12 +104,12 @@ def vrouter_check(conn, db_log, node_name, user_name, node_ip):
     except:
         LOG.exception()
 
-    return ret_docker, str(fail_list)
+    return ret_docker, fail_list
 
 
 def get_gw_ratio_gateway(conn, db_log, node_ip, node_name, rx, gw_rx_sum, pre_stat):
     status = 'ok'
-    reason = ''
+    reason = []
 
     try:
         sql = 'SELECT ' + DB.ONOS_TBL + '.nodename, nodelist, ip_addr' + ' FROM ' + DB.ONOS_TBL + \
@@ -210,14 +210,14 @@ def get_gw_ratio_gateway(conn, db_log, node_ip, node_name, rx, gw_rx_sum, pre_st
         status = 'fail'
 
     if not status == 'ok':
-        reason = str(json_ratio)
+        reason.append(json_ratio)
 
     return status, pre_stat, reason
 
 
 def get_gw_ratio_compute(conn, db_log, node_ip, node_name, pre_stat):
     status = 'ok'
-    reason = ''
+    reason = []
 
     try:
         sql = 'SELECT ' + DB.ONOS_TBL + '.nodename, nodelist, ip_addr' + ' FROM ' + DB.ONOS_TBL + \
@@ -322,14 +322,12 @@ def get_gw_ratio_compute(conn, db_log, node_ip, node_name, pre_stat):
 
         pre_stat[node_name + '_GW'] = in_out_dic
 
-        if not status == 'ok':
-            reason = str(json_ratio)
     except:
         LOG.exception()
         status = 'fail'
 
     if not status == 'ok':
-        reason = str(json_ratio)
+        reason.append(json_ratio)
 
     return status, pre_stat, reason
 
@@ -506,7 +504,7 @@ def get_node_traffic(conn, db_log, node_name, rx_dic, tx_dic, total_rx, total_tx
     if not status == 'ok':
         reason_list.append(vxlan_json)
 
-    return status, pre_stat, str(reason_list)
+    return status, pre_stat, reason_list
 
 
 def get_internal_traffic(conn, db_log, node_name, node_ip, user_name, sub_type, rx_count, patch_tx, pre_stat):
@@ -604,5 +602,5 @@ def get_internal_traffic(conn, db_log, node_name, node_ip, user_name, sub_type, 
     if not status == 'ok':
         reason_list.append(vxlan_json)
 
-    return status, pre_stat, str(reason_list)
+    return status, pre_stat, reason_list
 
