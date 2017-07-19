@@ -106,6 +106,16 @@ def main():
         evt_thread.join()
         return
 
+    # get event list
+    if CLI.get_event_list() == False:
+        print 'Get Event List failed'
+        print 'Processing shutdown...'
+        LOG.exception_err_write()
+        SYS.set_sys_thr_flag(False)
+        conn_evt_thread.join()
+        evt_thread.join()
+        return
+
     # inquiry controller info
     try:
         res_code, sys_info = CLI.req_sys_info()

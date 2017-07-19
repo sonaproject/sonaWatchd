@@ -65,9 +65,24 @@ class RestHandler(BaseHTTPRequestHandler):
                 try:
                     self.do_HEAD(200)
 
-                    url = 'http://' + self.client_address[0] + ':' + request_obj['port']  + '/' + str(request_obj['uri'])
+                    url = str(request_obj['url'])
 
                     res_body = command.regi_url(url, self.headers.getheader('Authorization'))
+
+                    self.wfile.write(json.dumps(res_body))
+
+                    LOG.info('[REST-SERVER] RES BODY = \n%s',
+                             json.dumps(res_body, sort_keys=True, indent=4))
+                except:
+                    LOG.exception()
+
+            elif self.path.startswith('/event_list'):
+                try:
+                    self.do_HEAD(200)
+
+                    url = str(request_obj['url'])
+
+                    res_body = command.get_event_list(url, self.headers.getheader('Authorization'))
 
                     self.wfile.write(json.dumps(res_body))
 
@@ -80,7 +95,7 @@ class RestHandler(BaseHTTPRequestHandler):
                 try:
                     self.do_HEAD(200)
 
-                    url = 'http://' + self.client_address[0] + ':' + request_obj['port']  + '/' + str(request_obj['uri'])
+                    url = str(request_obj['url'])
 
                     res_body = command.unregi_url(url)
 

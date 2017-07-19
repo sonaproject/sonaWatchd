@@ -5,10 +5,10 @@ from api.sbapi import SshCommand
 
 
 def vrouter_check(conn, db_log, node_name, user_name, node_ip):
-    str_docker = ''
     ret_docker = 'ok'
 
-    fail_reason = ''
+    docker_list = []
+    fail_list = []
 
     onos_id = ''
 
@@ -25,11 +25,13 @@ def vrouter_check(conn, db_log, node_name, user_name, node_ip):
 
                     if ' ' + docker in line:
                          if not 'Up' in line:
-                            str_docker = str_docker + str(docker).ljust(30) + '[nok]\n'
-                            fail_reason = fail_reason + str(docker) + '[nok],'
-                            ret_docker = 'nok'
+                             docker_json = {'name': docker, 'status': 'nok', 'type': 'docker'}
+                             fail_list.append(docker_json)
+                             ret_docker = 'nok'
                          else:
-                            str_docker = str_docker + str(docker).ljust(30) + '[ok]\n'
+                             docker_json = {'name': docker, 'status': 'ok', 'type': 'docker'}
+
+                         docker_list.append(docker_json)
 
                     if 'onos' in tmp_line[1]:
                         onos_id = tmp_line[0]
@@ -38,11 +40,9 @@ def vrouter_check(conn, db_log, node_name, user_name, node_ip):
     else:
         LOG.error("\'%s\' Vrouter Node Check Error", node_ip)
         ret_docker = 'fail'
-        str_docker = 'fail'
-        fail_reason = 'fail'
 
-    str_onosapp = ''
-    str_route = ''
+    onos_app_list = []
+    route_list = []
 
     if not onos_id == '':
         try:
@@ -65,25 +65,37 @@ def vrouter_check(conn, db_log, node_name, user_name, node_ip):
 
                 for app in CONF.openstack()['onos_vrouter_app_list']:
                     if app in app_active_list:
-                        str_onosapp = str_onosapp + str(app).ljust(30) + '[ok]\n'
+                        app_json = {'name': app, 'status': 'ok', 'type': 'onos_app'}
                     else:
-                        str_onosapp = str_onosapp + str(app).ljust(30) + '[nok]\n'
-                        fail_reason = fail_reason + str(app) + '[nok],'
+                        app_json = {'name': app, 'status': 'nok', 'type': 'onos_app'}
+                        fail_list.append(app_json)
                         ret_docker = 'nok'
 
+                    onos_app_list.append(app_json)
+
                 str_route = SshCommand.ssh_pexpect(user_name, node_ip, onos_ip, 'routes')
+
+                for line in str_route.splitlines():
+                    line = line.strip()
+
+                    if (line.startswith('Table') or line.startswith('Network') or line.startswith('Total')):
+                        continue
+
+                    new_line = " ".join(line.split())
+                    tmp = new_line.split(' ')
+                    route_json = {'network': tmp[0], 'next_hop': tmp[1]}
+                    route_list.append(route_json)
         except:
-            str_onosapp = 'fail'
-            str_route = 'fail'
+            LOG.exception()
     else:
-        str_onosapp = 'fail'
-        str_route = 'fail'
+        LOG.info('can not find onos_id.')
+        ret_docker = 'fail'
 
     try:
         sql = 'UPDATE ' + DB.OPENSTACK_TBL + \
-              ' SET docker = \'' + str_docker + '\',' + \
-              ' onosApp = \'' + str_onosapp + '\',' + \
-              ' routingTable = \'' + str_route + '\'' + \
+              ' SET docker = \"' + str(docker_list) + '\",' + \
+              ' onosApp = \"' + str(onos_app_list) + '\",' + \
+              ' routingTable = \"' + str(route_list) + '\"' + \
               ' WHERE nodename = \'' + node_name + '\''
         db_log.write_log('----- UPDATE GATEWAY INFO -----\n' + sql)
 
@@ -92,10 +104,10 @@ def vrouter_check(conn, db_log, node_name, user_name, node_ip):
     except:
         LOG.exception()
 
-    return ret_docker, fail_reason
+    return ret_docker, str(fail_list)
 
 
-def get_gw_ratio_gateway(conn, db_log, node_name, rx, gw_rx_sum, pre_stat):
+def get_gw_ratio_gateway(conn, db_log, node_ip, node_name, rx, gw_rx_sum, pre_stat):
     status = 'ok'
     reason = ''
 
@@ -107,7 +119,7 @@ def get_gw_ratio_gateway(conn, db_log, node_name, rx, gw_rx_sum, pre_stat):
 
         if len(nodes_info) == 0:
             LOG.info('Fail to load onos list')
-            return 'fail', pre_stat
+            return 'fail', pre_stat, reason
 
         # search data_ip
         data_ip = ''
@@ -117,7 +129,9 @@ def get_gw_ratio_gateway(conn, db_log, node_name, rx, gw_rx_sum, pre_stat):
             if not nodelist == 'none':
                 for node_info in eval(nodelist):
                     try:
-                        manage_ip = dict(node_info)['management_ip']
+                        if dict(node_info)['management_ip'] == node_ip:
+                            manage_ip = ip
+                            data_ip = dict(node_info)['data_ip']
                     except:
                         manage_ip = ''
 
@@ -170,7 +184,6 @@ def get_gw_ratio_gateway(conn, db_log, node_name, rx, gw_rx_sum, pre_stat):
 
             if ratio < float(CONF.alarm()['gw_ratio']) or cur_rx < cur_packet:
                 status = 'nok'
-                reason = 'gw ratio : ' + str(format(ratio, '.2f'))
 
             json_ratio = {'current_rx': cur_rx, 'current_compute_tx': cur_packet, 'current_total': cur_total, 'ratio': format(ratio, '.2f'),
                           'period':CONF.watchdog()['interval'], 'status': status, 'packet_loss': loss_flag, 'description': desc}
@@ -196,10 +209,13 @@ def get_gw_ratio_gateway(conn, db_log, node_name, rx, gw_rx_sum, pre_stat):
         LOG.exception()
         status = 'fail'
 
+    if not status == 'ok':
+        reason = str(json_ratio)
+
     return status, pre_stat, reason
 
 
-def get_gw_ratio_compute(conn, db_log, node_name, pre_stat):
+def get_gw_ratio_compute(conn, db_log, node_ip, node_name, pre_stat):
     status = 'ok'
     reason = ''
 
@@ -211,7 +227,7 @@ def get_gw_ratio_compute(conn, db_log, node_name, pre_stat):
 
         if len(nodes_info) == 0:
             LOG.info('Fail to load onos list')
-            return 'fail', pre_stat
+            return 'fail', pre_stat, reason
 
         manage_ip = ''
         hostname = ''
@@ -219,7 +235,9 @@ def get_gw_ratio_compute(conn, db_log, node_name, pre_stat):
             if not nodelist == 'none':
                 for node_info in eval(nodelist):
                     try:
-                        manage_ip = dict(node_info)['management_ip']
+                        if dict(node_info)['management_ip'] == node_ip:
+                            manage_ip = ip
+                            hostname = dict(node_info)['hostname']
                     except:
                         manage_ip = ''
 
@@ -233,7 +251,7 @@ def get_gw_ratio_compute(conn, db_log, node_name, pre_stat):
             return 'fail', pre_stat, reason
 
         try:
-            sql = 'SELECT of_id FROM ' + DB.OPENSTACK_TBL + ' WHERE hostname = \'' + hostname + '\''
+            sql = 'SELECT of_id FROM ' + DB.OPENSTACK_TBL + ' WHERE hostname = \'' + str(hostname) + '\''
             LOG.info(sql)
             node_info = conn.cursor().execute(sql).fetchone()
 
@@ -258,16 +276,18 @@ def get_gw_ratio_compute(conn, db_log, node_name, pre_stat):
                             gw_list.append(int(col.split('=')[1]))
 
         str_ratio = ''
-        gw_ratio_list = []
 
         if not dict(pre_stat).has_key(node_name + '_GW'):
             status = '-'
-            json_ratio = {'ratio': '-', 'status': status}
+            json_ratio = {'ratio': '-', 'status': status, 'period':CONF.watchdog()['interval'], 'status': status}
         else:
             i = 0
             for gw in gw_list:
                 cur_gw = gw - pre_stat[node_name + '_GW']['gw_list'][i]
                 cur_total = total_cnt - pre_stat[node_name + '_GW']['gw_total']
+
+                LOG.info('cur_gw = ' + str(cur_gw))
+                LOG.info('cur_total = ' + str(cur_total))
 
                 if cur_gw == 0 and cur_total == 0:
                     ratio = 100/len(gw_list)
@@ -275,16 +295,14 @@ def get_gw_ratio_compute(conn, db_log, node_name, pre_stat):
                     ratio = 0
                 else:
                     ratio = float(cur_gw) * 100 / cur_total
-                    i = i + 1
 
-                gw_ratio_list.append(ratio)
+                i = i + 1
                 str_ratio = str_ratio + str(ratio) + ':'
 
                 if ratio < float(CONF.alarm()['gw_ratio']):
                     status = 'nok'
-                    reason = 'gw ratio : ' + str(format(ratio, '.2f'))
 
-            json_ratio = {'ratio': str_ratio.rstrip(':'), 'status': status}
+            json_ratio = {'ratio': str_ratio.rstrip(':'), 'status': status, 'period':CONF.watchdog()['interval'], 'status': status}
             LOG.info('[COMPUTE] ' + 'GW_RATIO = ' + str_ratio.rstrip(':'))
 
         try:
@@ -304,9 +322,14 @@ def get_gw_ratio_compute(conn, db_log, node_name, pre_stat):
 
         pre_stat[node_name + '_GW'] = in_out_dic
 
+        if not status == 'ok':
+            reason = str(json_ratio)
     except:
         LOG.exception()
         status = 'fail'
+
+    if not status == 'ok':
+        reason = str(json_ratio)
 
     return status, pre_stat, reason
 

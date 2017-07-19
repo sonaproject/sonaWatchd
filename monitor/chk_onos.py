@@ -430,7 +430,7 @@ def controller_traffic_check(conn, db_log, node_name, node_ip, pre_stat):
 
         cpman_stat_list = list()
         controller_traffic = 'ok'
-        reason = list()
+        reason = []
 
         desc = ''
         ratio = 0

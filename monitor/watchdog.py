@@ -193,11 +193,11 @@ def periodic(conn, pre_stat, db_log):
                                                              cur_info[node_name]['GATEWAY'], v_router, reason)
                         LOG.info('[' + node_name + '][GATEWAY][' + v_router + ']' + reason)
 
-                        traffic_gw, pre_stat, reason = chk_openstack.get_gw_ratio_gateway(conn, db_log, node_name, openstack_rx_dic[node_name], gw_total, pre_stat)
+                        traffic_gw, pre_stat, reason = chk_openstack.get_gw_ratio_gateway(conn, db_log, node_ip, node_name, openstack_rx_dic[node_name], gw_total, pre_stat)
 
                     elif sub_type.upper() == 'COMPUTE':
                         v_router = '-'
-                        traffic_gw, pre_stat, reason = chk_openstack.get_gw_ratio_compute(conn, db_log, node_name, pre_stat)
+                        traffic_gw, pre_stat, reason = chk_openstack.get_gw_ratio_compute(conn, db_log, node_ip, node_name, pre_stat)
 
                     traffic_gw = alarm_event.process_event(conn, db_log, node_name, type, 'TRAFFIC_GW',
                                                            cur_info[node_name]['TRAFFIC_GW'], traffic_gw, reason)
@@ -215,7 +215,7 @@ def periodic(conn, pre_stat, db_log):
                 else:
                     cpu_grade = alarm_event.get_grade('cpu', cpu)
                     if cur_info[node_name]['CPU'] != cpu_grade:
-                        reason = 'cpu usage : ' + str(cpu)
+                        reason = str(cpu)
                         alarm_event.occur_event(conn, db_log, node_name, 'CPU', cur_info[node_name]['CPU'], cpu_grade, reason)
                 LOG.info('[' + node_name + '][CPU][' + cpu_grade + ']' + reason)
 
@@ -227,7 +227,7 @@ def periodic(conn, pre_stat, db_log):
                 else:
                     mem_grade = alarm_event.get_grade('memory', memory)
                     if cur_info[node_name]['MEMORY'] != mem_grade:
-                        reason = 'memory usage : ' + str(memory)
+                        reason = str(memory)
                         alarm_event.occur_event(conn, db_log, node_name, 'MEMORY', cur_info[node_name]['MEMORY'], mem_grade, reason)
                 LOG.info('[' + node_name + '][MEMORY][' + mem_grade + ']' + reason)
 
@@ -239,7 +239,7 @@ def periodic(conn, pre_stat, db_log):
                 else:
                     disk_grade = alarm_event.get_grade('disk', disk)
                     if cur_info[node_name]['DISK'] != disk_grade:
-                        reason = 'disk usage : ' + str(disk)
+                        reason = str(disk)
                         alarm_event.occur_event(conn, db_log, node_name, 'DISK', cur_info[node_name]['DISK'], disk_grade, reason)
                 LOG.info('[' + node_name + '][DISK][' + disk_grade + ']' + reason)
 

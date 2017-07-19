@@ -30,22 +30,14 @@ def parse_command(req_obj):
 def regi_url(url, auth):
     try:
         sql = 'SELECT * FROM ' + DB.REGI_SYS_TBL + ' WHERE url = \'' + url + '\''
-        sql_evt = 'SELECT * FROM ' + DB.EVENT_TBL
 
         with DB.connection() as conn:
             url_info = conn.cursor().execute(sql).fetchall()
-            evt_list = conn.cursor().execute(sql_evt).fetchall()
         conn.close()
-
-        event_list = []
-
-        for nodename, item, grade, desc, reason, time in evt_list:
-            evt = {'event': 'occur', 'system': nodename, 'item': item, 'grade': grade, 'desc': desc, 'reason': reason, 'time': time}
-            event_list.append(evt)
 
         # if already exist
         if len(url_info) == 1:
-            res_body = {'Result': 'SUCCESS', 'Event list': event_list}
+            res_body = {'Result': 'SUCCESS'}
         else:
             # insert db
             sql = 'INSERT INTO ' + DB.REGI_SYS_TBL + ' VALUES (\'' + url  + '\', \'' + auth + '\' )'
@@ -53,9 +45,30 @@ def regi_url(url, auth):
             ret = DB.sql_execute(sql)
 
             if ret == 'SUCCESS':
-                res_body = {'Result': 'SUCCESS', 'Event list': event_list}
+                res_body = {'Result': 'SUCCESS'}
             else:
                 res_body = {'Result': 'FAIL'}
+
+        return res_body
+    except:
+        LOG.exception()
+        return {'Result': 'FAIL'}
+
+def get_event_list(url, auth):
+    try:
+        sql_evt = 'SELECT * FROM ' + DB.EVENT_TBL
+
+        with DB.connection() as conn:
+            evt_list = conn.cursor().execute(sql_evt).fetchall()
+        conn.close()
+
+        event_list = []
+
+        for nodename, item, grade, pre_grade, reason, time in evt_list:
+            evt = {'event': 'occur', 'system': nodename, 'item': item, 'grade': grade, 'pre_grade': pre_grade, 'reason': 'fail_reason', 'time': time}
+            event_list.append(evt)
+
+            res_body = {'Result': 'SUCCESS', 'Event list': event_list}
 
         return res_body
     except:
@@ -212,7 +225,7 @@ def proc_dis_vrouter(node, param):
             if list == 'fail' or list == 'none':
                 res_result[nodename] = 'FAIL'
             else:
-                res_result[nodename] = list
+                res_result[nodename] = eval(list)
 
         return res_result
     except:
