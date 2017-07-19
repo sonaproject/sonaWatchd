@@ -13,8 +13,10 @@ REST_URI_KEY_NAME = 'rest-server'
 REST_COMMAND_URI = 'command-uri'
 REST_EVENT_REGI_URI = 'event-regi-uri'
 REST_EVENT_UNREGI_URI = 'event-unregi-uri'
+REST_EVENT_LIST_URI = 'event-list-uri'
 REST_TIMEOUT = 'timeout'
-REST_SVR_PORT = 'rest_server_port'
+REST_SVR_IP = 'client_rest_server_ip'
+REST_SVR_PORT = 'client_rest_server_port'
 
 COMMAND_OPT_KEY_NAME = 'option-list'
 
@@ -122,9 +124,21 @@ class CONFIG():
                cls.cli_get_value(REST_SECTION_NAME, REST_EVENT_UNREGI_URI)
 
     @classmethod
+    def get_event_list_uri(cls):
+        return cls.cli_get_value(REST_SECTION_NAME, REST_URI_KEY_NAME) + \
+               cls.cli_get_value(REST_SECTION_NAME, REST_EVENT_LIST_URI)
+
+    @classmethod
     def get_rest_port(cls):
         try:
             return cls.config_cli.getint(REST_SECTION_NAME, REST_SVR_PORT)
+        except:
+            return -1
+
+    @classmethod
+    def get_rest_ip(cls):
+        try:
+            return cls.config_cli.get(REST_SECTION_NAME, REST_SVR_IP)
         except:
             return -1
 

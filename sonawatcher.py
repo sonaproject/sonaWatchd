@@ -94,7 +94,7 @@ class SonaWatchD(Daemon):
                                 if i == 3:
                                     LOG.info('fail to check rest server.')
                                     alarm_event.push_event('sonawatcher', 'SONAWATCHER_DISCONNECT', 'critical',
-                                                           'sonawatcher server shutdown', 'sonawatcher server shutdown',
+                                                           'normal', 'sonawatcher server shutdown',
                                                            str(datetime.now()))
                                     conn.close()
                                     exitFlag = True
@@ -113,7 +113,7 @@ class SonaWatchD(Daemon):
 
                     time.sleep(CONF.watchdog()['interval'])
                 except:
-                    alarm_event.push_event('sonawatcher', 'SONAWATCHER_DISCONNECT', 'critical', 'sonawatcher server shutdown', 'sonawatcher server shutdown', str(datetime.now()))
+                    alarm_event.push_event('sonawatcher', 'SONAWATCHER_DISCONNECT', 'critical', 'normal', 'sonawatcher server shutdown', str(datetime.now()))
                     conn.close()
                     LOG.exception()
 
@@ -136,7 +136,7 @@ if __name__ == "__main__":
         elif 'stop' == sys.argv[1]:
             print "Stopping ..."
             try:
-                alarm_event.push_event('sonawatcher', 'SONAWATCHER_DISCONNECT', 'critical', 'sonawatcher server shutdown', 'sonawatcher server shutdown', str(datetime.now()))
+                alarm_event.push_event('sonawatcher', 'SONAWATCHER_DISCONNECT', 'critical', 'normal', 'sonawatcher server shutdown', str(datetime.now()))
             except:
                 pass
             daemon.stop()
@@ -144,7 +144,7 @@ if __name__ == "__main__":
         elif 'restart' == sys.argv[1]:
             print "Restaring ..."
             try:
-                alarm_event.push_event('sonawatcher', 'SONAWATCHER_DISCONNECT', 'critical', 'sonawatcher server shutdown', 'sonawatcher server shutdown', str(datetime.now()))
+                alarm_event.push_event('sonawatcher', 'SONAWATCHER_DISCONNECT', 'critical', 'normal', 'sonawatcher server shutdown', str(datetime.now()))
             except:
                 pass
             daemon.restart()

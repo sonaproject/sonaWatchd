@@ -6,13 +6,14 @@ from api.sbapi import SshCommand
 
 def onos_app_check(conn, db_log, node_name, node_ip):
     try:
-
         app_rt = SshCommand.onos_ssh_exec(node_ip, 'apps -a -s')
 
         status = 'ok'
-        applist = ''
-        fail_reason = ''
         app_active_list = list()
+
+        app_list = []
+        fail_reason = []
+
         if app_rt is not None:
             for line in app_rt.splitlines():
                 app_active_list.append(line.split(".")[2].split()[0])
@@ -24,19 +25,25 @@ def onos_app_check(conn, db_log, node_name, node_ip):
 
             for app in CONF.onos()['app_list']:
                 if app in app_active_list:
-                    applist = applist + str(app).ljust(30) + '[ok]\n'
+                    app_json = {'name': app, 'status': 'ok', 'monitor_item': True}
+                    app_active_list.remove(app)
                 else:
-                    applist = applist + str(app).ljust(30) + '[nok]\n'
-                    fail_reason = fail_reason + str(app) + '[nok],'
                     status = 'nok'
+                    app_json = {'name': app, 'status': 'nok', 'monitor_item': True}
+                    fail_reason.append(app_json)
+                app_list.append(app_json)
+
+            for app in app_active_list:
+                app_json = {'name': app, 'status': 'ok', 'monitor_item': False}
+                app_list.append(app_json)
         else:
             LOG.error("\'%s\' ONOS Application Check Error", node_ip)
             status = 'fail'
-            applist = 'fail'
+            app_list = 'fail'
 
         try:
             sql = 'UPDATE ' + DB.ONOS_TBL + \
-                  ' SET applist = \'' + applist + '\'' +\
+                  ' SET applist = \"' + str(app_list) + '\"' +\
                   ' WHERE nodename = \'' + node_name + '\''
             db_log.write_log('----- UPDATE ONOS APP INFO -----\n' + sql)
 
@@ -49,39 +56,56 @@ def onos_app_check(conn, db_log, node_name, node_ip):
         status = 'fail'
         fail_reason = 'fail'
 
-    return status, fail_reason.rstrip(',')
+    return status, str(fail_reason)
 
 
 def onos_rest_check(conn, db_log, node_name, node_ip):
     try:
-        weblist = ''
         web_status = 'ok'
-        fail_reason = ''
+
+        web_list = []
+        fail_reason = []
 
         web_rt = SshCommand.onos_ssh_exec(node_ip, 'web:list')
 
         if web_rt is not None:
-            for app in CONF.onos()['rest_list']:
+            for web in CONF.onos()['rest_list']:
                 for line in web_rt.splitlines():
                     if line.startswith('ID') or line.startswith('--'):
                         continue
 
-                    if ' ' + app + ' ' in line:
+                    if ' ' + web + ' ' in line:
                         if not ('Active' in line and 'Deployed' in line):
-                            weblist = weblist + str(app).ljust(30) + '[nok]\n'
-                            fail_reason = fail_reason + str(app) + '[nok],'
+                            rest_json = {'name': web, 'status': 'nok', 'monitor_item': True}
+                            fail_reason.append(rest_json)
                             web_status = 'nok'
                         else:
-                            weblist = weblist + str(app).ljust(30) + '[ok]\n'
+                            rest_json = {'name': web, 'status': 'ok', 'monitor_item': True}
 
+                        web_list.append(rest_json)
+
+            for line in web_rt.splitlines():
+                if line.startswith('ID') or line.startswith('--'):
+                    continue
+
+                name = " ".join(line.split()).split(' ')[10]
+
+                if not name in CONF.onos()['rest_list']:
+                    if not ('Active' in line and 'Deployed' in line):
+                        rest_json = {'name': name, 'status': 'nok', 'monitor_item': False}
+                    else:
+                        rest_json = {'name': name, 'status': 'ok', 'monitor_item': False}
+
+                    web_list.append(rest_json)
         else:
             LOG.error("\'%s\' ONOS Rest Check Error", node_ip)
             web_status = 'fail'
-            weblist = 'fail'
+            web_list = 'fail'
+            fail_reason = 'fail'
 
         try:
             sql = 'UPDATE ' + DB.ONOS_TBL + \
-                  ' SET weblist = \'' + weblist + '\'' +\
+                  ' SET weblist = \"' + str(web_list) + '\"' +\
                   ' WHERE nodename = \'' + node_name + '\''
             db_log.write_log('----- UPDATE ONOS REST INFO -----\n' + sql)
 
@@ -95,57 +119,147 @@ def onos_rest_check(conn, db_log, node_name, node_ip):
         web_status = 'fail'
         fail_reason = 'fail'
 
-    return web_status, fail_reason.rstrip(',')
+    return web_status, str(fail_reason)
 
+
+def parse_openflow(line, hostname, is_monitor):
+    of_id = line.split(',')[0].split('=')[1]
+    available = line.split(',')[1].split('=')[1]
+    status = line.split(',')[2].split('=')[1].split(' ')[0]
+    role = line.split(',')[3].split('=')[1]
+    type = line.split(',')[4].split('=')[1]
+
+    if available == 'true':
+        available = True
+    else:
+        available = False
+
+    rest_json = {'hostname': hostname, 'of_id': of_id, 'available': available, 'status': status,
+                 'role': role, 'type': type, 'monitor_item': is_monitor}
+
+    return rest_json
 
 def onos_conn_check(conn, db_log, node_name, node_ip):
     try:
         device_rt = SshCommand.onos_ssh_exec(node_ip, 'devices')
         nodes_rt = SshCommand.onos_ssh_exec(node_ip, 'nodes')
 
-        str_of = ''
+        of_status = 'ok'
 
-        of_fail_reason = ''
-        cluster_fail_reason = ''
+        of_list = []
+        of_fail_reason = []
 
+        cluster_list = []
+        cluster_fail_reason = []
+
+        find_list = []
         if device_rt is not None:
-            of_status = 'ok'
-            for line in device_rt.splitlines():
-                if line.startswith('id=of'):
-                    of_id = line.split(',')[0].split('=')[1]
+            try:
+                sql = 'SELECT hostname, of_id FROM ' + DB.OPENSTACK_TBL
+                nodes_info = conn.cursor().execute(sql).fetchall()
 
-                    try:
-                        sql = 'SELECT hostname FROM ' + DB.OPENSTACK_TBL + ' WHERE of_id = \'' + of_id + '\''
-                        node_info = conn.cursor().execute(sql).fetchone()
+                for hostname, switch_id in nodes_info:
+                    for line in device_rt.splitlines():
+                        if line.startswith('id=of'):
+                            find_list.append(switch_id)
 
-                        line = line.replace(of_id, node_info[0] + '(' + of_id + ')')
-                    except:
-                        LOG.exception()
+                            of_id = line.split(',')[0].split('=')[1]
+                            available = line.split(',')[1].split('=')[1]
 
-                    if not ('available=true' in line):
-                        of_status = 'nok'
-                        of_fail_reason = of_fail_reason + str(node_info[0]) + '[nok],'
+                            if switch_id == of_id:
+                                rest_json = parse_openflow(line, str(hostname), True)
 
-                    str_of = str_of + line + '\n'
+                                if not available == 'true':
+                                    of_status = 'nok'
+                                    of_fail_reason.append(rest_json)
+
+                                of_list.append(rest_json)
+
+                for line in device_rt.splitlines():
+                    if line.startswith('id=of'):
+                        of_id = line.split(',')[0].split('=')[1]
+
+                        if not of_id in find_list:
+                            rest_json = parse_openflow(line, '', False)
+                            of_list.append(rest_json)
+
+            except:
+                LOG.exception()
+                LOG.error("\'%s\' Connection Check Error(devices)", node_ip)
+                of_status = 'fail'
+                of_fail_reason = 'fail'
         else:
             LOG.error("\'%s\' Connection Check Error(devices)", node_ip)
             of_status = 'fail'
             of_fail_reason = 'fail'
 
+        cluster_status = 'ok'
         if nodes_rt is not None:
-            cluster_status = 'ok'
-            for line in nodes_rt.splitlines():
-                if not ('state=READY' in line):
-                    cluster_status = 'nok'
-                    cluster_fail_reason = cluster_fail_reason + line.split(',')[0].split('=')[0] + '[nok],'
+            try:
+                sql = 'SELECT ip_addr FROM ' + DB.NODE_INFO_TBL + ' WHERE type = \'ONOS\''
+                nodes_info = conn.cursor().execute(sql).fetchall()
+
+                cluster_ip_list = list()
+
+                for onos_ip in nodes_info:
+                    find_flag = False
+                    summary_rt = SshCommand.onos_ssh_exec(onos_ip[0], 'summary')
+                    if summary_rt is not None:
+                        data_ip = str(summary_rt).split(',')[0].split('=')[1]
+
+                        for line in nodes_rt.splitlines():
+                            id = line.split(',')[0].split('=')[1]
+                            address = line.split(',')[1].split('=')[1]
+                            state = line.split(',')[2].split('=')[1].split(' ')[0]
+
+                            if data_ip == address.split(':')[0]:
+                                find_flag = True
+                                cluster_ip_list.append(address)
+
+                                rest_json = {'id': id, 'address': address, 'status': 'ok',
+                                             'monitor_item': True}
+                                cluster_list.append(rest_json)
+
+                                if not state == 'READY':
+                                    cluster_status = 'nok'
+                                    cluster_fail_reason.append(rest_json)
+
+                        if not find_flag:
+                            rest_json = {'id': data_ip, 'address': '-', 'status': 'nok',
+                                         'monitor_item': True}
+                            cluster_list.append(rest_json)
+                            cluster_status = 'nok'
+                            cluster_fail_reason.append(rest_json)
+                    else:
+                        rest_json = {'id': onos_ip, 'address': '-', 'status': 'nok',
+                                     'monitor_item': True}
+                        cluster_list.append(rest_json)
+
+                if summary_rt is not None:
+                    for line in nodes_rt.splitlines():
+                        id = line.split(',')[0].split('=')[1]
+                        address = line.split(',')[1].split('=')[1]
+                        state = line.split(',')[2].split('=')[1].split(' ')[0]
+
+                        if not state == 'READY':
+                            status = 'nok'
+                        else:
+                            status = 'ok'
+
+                        if not address in cluster_ip_list:
+                            rest_json = {'id': id, 'address': address, 'status': status,
+                                         'monitor_item': True}
+                            cluster_list.append(rest_json)
+            except:
+                pass
         else:
             LOG.error("\'%s\' Connection Check Error(nodes)", node_ip)
             cluster_status = 'fail'
 
         try:
             sql = 'UPDATE ' + DB.ONOS_TBL + \
-                  ' SET openflow = \'' + str_of + '\',' + \
-                  ' cluster = \'' + str(nodes_rt) + '\'' \
+                  ' SET openflow = \"' + str(of_list) + '\",' + \
+                  ' cluster = \"' + str(cluster_list) + '\"' \
                   ' WHERE nodename = \'' + node_name + '\''
             db_log.write_log('----- UPDATE ONOS CONNECTION INFO -----\n' + sql)
 
@@ -158,19 +272,21 @@ def onos_conn_check(conn, db_log, node_name, node_ip):
         of_status = 'fail'
         cluster_status = 'fail'
 
-    return of_status, cluster_status, of_fail_reason, cluster_fail_reason
+    return of_status, cluster_status, str(of_fail_reason), str(cluster_fail_reason)
 
 
 
 def onos_node_check(conn, db_log, node_name, node_ip):
     try:
         node_rt = SshCommand.onos_ssh_exec(node_ip, 'openstack-nodes')
-        str_node_list = ''
+
+        node_list = []
+        port_list = []
+
+        fail_reason = []
+        ip_list = []
 
         node_status = 'ok'
-        fail_reason = ''
-
-        str_port = ''
 
         if node_rt is not None:
             for ip in CONF.openstack()['compute_list'] + CONF.openstack()['gateway_list']:
@@ -183,10 +299,10 @@ def onos_node_check(conn, db_log, node_name, node_ip):
                         find_flag = True
                         fail_flag = False
                         new_line = " ".join(line.split())
-                        str_node_list = str_node_list + new_line + '\n'
 
                         tmp = new_line.split(' ')
                         host_name = tmp[0]
+                        node_type = tmp[1]
                         of_id = tmp[2]
 
                         if not 'COMPLETE' in line:
@@ -198,9 +314,13 @@ def onos_node_check(conn, db_log, node_name, node_ip):
                             openstack_nodename = conn.cursor().execute(sql).fetchone()[0]
 
                             if tmp[3].startswith('of:'):
+                                manage_ip = tmp[4]
                                 data_ip = tmp[5]
+                                state = tmp[6]
                             else:
+                                manage_ip = tmp[3]
                                 data_ip = tmp[4]
+                                state = tmp[5]
 
                             sql = 'UPDATE ' + DB.OPENSTACK_TBL + \
                                   ' SET data_ip = \'' + data_ip + '\',' + \
@@ -210,45 +330,82 @@ def onos_node_check(conn, db_log, node_name, node_ip):
                             db_log.write_log('----- UPDATE OPENSTACK INFO -----\n' + sql)
 
                             if DB.sql_execute(sql, conn) != 'SUCCESS':
-                                db_log.write_log('[FAIL] OPENSTACK MANAGE IP Update Fail.')
+                                db_log.write_log('[FAIL] OPENSTACK DATA IP Update Fail.')
                         except:
                             LOG.exception()
 
                         port_rt = SshCommand.onos_ssh_exec(node_ip, 'openstack-node-check ' + host_name)
 
-                        str_port = str_port + '\n* ' + host_name + '\n'
-
+                        host_port_list = []
+                        port_status = 'ok'
                         if port_rt is not None:
                             for port_line in port_rt.splitlines():
-                                str_port = str_port + port_line + '\n'
-
                                 if port_line.startswith('[') or port_line.strip() == '':
                                     continue
 
+                                tmp = port_line.split(' ')
+
                                 if not port_line.startswith('OK'):
-                                    node_status = 'nok'
+                                    rest_json = {'port_name': tmp[1].split('=')[0], 'status': 'nok'}
                                     fail_flag = True
+                                    port_status = 'nok'
+                                    node_status = 'nok'
+                                else:
+                                    rest_json = {'port_name': tmp[1].split('=')[0], 'status': 'ok'}
+
+                                host_port_list.append(rest_json)
                         else:
                             node_status = 'nok'
-                            str_port = 'fail'
+                            port_status = 'nok'
+
+                        port_json = {'hostname': host_name, 'port_list': host_port_list}
+                        port_list.append(port_json)
+
+                        rest_json = {'hostname': host_name, 'type': node_type, 'of_id': of_id,
+                                     'management_ip': manage_ip, 'data_ip': data_ip, 'state': state,
+                                     'port_status': port_status, 'monitor_item': True}
+                        node_list.append(rest_json)
+                        ip_list.append(manage_ip)
 
                         if fail_flag:
-                            fail_reason = fail_reason + host_name + '[nok],'
+                            fail_reason.append(rest_json)
 
                 if not find_flag:
+                    rest_json = {'hostname': '-', 'type': '-', 'of_id': '-', 'port_status': 'nok',
+                                 'management_ip': ip, 'data_ip': '-', 'state': 'NO_EXIST', 'monitor_item': True}
+                    node_list.append(rest_json)
                     node_status = 'nok'
-                    fail_reason = fail_reason + ip + '[nok],'
-                    str_node_list = str_node_list + ip + ' - - - - NO_EXIST' + '\n'
+                    fail_reason.append(rest_json)
+
+            for line in node_rt.splitlines():
+                if not (line.startswith('Total') or line.startswith('Hostname')):
+                    new_line = " ".join(line.split())
+                    tmp = new_line.split(' ')
+
+                    if tmp[3].startswith('of:'):
+                        manage_ip = tmp[4]
+                        data_ip = tmp[5]
+                        state = tmp[6]
+                    else:
+                        manage_ip = tmp[3]
+                        data_ip = tmp[4]
+                        state = tmp[5]
+
+                    if not manage_ip in ip_list:
+                        rest_json = {'hostname': tmp[0], 'type': tmp[1], 'of_id': tmp[2],
+                                     'management_ip': manage_ip, 'data_ip': data_ip, 'state': state,
+                                     'monitor_item': False}
+                        node_list.append(rest_json)
         else:
             LOG.error("\'%s\' ONOS Node Check Error", node_ip)
             node_status = 'fail'
-            str_node_list = 'fail'
+            node_list = 'fail'
             fail_reason = 'fail'
 
         try:
             sql = 'UPDATE ' + DB.ONOS_TBL + \
-                  ' SET nodelist = \'' + str_node_list + '\',' + \
-                  ' port = \'' + str_port + '\'' \
+                  ' SET nodelist = \"' + str(node_list) + '\",' + \
+                  ' port = \"' + str(port_list) + '\"' \
                   ' WHERE nodename = \'' + node_name + '\''
             db_log.write_log('----- UPDATE ONOS NODE INFO -----\n' + sql)
 
@@ -261,7 +418,7 @@ def onos_node_check(conn, db_log, node_name, node_ip):
         node_status = 'fail'
         fail_reason = 'fail'
 
-    return node_status, fail_reason.rstrip(',')
+    return node_status, str(fail_reason)
 
 
 def controller_traffic_check(conn, db_log, node_name, node_ip, pre_stat):
@@ -270,9 +427,13 @@ def controller_traffic_check(conn, db_log, node_name, node_ip, pre_stat):
 
         in_packet = 0
         out_packet = 0
-        str_info = ''
+
+        cpman_stat_list = list()
         controller_traffic = 'ok'
-        reason = ''
+        reason = []
+
+        desc = ''
+        ratio = 0
 
         if summary_rt is not None:
             data_ip = str(summary_rt).split(',')[0].split('=')[1]
@@ -281,29 +442,45 @@ def controller_traffic_check(conn, db_log, node_name, node_ip, pre_stat):
                 sql = 'SELECT hostname, of_id FROM ' + DB.OPENSTACK_TBL
                 nodes_info = conn.cursor().execute(sql).fetchall()
 
-                str_info = ''
-
                 for hostname, of_id in nodes_info:
                     cmd = 'cpman-stats-list ' + data_ip + ' control_message ' + of_id
 
                     stat_rt = SshCommand.onos_ssh_exec(node_ip, cmd)
 
-                    if stat_rt is not None:
-                        str_info = str_info + 'HOST_NAME=' + hostname + ', SWITCH_ID=' + of_id
+                    rest_json = {'hostname': str(hostname), 'of_id': str(of_id), 'inbound': '-',
+                                 'outbound': '-', 'mod': '-', 'removed': '-', 'request': '-', 'reply': '-'}
 
+                    if stat_rt is not None:
                         if not str(stat_rt).startswith('Failed'):
                             for line in stat_rt.splitlines():
                                 type = line.split(',')[0].split('=')[1]
                                 avg_cnt = int(line.split(',')[2].split('=')[1])
 
-                                str_info = str_info  + ', ' + type + '=' + str(avg_cnt)
-
                                 if type == 'INBOUND_PACKET':
                                     in_packet = in_packet + avg_cnt
+                                    in_p = avg_cnt
                                 elif type == 'OUTBOUND_PACKET':
                                     out_packet = out_packet + avg_cnt
+                                    out_p = avg_cnt
+                                elif type == 'FLOW_MOD_PACKET':
+                                    mod_p = avg_cnt
+                                elif type == 'FLOW_REMOVED_PACKET':
+                                    remove_p = avg_cnt
+                                elif type == 'REQUEST_PACKET':
+                                    req_p = avg_cnt
+                                elif type == 'REPLY_PACKET':
+                                    res_p = avg_cnt
 
-                            str_info = str_info + '\n'
+                            rest_json = {'hostname': str(hostname), 'of_id': str(of_id), 'inbound': in_p,
+                                         'outbound': out_p, 'mod': mod_p,'removed': remove_p,'request': req_p,'reply': res_p}
+                        else:
+                            reason.append(rest_json)
+                            controller_traffic = 'fail'
+                    else:
+                        reason.append(rest_json)
+                        controller_traffic = 'fail'
+
+                    cpman_stat_list.append(rest_json)
 
                 for_save_in = in_packet
                 for_save_out = out_packet
@@ -321,9 +498,8 @@ def controller_traffic_check(conn, db_log, node_name, node_ip, pre_stat):
                     out_packet = out_packet - int(dict(pre_stat)[node_name]['out_packet'])
 
                     if in_packet <= CONF.alarm()['controller_traffic_minimum_inbound']:
-                        reason = ' * Minimum increment for status check = ' + str(
+                        desc = 'Minimum increment for status check = ' + str(
                             CONF.alarm()['controller_traffic_minimum_inbound'])
-                        str_info = str_info + reason
                         controller_traffic = '-'
                     else:
                         if in_packet == 0 and out_packet == 0:
@@ -335,11 +511,10 @@ def controller_traffic_check(conn, db_log, node_name, node_ip, pre_stat):
                             ratio = float(out_packet) * 100 / in_packet
 
                         LOG.info('[CPMAN][' + node_name + '] Controller Traffic Ratio = ' + str(ratio) + '(' + str(out_packet) + '/' + str(in_packet) + ')')
-                        str_info = str_info + ' * [LAST ' + str(CONF.watchdog()['interval']) + ' Sec] Controller Traffic Ratio = ' + str(ratio) + '(' + str(out_packet) + '/' + str(in_packet) + ')\n'
+                        desc = 'Controller Traffic Ratio = ' + str(ratio) + '(' + str(out_packet) + '/' + str(in_packet) + ')\n'
 
                         if ratio < float(CONF.alarm()['controller_traffic_ratio']):
                             controller_traffic = 'nok'
-                            reason = 'controller traffic ratio : ' + str(format(ratio, '.2f'))
 
                         in_out_dic = dict()
                         in_out_dic['in_packet'] = for_save_in
@@ -349,14 +524,18 @@ def controller_traffic_check(conn, db_log, node_name, node_ip, pre_stat):
             except:
                 LOG.exception()
                 controller_traffic = 'fail'
-                reason = 'fail'
         else:
             controller_traffic = 'fail'
-            reason = 'fail'
+
+        controller_json = {'status': controller_traffic, 'stat_list': cpman_stat_list, 'minimum_inbound_packet': CONF.alarm()['controller_traffic_minimum_inbound'], 'current_inbound_packet': in_packet,
+                     'current_outbound_packet': out_packet, 'period': CONF.watchdog()['interval'], 'ratio': format(ratio, '.2f'), 'description': desc, 'threshold': CONF.alarm()['controller_traffic_ratio']}
+
+        if not controller_traffic == 'ok':
+            reason.append(controller_json)
 
         try:
             sql = 'UPDATE ' + DB.ONOS_TBL + \
-                  ' SET traffic_stat = \'' + str_info.rstrip('\n') + '\'' + \
+                  ' SET traffic_stat = \"' + str(controller_json) + '\"' + \
                   ' WHERE nodename = \'' + node_name + '\''
             db_log.write_log('----- UPDATE CONTROLLER TRAFFIC INFO -----\n' + sql)
 
@@ -365,7 +544,8 @@ def controller_traffic_check(conn, db_log, node_name, node_ip, pre_stat):
         except:
             LOG.exception()
     except:
+        LOG.exception()
         controller_traffic = 'fail'
         reason = 'fail'
 
-    return controller_traffic, pre_stat, reason
+    return controller_traffic, pre_stat, str(reason)

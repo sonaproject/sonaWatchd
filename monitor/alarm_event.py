@@ -58,11 +58,10 @@ def get_grade(item, value):
 def occur_event(conn, db_log, node_name, item, pre_grade, cur_grade, reason = '-'):
     try:
         time = str(datetime.now())
-        desc = pre_grade + ' -> ' + cur_grade
         sql = 'UPDATE ' + DB.EVENT_TBL + \
               ' SET grade = \'' + cur_grade + '\'' + ',' + \
-              ' desc = \'' + desc + '\'' + ',' + \
-              ' reason = \'' + reason + '\'' + ',' + \
+              ' pre_grade = \'' + pre_grade + '\'' + ',' + \
+              ' reason = \"' + reason + '\"' + ',' + \
               ' time = \'' + time + '\'' + \
               ' WHERE nodename = \'' + node_name + '\' and item = \'' + item + '\''
         db_log.write_log('----- UPDATE EVENT INFO -----\n' + sql)
@@ -70,7 +69,7 @@ def occur_event(conn, db_log, node_name, item, pre_grade, cur_grade, reason = '-
         if DB.sql_execute(sql, conn) != 'SUCCESS':
             db_log.write_log('[FAIL] EVENT INFO DB Update Fail.')
 
-        push_event(node_name, item, cur_grade, desc, reason, time)
+        push_event(node_name, item, cur_grade, pre_grade, reason, time)
     except:
         LOG.exception()
 
@@ -81,11 +80,11 @@ def set_history_log(log):
     history_log = log
 
 
-def push_event(node_name, item, grade, desc, reason, time):
+def push_event(node_name, item, grade, pre_grade, reason, time):
     global history_log
 
     try:
-        history_log.write_log('[%s][%s][%s][%s] %s', node_name, item, grade, desc, reason)
+        history_log.write_log('[%s][%s][%s][%s] %s', node_name, item, grade, pre_grade, reason)
 
         sql = 'SELECT * FROM ' + DB.REGI_SYS_TBL
 
@@ -95,12 +94,12 @@ def push_event(node_name, item, grade, desc, reason, time):
         conn.close()
 
         for url, auth in url_list:
-            header = {'Content-Type': 'application/json', 'Authorization': auth}
-            req_body = {'system': node_name, 'item': item, 'grade': grade, 'desc': desc, 'reason': reason, 'time': time}
+            header = {'Content-Type': 'application/json', 'Authorization': str(auth)}
+            req_body = {'system': node_name, 'item': item, 'grade': grade, 'pre_grade': pre_grade, 'reason': reason, 'time': time}
             req_body_json = json.dumps(req_body)
 
             try:
-                requests.post(url, headers=header, data=req_body_json, timeout = 2)
+                requests.post(str(url), headers=header, data=req_body_json, timeout = 2)
             except:
                 # Push event does not respond
                 pass

@@ -84,7 +84,7 @@ class DB(object):
                         'CREATE TABLE ' + cls.SWARM_TBL + '(nodename text primary key, node, service, ps)',
                         'CREATE TABLE ' + cls.OPENSTACK_TBL + '(nodename text primary key, sub_type, data_ip, of_id, hostname, docker, onosApp, routingTable, gw_ratio, vxlan_traffic, internal_traffic)',
                         'CREATE TABLE ' + cls.HA_TBL + '(ha_key text primary key, stats)',
-                        'CREATE TABLE ' + cls.EVENT_TBL + '(nodename, item, grade, desc, reason, time, PRIMARY KEY (nodename, item))']
+                        'CREATE TABLE ' + cls.EVENT_TBL + '(nodename, item, grade, pre_grade, reason, time, PRIMARY KEY (nodename, item))']
 
             for sql in init_sql:
                 sql_rt = cls.sql_execute(sql)

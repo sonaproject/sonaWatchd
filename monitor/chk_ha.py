@@ -59,7 +59,7 @@ def get_ha_stats(ha_dic):
         ha_status = 'ok'
         ha_ratio = 'ok'
 
-        list_reason = ''
+        list_reason = []
         ratio_reason = ''
 
         frontend = 0
@@ -72,13 +72,15 @@ def get_ha_stats(ha_dic):
 
                 if host == 'FRONTEND':
                     if not 'OPEN' in status:
-                        list_reason = list_reason + key + ':' + host + '[nok],'
+                        list_json = {'key': key, 'hostname': host, 'status': 'nok'}
+                        list_reason.append(list_json)
                         ha_status = 'nok'
 
                     frontend = int(dict(line)['req_count'])
                 else:
                     if not 'UP' in status:
-                        list_reason = list_reason + key + ':' + host + '[nok],'
+                        list_json = {'key': key, 'hostname': host, 'status': 'nok'}
+                        list_reason.append(list_json)
                         ha_status = 'nok'
 
                     backend = backend + int(dict(line)['succ_count'])
@@ -87,11 +89,11 @@ def get_ha_stats(ha_dic):
 
         if ratio < float(CONF.alarm()['ha_proxy']):
             ha_ratio = 'nok'
-            ratio_reason = 'ha ratio : ' + str(format(ratio, '.2f'))
+            ratio_reason = str(format(ratio, '.2f'))
     except:
         LOG.exception()
         ha_status = 'fail'
         ha_ratio = 'fail'
 
-    return ha_status, ha_ratio, list_reason.rstrip(','), ratio_reason
+    return ha_status, ha_ratio, str(list_reason), ratio_reason
 

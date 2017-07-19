@@ -613,11 +613,14 @@ class CLI():
 
         return 1, myResponse
 
+
     @classmethod
     def send_regi(cls, type = 'regi'):
         auth = cls.get_auth()
 
-        req_body = {'uri': 'event', 'port': str(CONFIG.get_rest_port())}
+        url = 'http://' + str(CONFIG.get_rest_ip()) + ':' + str(CONFIG.get_rest_port()) + '/event'
+
+        req_body = {'url': url}
         req_body_json = json.dumps(req_body)
 
         header = {'Content-Type': 'application/json', 'Authorization': base64.b64encode(auth)}
@@ -646,6 +649,46 @@ class CLI():
         cls.CLI_LOG.cli_log('---------------------------RECV RES---------------------------')
         cls.CLI_LOG.cli_log('RESPONSE CODE = ' + str(myResponse.status_code))
 
+        result = json.loads(myResponse.content)
+
+        if myResponse.status_code == 200 and result['Result'] == 'SUCCESS':
+            return True
+        else:
+            return False
+
+
+    @classmethod
+    def get_event_list(cls):
+        auth = cls.get_auth()
+
+        url = 'http://' + str(CONFIG.get_rest_ip()) + ':' + str(CONFIG.get_rest_port()) + '/event'
+
+        req_body = {'url': url}
+        req_body_json = json.dumps(req_body)
+
+        header = {'Content-Type': 'application/json', 'Authorization': base64.b64encode(auth)}
+
+        cls.CLI_LOG.cli_log('---------------------------SEND CMD---------------------------')
+
+        try:
+            url = CONFIG.get_event_list_uri()
+
+            cls.CLI_LOG.cli_log('URL = ' + url)
+            cls.CLI_LOG.cli_log('AUTH = ' + auth)
+
+            myResponse = requests.get(url, headers=header, data=req_body_json, timeout=CONFIG.get_rest_timeout())
+
+            cls.CLI_LOG.cli_log('HEADER = ' + json.dumps(header, sort_keys=True, indent=4))
+            cls.CLI_LOG.cli_log('BODY = ' + json.dumps(req_body, sort_keys=True, indent=4))
+
+        except:
+            # req timeout
+            LOG.exception_err_write()
+            return False
+
+        cls.CLI_LOG.cli_log('---------------------------RECV RES---------------------------')
+        cls.CLI_LOG.cli_log('RESPONSE CODE = ' + str(myResponse.status_code))
+
         try:
             res = json.loads(myResponse.content.replace("\'", '"'))
             cls.CLI_LOG.cli_log(
@@ -655,7 +698,7 @@ class CLI():
 
             for line in res['Event list']:
                 cls.HISTORY_LOG.write_history('[OCCUR_TIME : %s][%s][%s][%s][%s] %s', line['time'], line['system'], line['item'],
-                                          line['grade'], line['desc'], line['reason'])
+                                          line['grade'], line['pre_grade'], line['reason'])
 
             cls.HISTORY_LOG.write_history("--- Current Event History END ---")
 
