@@ -375,44 +375,33 @@ class CLI():
                             print '[' + sys + ']'
 
                             sys_ret = result[sys]
-                            if sys_ret.upper().endswith('FAIL'):
+                            if str(sys_ret).upper().endswith('FAIL'):
                                 sys_ret = 'fail'
                                 print sys_ret
                             else:
                                 data = []
-                                line = []
 
-                                for row in sys_ret.splitlines():
-                                    if str(row).strip() == '':
-                                        continue
-
-                                    if str(row).startswith('*'):
-                                        line.append(str(row).lstrip('*').strip())
-                                    elif str(row).startswith('['):
-                                        if len(line) == 0:
-                                            line.append('')
-                                        line.append(str(row).lstrip('[').split(' ')[0])
-                                    else:
-                                        tmp = str(row).split(' ')
-                                        if len(line) < 2:
-                                            line.append('')
-                                            line.append('')
-                                        line.append(tmp[1].split('=')[0])
-                                        status = tmp[0]
-
-                                        line.append(status)
-                                        data.append(line)
+                                for row in sys_ret:
+                                    is_first = True
+                                    for port in row['port_list']:
                                         line = []
+
+                                        if is_first:
+                                            line.append(row['hostname'])
+                                            is_first = False
+                                        else:
+                                            line.append('')
+
+                                        line.append(port['port_name'])
+                                        line.append(port['status'])
+
+                                        data.append(line)
 
                                 header = []
 
                                 col_host = dict()
-                                col_host['title'] = 'Host Name'
+                                col_host['title'] = 'Hostname'
                                 col_host['size'] = '12'
-
-                                col_bridge = dict()
-                                col_bridge['title'] = 'Bridge'
-                                col_bridge['size'] = '14'
 
                                 col_port = dict()
                                 col_port['title'] = 'Port'
@@ -423,7 +412,6 @@ class CLI():
                                 col_status['size'] = '6'
 
                                 header.append(col_host)
-                                header.append(col_bridge)
                                 header.append(col_port)
                                 header.append(col_status)
 
@@ -547,9 +535,114 @@ class CLI():
                                 cls.draw_grid(header, data)
 
                             print ''
-                else:
-                    special_line_vxlan = ''
 
+                elif command == 'gateway':
+                    print('')
+                    if param in ['docker', 'onosApp']:
+                        for sys in sorted_list:
+                            print '[' + sys + ']'
+
+                            sys_ret = result[sys]
+                            if str(sys_ret).upper().endswith('FAIL'):
+                                sys_ret = 'fail'
+                                print sys_ret
+                            else:
+                                data = []
+
+                                for row in sys_ret:
+                                    line = []
+
+                                    line.append(row['name'])
+                                    line.append(row['status'])
+
+                                    data.append(line)
+
+                                header = []
+
+                                col_name = dict()
+                                col_name['title'] = 'Name'
+                                col_name['size'] = '14'
+
+                                col_status = dict()
+                                col_status['title'] = 'Status'
+                                col_status['size'] = '8'
+
+                                header.append(col_name)
+                                header.append(col_status)
+
+                                cls.draw_grid(header, data)
+
+                            print ''
+                    elif param == 'routingTable':
+                        for sys in sorted_list:
+                            print '[' + sys + ']'
+
+                            sys_ret = result[sys]
+                            if str(sys_ret).upper().endswith('FAIL'):
+                                sys_ret = 'fail'
+                                print sys_ret
+                            else:
+                                data = []
+
+                                for row in sys_ret:
+                                    line = []
+
+                                    line.append(row['network'])
+                                    line.append(row['next_hop'])
+
+                                    data.append(line)
+
+                                header = []
+
+                                col_name = dict()
+                                col_name['title'] = 'network'
+                                col_name['size'] = '18'
+
+                                col_hop = dict()
+                                col_hop['title'] = 'next_hop'
+                                col_hop['size'] = '18'
+
+                                header.append(col_name)
+                                header.append(col_hop)
+
+                                cls.draw_grid(header, data)
+
+                            print ''
+
+                elif command == 'port-stat-vxlan':
+                    print('')
+                    for sys in sorted_list:
+                        print '[' + sys + ']'
+
+                        desc = ''
+                        sys_ret = result[sys]
+                        if str(sys_ret).upper().endswith('FAIL'):
+                            sys_ret = 'fail'
+                            print sys_ret
+                        else:
+                            print '   tx = ' + str(sys_ret['port_stat_vxlan']['tx']) + ', tx_drop = ' + str(sys_ret['port_stat_vxlan']['tx_drop']) \
+                                  + ', tx_errs = ' + str(sys_ret['port_stat_vxlan']['tx_errs'])
+                            print '   rx = ' + str(sys_ret['port_stat_vxlan']['rx']) + ', rx_drop = ' + \
+                                  str(sys_ret['port_stat_vxlan']['rx_drop']) + ', rx_errs = ' + str(sys_ret['port_stat_vxlan']['rx_errs'])  + ', rx_min = ' + str(sys_ret['port_stat_vxlan']['minimum_rx'])
+
+                            desc = '   * ' + sys_ret['description'] + '\n'
+
+                            print('')
+                    print desc
+
+                elif command == 'traffic-gw':
+                    print('')
+                    for sys in sorted_list:
+                        print '[' + sys + ']'
+
+                        sys_ret = result[sys]
+                        if str(sys_ret).upper().endswith('FAIL'):
+                            sys_ret = 'fail'
+                            print sys_ret
+                        else:
+                            print '   ratio = ' + sys_ret['ratio'] + '\n'
+
+                else:
                     print('')
                     for sys in sorted_list:
                         sys_ret = result[sys]
@@ -559,15 +652,10 @@ class CLI():
                         print '[' + sys + ']'
 
                         for line in sys_ret.splitlines():
-                            if 'Ratio of success for all node' in line:
-                                special_line_vxlan = line
-                            else:
-                                print '   ' + line
+                            print '   ' + line
 
                         print('')
 
-                    if len(special_line_vxlan) > 0:
-                        print special_line_vxlan + '\n'
             except:
                 LOG.exception_err_write()
                 print '[parser err] return = ' + str(result)
