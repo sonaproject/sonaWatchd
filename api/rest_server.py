@@ -22,6 +22,9 @@ class RestHandler(BaseHTTPRequestHandler):
 
         LOG.info('[REST-SERVER] RESPONSE CODE = ' + str(res_code))
 
+    def do_POST(self):
+        self.do_GET()
+
     def do_GET(self):
         # health check
         if self.path.startswith('/alive-check'):
