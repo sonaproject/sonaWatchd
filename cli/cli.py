@@ -797,10 +797,13 @@ class CLI():
         cls.CLI_LOG.cli_log('---------------------------RECV RES---------------------------')
         cls.CLI_LOG.cli_log('RESPONSE CODE = ' + str(myResponse.status_code))
 
-        result = json.loads(myResponse.content)
+        if myResponse.status_code == 200:
+            result = json.loads(myResponse.content)
 
-        if myResponse.status_code == 200 and result['Result'] == 'SUCCESS':
-            return True
+            if result['Result'] == 'SUCCESS':
+                return True
+            else:
+                return False
         else:
             return False
 
