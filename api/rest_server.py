@@ -4,6 +4,7 @@
 
 import json
 import base64
+from datetime import datetime
 import multiprocessing as multiprocess
 
 import monitor.cmd_proc as command
@@ -11,10 +12,14 @@ import monitor.cmd_proc as command
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 from api.config import CONF
 from api.sona_log import LOG
-from watcherdb import DB
+
+import sonatrace as trace
 
 
 class RestHandler(BaseHTTPRequestHandler):
+    # write buffer; 0: unbuffered, -1: buffering; rf) default rbufsize(rfile) is -1.
+    wbufsize = -1
+
     def do_HEAD(self, res_code):
         self.send_response(res_code)
         self.send_header('Content-type', 'application/json')
@@ -29,23 +34,25 @@ class RestHandler(BaseHTTPRequestHandler):
         # health check
         if self.path.startswith('/alive-check'):
             self.do_HEAD(200)
-            self.wfile.write('ok')
+            self.wfile.write('ok\n')
             return
 
-        request_sz = int(self.headers["Content-length"])
-        request_str = self.rfile.read(request_sz)
-        request_obj = json.loads(request_str)
-
-        LOG.info('[REST-SERVER] CLIENT INFO = ' + str(self.client_address))
-        LOG.info('[REST-SERVER] RECV BODY = \n' + json.dumps(request_obj, sort_keys=True, indent=4))
-
-        if self.headers.getheader('Authorization') is None:
+        if not self.authentication():
             self.do_HEAD(401)
-            self.wfile.write('no auth header received')
+            return
+        else:
+            if not self.headers.getheader('Content-Length'):
+                self.do_HEAD(400)
+                self.wfile.write('Bad Request, Content Length is 0\n')
+                return
+            else:
+                request_size = int(self.headers.getheader("Content-Length"))
+                request_string = self.rfile.read(request_size)
+                request_obj = json.loads(request_string)
 
-            LOG.info('[REST-SERVER] no auth header received')
+            LOG.info('[REST-SERVER] CLIENT INFO = ' + str(self.client_address))
+            LOG.info('[REST-SERVER] RECV BODY = \n' + json.dumps(request_obj, sort_keys=True, indent=4))
 
-        elif self.auth_pw(self.headers.getheader('Authorization')):
             if self.path.startswith('/command'):
                 try:
                     if command.exist_command(request_obj):
@@ -111,38 +118,115 @@ class RestHandler(BaseHTTPRequestHandler):
 
             else:
                 self.do_HEAD(404)
-                self.wfile.write(self.path + ' not found')
+                self.wfile.write(self.path + ' not found\n')
 
                 LOG.info('[REST-SERVER] ' + self.path + ' not found')
 
-        else:
+    def do_POST(self):
+
+        if not self.authentication():
             self.do_HEAD(401)
-            self.wfile.write(self.headers.getheader('Authorization'))
-            self.wfile.write('not authenticated')
+            return
+        else:
+            if self.path.startswith('/tracerequest'):
+                trace_mandatory_field = ['source_ip', 'destination_ip']
+                trace_result_data = {}
 
-            LOG.info('[REST-SERVER] not authenticated')
+                trace_condition_json = self.get_content()
+                if not trace_condition_json:
+                    self.do_HEAD(400)
+                    return
+                else:
+                    if not all(x in dict(trace_condition_json).keys() for x in trace_mandatory_field):
+                        self.do_HEAD(400)
+                        self.wfile.write('Not Exist Mandatory Attribute\n')
+                        return
+                    else:
+                        self.do_HEAD(200)
+                        self.wfile.write(str({'result': 'Success'}) + '\n')
 
-    def auth_pw(self, cli_pw):
+                try:
+                    trace_result_data.update(trace.flow_trace(trace_condition_json))
+                except:
+                    LOG.exception()
+
+                trace_result_data['time'] = str(datetime.now())
+                LOG.info('%s', str(trace_result_data))
+
+                # TODO send trace result noti
+
+            else:
+                self.do_HEAD(404)
+                self.wfile.write("Not Found path \"" + self.path + "\"\n")
+                return
+
+    def get_content(self):
+        if not self.headers.getheader('content-length'):
+            self.wfile.write('Bad Request, Content Length is 0\n')
+            LOG.info('[TRACE REST-S] Received No Data from %s', self.client_address)
+            return False
+        else:
+            try:
+                receive_data = json.loads(self.rfile.read(int(self.headers.getheader("content-length"))))
+                LOG.info('[Trace Conditions] \n' + json.dumps(receive_data, sort_keys=True, indent=4))
+                return receive_data
+            except:
+                LOG.exception()
+                error_reason = 'Trace Request Json Data Parsing Error\n'
+                self.wfile.write(error_reason)
+                LOG.info('[TRACE] %s', error_reason)
+                return False
+
+
+    # def auth_pw(self, cli_pw):
+    #     try:
+    #         id_pw_list = CONF.rest()['user_password']
+    #
+    #         strBasic = 'Basic '
+    #         if str(cli_pw).startswith(strBasic):
+    #             cli_pw = cli_pw[len(strBasic):]
+    #
+    #         cli_pw = base64.b64decode(cli_pw)
+    #
+    #         for id_pw in id_pw_list:
+    #             if id_pw.strip() == cli_pw:
+    #                 LOG.info('[REST-SERVER] AUTH SUCCESS = ' + id_pw)
+    #                 return True
+    #
+    #         LOG.info('[REST-SERVER] AUTH FAIL = ' + cli_pw)
+    #
+    #     except:
+    #         LOG.exception()
+    #
+    #     return False
+
+    def authentication(self):
         try:
-            id_pw_list = CONF.rest()['user_password']
+            if not self.headers.getheader("authorization"):
+                self.wfile.write('No Authorization Header\n')
+                return False
+            else:
+                request_auth = self.headers.getheader("authorization")
+                id_pw_list = CONF.rest()['user_password']
 
-            strBasic = 'Basic '
-            if str(cli_pw).startswith(strBasic):
-                cli_pw = cli_pw[len(strBasic):]
+                try:
+                    request_account = base64.b64decode(str(request_auth).split()[-1])
 
-            cli_pw = base64.b64decode(cli_pw)
+                    for id_pw in id_pw_list:
+                        if id_pw.strip() == request_account:
+                            LOG.info('[REST-SERVER] AUTH SUCCESS = %s, from %s', id_pw, self.client_address)
+                            return True
+                except:
+                    LOG.exception()
 
-            for id_pw in id_pw_list:
-                if id_pw.strip() == cli_pw:
-                    LOG.info('[REST-SERVER] AUTH SUCCESS = ' + id_pw)
-                    return True
-
-            LOG.info('[REST-SERVER] AUTH FAIL = ' + cli_pw)
+                self.wfile.write('Request Authentication User ID or Password is Wrong \n')
+                LOG.info('[REST-SERVER] AUTH FAIL = %s, from %s',
+                         base64.b64decode(str(request_auth).split()[-1]), self.client_address)
+                return False
 
         except:
             LOG.exception()
-
-        return False
+            return False
 
 
 def run():

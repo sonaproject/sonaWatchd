@@ -2,6 +2,7 @@ from config import CONFIG
 from log_lib import LOG
 from subprocess import Popen, PIPE
 
+
 class TRACE():
     TRACE_LOG = None
     trace_cond_list = []
