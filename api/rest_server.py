@@ -27,9 +27,6 @@ class RestHandler(BaseHTTPRequestHandler):
 
         LOG.info('[REST-SERVER] RESPONSE CODE = ' + str(res_code))
 
-    def do_POST(self):
-        self.do_GET()
-
     def do_GET(self):
         # health check
         if self.path.startswith('/alive-check'):
@@ -128,30 +125,29 @@ class RestHandler(BaseHTTPRequestHandler):
             self.do_HEAD(401)
             return
         else:
-            if self.path.startswith('/tracerequest'):
+            if self.path.startswith('/trace_request'):
                 trace_mandatory_field = ['source_ip', 'destination_ip']
                 trace_result_data = {}
 
                 trace_condition_json = self.get_content()
                 if not trace_condition_json:
-                    self.do_HEAD(400)
                     return
                 else:
-                    if not all(x in dict(trace_condition_json).keys() for x in trace_mandatory_field):
+                    if not all(x in dict(trace_condition_json['matchingfields']).keys() for x in trace_mandatory_field):
                         self.do_HEAD(400)
                         self.wfile.write('Not Exist Mandatory Attribute\n')
                         return
                     else:
                         self.do_HEAD(200)
-                        self.wfile.write(str({'result': 'Success'}) + '\n')
+                        self.wfile.write(str({'result': 'Success'}))
 
                 try:
-                    trace_result_data.update(trace.flow_trace(trace_condition_json))
+                    trace_result_data.update(trace.flow_trace(trace_condition_json['matchingfields']))
                 except:
                     LOG.exception()
 
                 trace_result_data['time'] = str(datetime.now())
-                LOG.info('%s', str(trace_result_data))
+                LOG.info(json.dumps(trace_result_data, sort_keys=True, indent=4))
 
                 # TODO send trace result noti
 
@@ -162,6 +158,7 @@ class RestHandler(BaseHTTPRequestHandler):
 
     def get_content(self):
         if not self.headers.getheader('content-length'):
+            self.do_HEAD(400)
             self.wfile.write('Bad Request, Content Length is 0\n')
             LOG.info('[TRACE REST-S] Received No Data from %s', self.client_address)
             return False
@@ -173,32 +170,11 @@ class RestHandler(BaseHTTPRequestHandler):
             except:
                 LOG.exception()
                 error_reason = 'Trace Request Json Data Parsing Error\n'
+                self.do_HEAD(400)
                 self.wfile.write(error_reason)
                 LOG.info('[TRACE] %s', error_reason)
                 return False
 
-
-    # def auth_pw(self, cli_pw):
-    #     try:
-    #         id_pw_list = CONF.rest()['user_password']
-    #
-    #         strBasic = 'Basic '
-    #         if str(cli_pw).startswith(strBasic):
-    #             cli_pw = cli_pw[len(strBasic):]
-    #
-    #         cli_pw = base64.b64decode(cli_pw)
-    #
-    #         for id_pw in id_pw_list:
-    #             if id_pw.strip() == cli_pw:
-    #                 LOG.info('[REST-SERVER] AUTH SUCCESS = ' + id_pw)
-    #                 return True
-    #
-    #         LOG.info('[REST-SERVER] AUTH FAIL = ' + cli_pw)
-    #
-    #     except:
-    #         LOG.exception()
-    #
-    #     return False
 
     def authentication(self):
         try:
