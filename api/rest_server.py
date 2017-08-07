@@ -3,6 +3,8 @@
 # SONA Monitoring Solutions.
 
 import json
+import requests
+import threading
 import base64
 from datetime import datetime
 import multiprocessing as multiprocess
@@ -14,7 +16,6 @@ from api.config import CONF
 from api.sona_log import LOG
 
 import sonatrace as trace
-
 
 class RestHandler(BaseHTTPRequestHandler):
     # write buffer; 0: unbuffered, -1: buffering; rf) default rbufsize(rfile) is -1.
@@ -120,14 +121,12 @@ class RestHandler(BaseHTTPRequestHandler):
                 LOG.info('[REST-SERVER] ' + self.path + ' not found')
 
     def do_POST(self):
-
         if not self.authentication():
             self.do_HEAD(401)
-            return
+            self.wfile.write(str({"result": "FAIL"}))
         else:
             if self.path.startswith('/trace_request'):
                 trace_mandatory_field = ['source_ip', 'destination_ip']
-                trace_result_data = {}
 
                 trace_condition_json = self.get_content()
                 if not trace_condition_json:
@@ -135,31 +134,33 @@ class RestHandler(BaseHTTPRequestHandler):
                 else:
                     if not all(x in dict(trace_condition_json['matchingfields']).keys() for x in trace_mandatory_field):
                         self.do_HEAD(400)
-                        self.wfile.write('Not Exist Mandatory Attribute\n')
+                        self.wfile.write(str({"result": "FAIL", "fail_reason": "Not Exist Mandatory Attribute\n"}))
                         return
                     else:
+                        # process trace, send noti
+                        process_thread = threading.Thread(target=send_response,
+                                                           args=(trace_condition_json['matchingfields'],
+                                                                 str(self.headers.getheader("Authorization"))))
+                        process_thread.daemon = False
+                        process_thread.start()
+
                         self.do_HEAD(200)
-                        self.wfile.write(str({'result': 'Success'}))
+                        self.wfile.write(str({"result": "SUCCESS"}))
 
-                try:
-                    trace_result_data.update(trace.flow_trace(trace_condition_json['matchingfields']))
-                except:
-                    LOG.exception()
-
-                trace_result_data['time'] = str(datetime.now())
-                LOG.info(json.dumps(trace_result_data, sort_keys=True, indent=4))
-
-                # TODO send trace result noti
-
+            # noti test
+            elif self.path.startswith('/test'):
+                self.do_HEAD(200)
+                trace_condition_json = self.get_content()
+                LOG.info('------------------------------result---------------------------------')
+                LOG.info(json.dumps(trace_condition_json, sort_keys=True, indent=4))
             else:
                 self.do_HEAD(404)
-                self.wfile.write("Not Found path \"" + self.path + "\"\n")
-                return
+                self.wfile.write(str({"result": "FAIL", "fail_reason": "Not Found path \"" + self.path + "\"\n"}))
 
     def get_content(self):
         if not self.headers.getheader('content-length'):
             self.do_HEAD(400)
-            self.wfile.write('Bad Request, Content Length is 0\n')
+            self.wfile.write(str({"result": "FAIL", "fail_reason": "Bad Request, Content Length is 0\n"}))
             LOG.info('[TRACE REST-S] Received No Data from %s', self.client_address)
             return False
         else:
@@ -171,7 +172,7 @@ class RestHandler(BaseHTTPRequestHandler):
                 LOG.exception()
                 error_reason = 'Trace Request Json Data Parsing Error\n'
                 self.do_HEAD(400)
-                self.wfile.write(error_reason)
+                self.wfile.write(str({"result": "FAIL", "fail_reason": error_reason}))
                 LOG.info('[TRACE] %s', error_reason)
                 return False
 
@@ -204,6 +205,35 @@ class RestHandler(BaseHTTPRequestHandler):
             LOG.exception()
             return False
 
+def send_response(cond, auth):
+    trace_result_data = {}
+
+    try:
+        is_success, result = trace.flow_trace(cond)
+
+        if is_success:
+            trace_result_data['result'] = 'SUCCESS'
+            trace_result_data.update(result)
+        else:
+            trace_result_data['result'] = 'FAIL'
+            trace_result_data['fail_reason'] = 'The source ip does not exist.'
+
+        trace_result_data['time'] = str(datetime.now())
+        LOG.info(json.dumps(trace_result_data, sort_keys=True, indent=4))
+
+        header = {'Content-Type': 'application/json', 'Authorization': auth}
+
+        req_body_json = json.dumps(trace_result_data)
+
+        try:
+            url = str(cond['app_rest_url'])
+            requests.post(str(url), headers=header, data=req_body_json, timeout=2)
+        except:
+            # Push noti does not respond
+            pass
+
+    except:
+        LOG.exception()
 
 def run():
     try:
