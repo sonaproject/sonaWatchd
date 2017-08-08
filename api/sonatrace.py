@@ -10,22 +10,20 @@ from config import CONF
 from sbapi import SshCommand
 
 class Conditions:
-    cond_dict = dict()
     def __init__(self):
-        self.cond_dict.clear()
+        self.cond_dict = dict()
 
-        self.cond_dict["in_port"] = ''
-        self.cond_dict["dl_src"] = ''
-        self.cond_dict["dl_dst"] = ''
-        self.cond_dict["dl_type"] = ''
-        self.cond_dict["nw_src"] = ''
-        self.cond_dict["nw_dst"] = ''
-        self.cond_dict["nw_proto"] = ''
-        self.cond_dict["tp_src"] = ''
-        self.cond_dict["tp_dst"] = ''
-        self.cond_dict["tun_id"] = ''
+        self.cond_dict['in_port'] = ''
+        self.cond_dict['dl_src'] = ''
+        self.cond_dict['dl_dst'] = ''
+        self.cond_dict['dl_type'] = '0x0800'
+        self.cond_dict['nw_src'] = ''
+        self.cond_dict['nw_dst'] = ''
+        self.cond_dict['nw_proto'] = ''
+        self.cond_dict['tp_src'] = ''
+        self.cond_dict['tp_dst'] = ''
+        self.cond_dict['tun_id'] = ''
 
-        self.reverse = False
         self.cur_target_ip = ''
         self.cur_target_hostname = ''
 
@@ -94,23 +92,37 @@ class Topology:
 def flow_trace(condition_json):
     trace_result = {}
 
-    trace_condition = check_condition(condition_json)
-
     sona_topology = Topology()
+
+    trace_condition = set_condition(sona_topology, condition_json)
+
+    is_reverse = False
+    if dict(condition_json).has_key('reverse'):
+        is_reverse = condition_json['reverse']
 
     if find_target(trace_condition, sona_topology) == False:
         return False, None
 
     trace_result['up_result'] = onsway_trace(sona_topology, trace_condition)
-    #
-    # if trace_condition.reverse:
-    #     reverse_condition = Conditions()
-    #     reverse_condition.src_ip = trace_condition.dest_ip
-    #     reverse_condition.dest_ip = trace_condition.src_ip
-    #
-    #     # TODO down direction trace
-    #
-    # trace_result.update({'trace_result': 'Success'})
+
+    if is_reverse:
+        reverse_condition = Conditions()
+
+        reverse_condition.cond_dict['nw_src'] = trace_condition.cond_dict['nw_dst']
+        reverse_condition.cond_dict['nw_dst'] = trace_condition.cond_dict['nw_src']
+        reverse_condition.cond_dict['dl_type'] = trace_condition.cond_dict['dl_type']
+        reverse_condition.cond_dict['nw_proto'] = trace_condition.cond_dict['nw_proto']
+
+        reverse_condition.cond_dict['dl_dst'] = get_dl_dst(sona_topology, reverse_condition.cond_dict['nw_src'],
+                                                           reverse_condition.cond_dict['nw_dst'])
+
+        if find_target(reverse_condition, sona_topology) == False:
+            return False, trace_result
+
+        LOG.info("@@@@@@@ target info = " + reverse_condition.cur_target_hostname)
+
+        trace_result['down_result'] = onsway_trace(sona_topology, reverse_condition)
+
     return True, trace_result
 
 
@@ -128,7 +140,9 @@ def find_target(trace_condition, sona_topology):
         LOG.info('swtich id = ' + switch_id)
 
         # find target node
-        trace_condition.cond_dict['in_port'] = vm_port
+        if trace_condition.cond_dict['in_port'] == '':
+            trace_condition.cond_dict['in_port'] = vm_port
+
         trace_condition.cur_target_ip = sona_topology.get_openstack_info(' ' + switch_id + ' ', 'ip')
         trace_condition.cur_target_hostname = sona_topology.get_openstack_info(' ' + switch_id + ' ', 'hostname')
     # source ip = external
@@ -151,22 +165,50 @@ def find_target(trace_condition, sona_topology):
     return True
 
 
-def check_condition(cond_json):
+def set_condition(sona_topology, cond_json):
     condition_obj = Conditions()
 
-    for key in dict(cond_json).keys():
-        if key == 'reverse':
-            condition_obj.reverse = cond_json['reverse']
-        elif key == 'source_ip':
-            condition_obj.cond_dict['nw_src'] = cond_json['source_ip']
-        elif key == 'destination_ip':
-            condition_obj.cond_dict['nw_dst'] = cond_json['destination_ip']
+    match_json = cond_json['matchingfields']
 
-    # check dl_dst/dl_type
-    condition_obj.cond_dict['dl_dst'] = 'fe:00:00:00:00:02'
-    condition_obj.cond_dict['dl_type'] = '0x0800'
+    for key in dict(match_json).keys():
+        if key == 'source_ip':
+            condition_obj.cond_dict['nw_src'] = match_json[key]
+        elif key == 'destination_ip':
+            condition_obj.cond_dict['nw_dst'] = match_json[key]
+        elif key == 'source_input_port':
+            condition_obj.cond_dict['in_port'] = match_json[key]
+        elif key == 'source_mac':
+            condition_obj.cond_dict['dl_src'] = match_json[key]
+        elif key == 'destination_mac':
+            condition_obj.cond_dict['dl_dst'] = match_json[key]
+        elif key == 'ethernet_type':
+            condition_obj.cond_dict['dl_type'] = match_json[key]
+        elif key == 'ip_protocol':
+            condition_obj.cond_dict['nw_proto'] = match_json[key]
+        elif key == 'source_port':
+            condition_obj.cond_dict['tp_src'] = match_json[key]
+        elif key == 'destination_port':
+            condition_obj.cond_dict['tp_dst'] = match_json[key]
+        elif key == 'tun_id':
+            condition_obj.cond_dict['tun_id'] = match_json[key]
+
+    if condition_obj.cond_dict['dl_dst'] == '':
+        condition_obj.cond_dict['dl_dst'] = get_dl_dst(sona_topology, condition_obj.cond_dict['nw_src'], condition_obj.cond_dict['nw_dst'])
 
     return condition_obj
+
+
+def get_dl_dst(sona_topology, src_ip, dst_ip):
+    is_same_net = False
+    for net in sona_topology.subnets:
+        if IPAddress(src_ip) in IPNetwork(net):
+            if IPAddress(dst_ip) in IPNetwork(net):
+                is_same_net = True
+
+    if not is_same_net:
+        return 'fe:00:00:00:00:02'
+    else:
+        return ''
 
 
 def make_command(trace_conditions):
@@ -195,10 +237,11 @@ def onsway_trace(sona_topology, trace_conditions):
         LOG.info('target_node = ' + trace_conditions.cur_target_ip)
         LOG.info('TRACE RESULT = ' + str(ssh_result))
 
-        process_result, retry_flag = process_trace(ssh_result, sona_topology, trace_conditions)
-
         node_trace = dict()
         node_trace['trace_node_name'] = trace_conditions.cur_target_hostname
+
+        process_result, retry_flag = process_trace(ssh_result, sona_topology, trace_conditions)
+
         node_trace['flow_rules'] = process_result
 
         trace_conditions.cond_dict['in_port'] = ''
@@ -253,6 +296,11 @@ def process_trace(output, sona_topology, trace_conditions):
                         else:
                             trace_conditions.cond_dict[type] = value
                     else:
+                        if action.startswith('group:'):
+                            trace_conditions.cur_target_ip = sona_topology.get_gateway_ip()
+                            trace_conditions.cur_target_hostname = sona_topology.get_openstack_info(
+                                ' ' + trace_conditions.cur_target_ip + ' ', 'hostname')
+
                         action_dict['action'] = action
 
                 if len(setfield_dict) > 0:
@@ -264,7 +312,7 @@ def process_trace(output, sona_topology, trace_conditions):
 
                 result_flow.append(flow_dict)
 
-                if 'tun_dst' in line:
+                if 'tun_dst' in line or 'group' in line:
                     retry_flag = True
 
                 if 'output' in line:

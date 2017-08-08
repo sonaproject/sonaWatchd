@@ -126,20 +126,22 @@ class RestHandler(BaseHTTPRequestHandler):
             self.wfile.write(str({"result": "FAIL"}))
         else:
             if self.path.startswith('/trace_request'):
-                trace_mandatory_field = ['source_ip', 'destination_ip']
+                trace_mandatory_field = ['command', 'transaction_id', 'app_rest_url', 'matchingfields']
+                matching_mandatory_field = ['source_ip', 'destination_ip']
 
                 trace_condition_json = self.get_content()
                 if not trace_condition_json:
                     return
                 else:
-                    if not all(x in dict(trace_condition_json['matchingfields']).keys() for x in trace_mandatory_field):
+                    if (not all(x in dict(trace_condition_json['matchingfields']).keys() for x in matching_mandatory_field))\
+                            or (not all(x in dict(trace_condition_json).keys() for x in trace_mandatory_field)):
                         self.do_HEAD(400)
                         self.wfile.write(str({"result": "FAIL", "fail_reason": "Not Exist Mandatory Attribute\n"}))
                         return
                     else:
                         # process trace, send noti
                         process_thread = threading.Thread(target=send_response,
-                                                           args=(trace_condition_json['matchingfields'],
+                                                           args=(trace_condition_json,
                                                                  str(self.headers.getheader("Authorization"))))
                         process_thread.daemon = False
                         process_thread.start()
@@ -213,12 +215,14 @@ def send_response(cond, auth):
 
         if is_success:
             trace_result_data['result'] = 'SUCCESS'
-            trace_result_data.update(result)
         else:
             trace_result_data['result'] = 'FAIL'
             trace_result_data['fail_reason'] = 'The source ip does not exist.'
 
-        trace_result_data['time'] = str(datetime.now())
+        if result != None:
+            trace_result_data.update(result)
+
+        trace_result_data['transaction_id'] = cond['transaction_id']
         LOG.info(json.dumps(trace_result_data, sort_keys=True, indent=4))
 
         header = {'Content-Type': 'application/json', 'Authorization': auth}
