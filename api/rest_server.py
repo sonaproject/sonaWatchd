@@ -140,8 +140,36 @@ class RestHandler(BaseHTTPRequestHandler):
                         return
                     else:
                         # process trace, send noti
-                        process_thread = threading.Thread(target=send_response,
-                                                           args=(trace_condition_json,
+                        process_thread = threading.Thread(target=send_response_trace_test,
+                                                          args=(trace_condition_json,
+                                                                 str(self.headers.getheader("Authorization"))))
+                        process_thread.daemon = False
+                        process_thread.start()
+
+                        self.do_HEAD(200)
+                        self.wfile.write(str({"result": "SUCCESS"}))
+            elif self.path.startswith('/traffictest_request'):
+                trace_mandatory_field = ['command', 'transaction_id', 'app_rest_url', 'traffic_test_list']
+                test_mandatory_field = ['node', 'instance_id', 'vm_user_id', 'vm_user_password', 'traffic_test_command']
+
+                trace_condition_json = self.get_content()
+                if not trace_condition_json:
+                    return
+                else:
+                    if not all(x in dict(trace_condition_json).keys() for x in trace_mandatory_field):
+                        self.do_HEAD(400)
+                        self.wfile.write(str({"result": "FAIL", "fail_reason": "Not Exist Mandatory Attribute\n"}))
+                        return
+                    else:
+                        for test in trace_condition_json['traffic_test_list']:
+                            if not all(x in dict(test).keys() for x in test_mandatory_field):
+                                self.do_HEAD(400)
+                                self.wfile.write(str({"result": "FAIL", "fail_reason": "Not Exist Mandatory Attribute\n"}))
+                                return
+
+                        # process traffic test, send noti
+                        process_thread = threading.Thread(target=send_response_traffic_test,
+                                                          args=(trace_condition_json,
                                                                  str(self.headers.getheader("Authorization"))))
                         process_thread.daemon = False
                         process_thread.start()
@@ -207,7 +235,8 @@ class RestHandler(BaseHTTPRequestHandler):
             LOG.exception()
             return False
 
-def send_response(cond, auth):
+
+def send_response_trace_test(cond, auth):
     trace_result_data = {}
 
     try:
@@ -238,6 +267,40 @@ def send_response(cond, auth):
 
     except:
         LOG.exception()
+
+
+def send_response_traffic_test(cond, auth):
+    trace_result_data = {}
+
+    try:
+        is_success, result = trace.traffic_test(cond)
+
+        if is_success:
+            trace_result_data['result'] = 'SUCCESS'
+        else:
+            trace_result_data['result'] = 'FAIL'
+            # trace_result_data['fail_reason'] = 'The source ip does not exist.'
+
+        if result != None:
+            trace_result_data['traffic_test_result'] = result
+
+        trace_result_data['transaction_id'] = cond['transaction_id']
+        LOG.info(json.dumps(trace_result_data, sort_keys=True, indent=4))
+
+        header = {'Content-Type': 'application/json', 'Authorization': auth}
+
+        req_body_json = json.dumps(trace_result_data)
+
+        try:
+            url = str(cond['app_rest_url'])
+            requests.post(str(url), headers=header, data=req_body_json, timeout=2)
+        except:
+            # Push noti does not respond
+            pass
+
+    except:
+        LOG.exception()
+
 
 def run():
     try:

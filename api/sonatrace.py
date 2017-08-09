@@ -3,6 +3,7 @@
 # SONA Monitoring Solutions.
 
 import re
+import pexpect
 from netaddr import IPNetwork, IPAddress
 
 from sona_log import LOG
@@ -34,9 +35,11 @@ class Topology:
     ONOS_FLOATINGIP = 'openstack-floatingips'
     ONOS_OPENSTACKNODES = 'openstack-nodes'
 
-    def __init__(self):
-        self.subnets = self.get_subnets(self.get_onos_ip())
-        self.floatingips = self.get_floatingips(self.get_onos_ip())
+    def __init__(self, openstack_only = False):
+        if not openstack_only:
+            self.subnets = self.get_subnets(self.get_onos_ip())
+            self.floatingips = self.get_floatingips(self.get_onos_ip())
+
         self.openstack = self.get_openstacknodes(self.get_onos_ip())
 
     def get_hosts(self, onos_ip, find_cond):
@@ -131,6 +134,8 @@ def find_target(trace_condition, sona_topology):
     LOG.info('source ip = ' + trace_condition.cond_dict['nw_src'])
     result = sona_topology.get_hosts(sona_topology.get_onos_ip(), '\"\[' + trace_condition.cond_dict['nw_src'] + '\]\"')
 
+    LOG.info("### RESULT = " + str(result))
+
     # source ip = internal vm
     if result != None:
         switch_info = (result.split(',')[2].split('=')[1])[1:-1]
@@ -152,7 +157,11 @@ def find_target(trace_condition, sona_topology):
                 return False
 
         if trace_condition.cond_dict['nw_dst'] in sona_topology.floatingips.values():
-            for key, value in sona_topology.floatingips:
+            LOG.info('floating ip : ' + str(sona_topology.floatingips))
+
+            for key in sona_topology.floatingips.keys():
+                value = sona_topology.floatingips[key]
+
                 if trace_condition.cond_dict['nw_dst'] == value:
                     trace_condition.cond_dict['nw_dst'] = key
                     break
@@ -226,8 +235,6 @@ def make_command(trace_conditions):
 
 
 def onsway_trace(sona_topology, trace_conditions):
-    # TODO: ip check(format, subnet)
-
     retry_flag = True
     up_down_result = []
 
@@ -245,7 +252,10 @@ def onsway_trace(sona_topology, trace_conditions):
         node_trace['flow_rules'] = process_result
 
         trace_conditions.cond_dict['in_port'] = ''
+        trace_conditions.cond_dict['dl_src'] = ''
         trace_conditions.cond_dict['dl_dst'] = ''
+        trace_conditions.cond_dict['eth_dst'] = ''
+        trace_conditions.cond_dict['eth_src'] = ''
 
         up_down_result.append(node_trace)
 
@@ -295,6 +305,9 @@ def process_trace(output, sona_topology, trace_conditions):
                             trace_conditions.cur_target_hostname = sona_topology.get_openstack_info(' ' + value + ' ', 'hostname')
                         else:
                             trace_conditions.cond_dict[type] = value
+
+                            if type == 'ip_dst':
+                                trace_conditions.cond_dict['nw_dst'] = ''
                     else:
                         if action.startswith('group:'):
                             trace_conditions.cur_target_ip = sona_topology.get_gateway_ip()
@@ -322,3 +335,103 @@ def process_trace(output, sona_topology, trace_conditions):
     except:
         LOG.exception()
         return 'parsing error\n' + output
+
+
+def traffic_test(condition_json):
+    trace_result = []
+
+    sona_topology = Topology(True)
+
+    LOG.info('COND_JSON = ' + str(condition_json['traffic_test_list']))
+
+    for test in condition_json['traffic_test_list']:
+        LOG.info('test = ' + str(test))
+        ret = run_test(sona_topology, test)
+        trace_result.append(ret)
+
+    return True, trace_result
+
+def run_test(sona_topology, test_json):
+    try:
+        node = test_json['node']
+        ins_id = test_json['instance_id']
+        user = test_json['vm_user_id']
+        pw = test_json['vm_user_password']
+        command = test_json['traffic_test_command']
+
+        interval = 0
+        if dict(test_json).has_key('next_command_interval'):
+             interval = test_json['next_command_interval']
+
+        ip = sona_topology.get_openstack_info(node, 'ip')
+        node_id = CONF.openstack()['account'].split(':')[0]
+
+        ssh_options = '-o StrictHostKeyChecking=no ' \
+                      '-o ConnectTimeout=' + str(CONF.ssh_conn()['ssh_req_timeout'])
+        cmd = 'ssh %s %s@%s' % (ssh_options, node_id, ip)
+
+        try:
+            LOG.info('ssh_pexpect cmd = ' + cmd)
+            ssh_conn = pexpect.spawn(cmd)
+
+            rt1 = ssh_conn.expect(['#', '\$', pexpect.EOF], timeout=CONF.ssh_conn()['ssh_req_timeout'])
+
+            if rt1 == 0:
+                cmd = 'virsh console ' + ins_id
+
+                LOG.info('ssh_pexpect cmd = ' + cmd)
+                ssh_conn.sendline(cmd)
+                ssh_conn.expect(['Escape character is', pexpect.EOF])
+                LOG.info('find escape....')
+                ssh_conn.sendline('\n')
+                LOG.info("STEP1")
+                ssh_conn.expect(['login: ', pexpect.EOF], timeout=CONF.ssh_conn()['ssh_req_timeout'])
+                LOG.info("STEP1+1")
+                ssh_conn.sendline(user)
+                LOG.info("STEP2")
+                ssh_conn.expect(['Password:', pexpect.EOF], timeout=CONF.ssh_conn()['ssh_req_timeout'])
+                ssh_conn.sendline(pw)
+                LOG.info("STEP3")
+                ssh_conn.expect(['\$', pexpect.EOF, pexpect.TIMEOUT], timeout=CONF.ssh_conn()['ssh_req_timeout'])
+                ssh_conn.sendline(command)
+                LOG.info("STEP4")
+                ssh_conn.expect(['\$', pexpect.EOF, pexpect.TIMEOUT], timeout=CONF.ssh_conn()['ssh_req_timeout'])
+                str_output = str(ssh_conn.before)
+                ssh_conn.sendline('exit')
+                ssh_conn.close()
+                LOG.info("STEP5")
+                LOG.info('output = ' + str_output)
+
+                result = {'output': str_output}
+                return result
+
+                '''
+                if rt2 == 0:
+                    ssh_conn.sendline('karaf')
+                    ssh_conn.expect(['#', '\$', pexpect.EOF], timeout=CONF.ssh_conn()['ssh_req_timeout'])
+
+                    str_output = str(ssh_conn.before)
+
+                    ret = ''
+                    for line in str_output.splitlines():
+                        if (line.strip() == '') or ('#' in line) or ('$' in line) or ('~' in line) or ('@' in line):
+                            continue
+
+                        ret = ret + line + '\n'
+
+                    return ret
+                else:
+                    return "fail"
+                '''
+            elif rt1 == 1:
+                LOG.error(ssh_conn.before)
+            elif rt1 == 2:
+                LOG.error("[ssh_pexpect] connection timeout")
+
+        except:
+            pass
+
+        result = {'output': 'fail'}
+        return result
+    except:
+        LOG.exception()
