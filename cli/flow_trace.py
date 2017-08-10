@@ -156,8 +156,9 @@ class TRACE():
         try:
             import os
             cmd = 'curl -X POST -u \'admin:admin\' -H \'Content-Type: application/json\' -d \'{"command": "flowtrace", "reverse": true, "transaction_id": "test1234", ' \
-                  '"app_rest_url": "http://' + CONFIG.get_rest_ip() + ':' + CONFIG.get_rest_port() + '/test", "matchingfields":{"source_ip": "' + src_ip \
-                  + '","destination_ip": "' + dst_ip + '"}}\' http://' + CONFIG.get_server_addr() + '/trace_request'
+                  '"app_rest_url": "http://' + CONFIG.get_rest_ip() + ':' + str(CONFIG.get_rest_port()) + '/test", "matchingfields":{"source_ip": "' + src_ip \
+                  + '","destination_ip": "' + dst_ip + '"}}\' ' + CONFIG.get_server_addr() + '/trace_request'
+            LOG.debug_log(cmd)
             result = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
             output, error = result.communicate()
 
@@ -167,6 +168,7 @@ class TRACE():
             else:
                 print output
                 timeout = 0
+                print '\nwaiting...'
 
                 if 'SUCCESS' in output:
                     while True:
