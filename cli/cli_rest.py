@@ -31,6 +31,12 @@ class RestHandler(BaseHTTPRequestHandler):
                 result_file = open('log/flowtrace', 'w')
                 result_file.write(json.dumps(request_obj, sort_keys=True, indent=4))
                 result_file.close()
+            elif self.path.startswith('/traffictest'):
+                if os.path.exists('log/traffictest'):
+                    os.remove('log/traffictest')
+                result_file = open('log/traffictest', 'w')
+                result_file.write(json.dumps(request_obj, sort_keys=True, indent=4))
+                result_file.close()
             elif not self.path.startswith('/event'):
                 LOG.debug_log('[REST-SERVER] ' + self.path + ' not found')
 
