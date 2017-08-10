@@ -3,7 +3,10 @@
 # SONA Monitoring Solutions.
 
 import re
+import time
 import pexpect
+import threading
+import base64
 from netaddr import IPNetwork, IPAddress
 
 from sona_log import LOG
@@ -106,7 +109,7 @@ def flow_trace(condition_json):
     if find_target(trace_condition, sona_topology) == False:
         return False, None
 
-    trace_result['up_result'] = onsway_trace(sona_topology, trace_condition)
+    trace_result['up_result'], trace_result['up_success'] = onsway_trace(sona_topology, trace_condition)
 
     if is_reverse:
         reverse_condition = Conditions()
@@ -122,9 +125,7 @@ def flow_trace(condition_json):
         if find_target(reverse_condition, sona_topology) == False:
             return False, trace_result
 
-        LOG.info("@@@@@@@ target info = " + reverse_condition.cur_target_hostname)
-
-        trace_result['down_result'] = onsway_trace(sona_topology, reverse_condition)
+        trace_result['down_result'], trace_result['down_success'] = onsway_trace(sona_topology, reverse_condition)
 
     return True, trace_result
 
@@ -133,8 +134,6 @@ def find_target(trace_condition, sona_topology):
     # find switch info
     LOG.info('source ip = ' + trace_condition.cond_dict['nw_src'])
     result = sona_topology.get_hosts(sona_topology.get_onos_ip(), '\"\[' + trace_condition.cond_dict['nw_src'] + '\]\"')
-
-    LOG.info("### RESULT = " + str(result))
 
     # source ip = internal vm
     if result != None:
@@ -229,7 +228,7 @@ def make_command(trace_conditions):
             cond_list = cond_list + key + '=' + str(value) + ','
 
     command = 'ovs-appctl ofproto/trace br-int \'' + cond_list.rstrip(',') + '\''
-    LOG.info('## command = ' + command)
+    LOG.info('trace command = ' + command)
 
     return command
 
@@ -237,6 +236,7 @@ def make_command(trace_conditions):
 def onsway_trace(sona_topology, trace_conditions):
     retry_flag = True
     up_down_result = []
+    is_success = False
 
     while retry_flag:
         ssh_result = SshCommand.ssh_exec(CONF.openstack()['account'].split(':')[0], trace_conditions.cur_target_ip, make_command(trace_conditions))
@@ -247,7 +247,7 @@ def onsway_trace(sona_topology, trace_conditions):
         node_trace = dict()
         node_trace['trace_node_name'] = trace_conditions.cur_target_hostname
 
-        process_result, retry_flag = process_trace(ssh_result, sona_topology, trace_conditions)
+        process_result, retry_flag, is_success = process_trace(ssh_result, sona_topology, trace_conditions)
 
         node_trace['flow_rules'] = process_result
 
@@ -259,12 +259,13 @@ def onsway_trace(sona_topology, trace_conditions):
 
         up_down_result.append(node_trace)
 
-    return up_down_result
+    return up_down_result, is_success
 
 
 def process_trace(output, sona_topology, trace_conditions):
     try:
         retry_flag = False
+        is_success = False
 
         result_flow = []
         lines = output.splitlines()
@@ -328,40 +329,86 @@ def process_trace(output, sona_topology, trace_conditions):
                 if 'tun_dst' in line or 'group' in line:
                     retry_flag = True
 
-                if 'output' in line:
+                if 'output' in line or 'CONTROLLER' in line:
+                    is_success = True
                     break
 
-        return result_flow, retry_flag
+        return result_flow, retry_flag, is_success
     except:
         LOG.exception()
         return 'parsing error\n' + output
 
 
 def traffic_test(condition_json):
+    seconds = 0
+
     trace_result = []
 
     sona_topology = Topology(True)
 
     LOG.info('COND_JSON = ' + str(condition_json['traffic_test_list']))
 
+    timeout_arr = []
+
+    for test in condition_json['traffic_test_list']:
+        timeout_arr.append('timeout')
+
+    i = 0
     for test in condition_json['traffic_test_list']:
         LOG.info('test = ' + str(test))
-        ret = run_test(sona_topology, test)
-        trace_result.append(ret)
+        run_thread = threading.Thread(target=run_test, args=(sona_topology, test, timeout_arr, i))
+        run_thread.daemon = False
+        run_thread.start()
+
+        interval = 0
+        if dict(test).has_key('next_command_interval'):
+            interval = test['next_command_interval']
+
+        while interval > 0:
+            time.sleep(1)
+            seconds = seconds + 1
+            interval = interval - 1
+
+        i = i + 1
+
+    timeout = 10
+    if dict(condition_json).has_key('timeout'):
+        timeout = condition_json['timeout']
+
+    if timeout > seconds:
+        wait_time = timeout - seconds
+
+        while wait_time > 0:
+            find_timeout = False
+            i = 0
+            while i < len(timeout_arr):
+                if timeout_arr[i] == 'timeout':
+                    find_timeout = True
+                i = i + 1
+
+            if find_timeout:
+                time.sleep(1)
+            else:
+                break
+
+            wait_time = wait_time - 1
+
+    i = 0
+    while i < len(timeout_arr):
+        trace_result.append(timeout_arr[i])
+        i = i + 1
 
     return True, trace_result
 
-def run_test(sona_topology, test_json):
+PROMPT = ['~# ', 'onos> ', '\$ ', '\# ', ':~$ ']
+
+def run_test(sona_topology, test_json, timeout_arr, index):
     try:
         node = test_json['node']
         ins_id = test_json['instance_id']
         user = test_json['vm_user_id']
         pw = test_json['vm_user_password']
         command = test_json['traffic_test_command']
-
-        interval = 0
-        if dict(test_json).has_key('next_command_interval'):
-             interval = test_json['next_command_interval']
 
         ip = sona_topology.get_openstack_info(node, 'ip')
         node_id = CONF.openstack()['account'].split(':')[0]
@@ -373,65 +420,54 @@ def run_test(sona_topology, test_json):
         try:
             LOG.info('ssh_pexpect cmd = ' + cmd)
             ssh_conn = pexpect.spawn(cmd)
-
-            rt1 = ssh_conn.expect(['#', '\$', pexpect.EOF], timeout=CONF.ssh_conn()['ssh_req_timeout'])
+            rt1 = ssh_conn.expect(PROMPT, timeout=CONF.ssh_conn()['ssh_req_timeout'])
 
             if rt1 == 0:
                 cmd = 'virsh console ' + ins_id
 
                 LOG.info('ssh_pexpect cmd = ' + cmd)
                 ssh_conn.sendline(cmd)
-                ssh_conn.expect(['Escape character is', pexpect.EOF])
-                LOG.info('find escape....')
-                ssh_conn.sendline('\n')
-                LOG.info("STEP1")
-                ssh_conn.expect(['login: ', pexpect.EOF], timeout=CONF.ssh_conn()['ssh_req_timeout'])
-                LOG.info("STEP1+1")
-                ssh_conn.sendline(user)
-                LOG.info("STEP2")
-                ssh_conn.expect(['Password:', pexpect.EOF], timeout=CONF.ssh_conn()['ssh_req_timeout'])
-                ssh_conn.sendline(pw)
-                LOG.info("STEP3")
-                ssh_conn.expect(['\$', pexpect.EOF, pexpect.TIMEOUT], timeout=CONF.ssh_conn()['ssh_req_timeout'])
-                ssh_conn.sendline(command)
-                LOG.info("STEP4")
-                ssh_conn.expect(['\$', pexpect.EOF, pexpect.TIMEOUT], timeout=CONF.ssh_conn()['ssh_req_timeout'])
-                str_output = str(ssh_conn.before)
-                ssh_conn.sendline('exit')
-                ssh_conn.close()
-                LOG.info("STEP5")
-                LOG.info('output = ' + str_output)
+                rt2 = ssh_conn.expect(['Escape character is', 'error: Failed', pexpect.EOF], timeout=CONF.ssh_conn()['ssh_req_timeout'])
 
-                result = {'output': str_output}
-                return result
-
-                '''
                 if rt2 == 0:
-                    ssh_conn.sendline('karaf')
-                    ssh_conn.expect(['#', '\$', pexpect.EOF], timeout=CONF.ssh_conn()['ssh_req_timeout'])
+                    ssh_conn.sendline('\n')
+                    try:
+                        ssh_conn.expect(['login: ', pexpect.EOF], timeout=CONF.ssh_conn()['ssh_req_timeout'])
 
-                    str_output = str(ssh_conn.before)
+                        ssh_conn.sendline(user)
+                        ssh_conn.expect(['[P|p]assword:', pexpect.EOF], timeout=CONF.ssh_conn()['ssh_req_timeout'])
 
-                    ret = ''
-                    for line in str_output.splitlines():
-                        if (line.strip() == '') or ('#' in line) or ('$' in line) or ('~' in line) or ('@' in line):
-                            continue
+                        ssh_conn.sendline(pw)
+                        rt3 = ssh_conn.expect(['Login incorrect', '~# ', 'onos> ', '\$ ', '\# ', ':~$ '],
+                                              timeout=CONF.ssh_conn()['ssh_req_timeout'])
 
-                        ret = ret + line + '\n'
+                        if rt3 == 0:
+                            str_output = 'auth fail'
+                        else:
+                            LOG.info('step1')
+                            ssh_conn.sendline(command)
+                            LOG.info('step2')
+                            ssh_conn.expect(PROMPT, timeout=CONF.ssh_conn()['ssh_req_timeout'])
+                            LOG.info('step3')
+                            str_output = ssh_conn.before
+                            LOG.info('step4')
+                            ssh_conn.sendline('exit')
+                            ssh_conn.close()
+                    except:
+                        str_output = 'Permission denied'
+                        ssh_conn.sendline('exit')
+                        ssh_conn.close()
 
-                    return ret
                 else:
-                    return "fail"
-                '''
-            elif rt1 == 1:
-                LOG.error(ssh_conn.before)
-            elif rt1 == 2:
-                LOG.error("[ssh_pexpect] connection timeout")
+                    str_output = 'connection fail'
 
+                result = {'command_result': str_output.replace('%', ' percent').replace('\r\n', '\n'), 'node': node, 'instance-id': ins_id}
+                timeout_arr[index] = result
+                return
         except:
-            pass
+            LOG.exception()
 
-        result = {'output': 'fail'}
-        return result
+        result = {'command_result': 'fail'}
+        timeout_arr[index] = result
     except:
         LOG.exception()

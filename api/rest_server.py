@@ -285,7 +285,11 @@ def send_response_traffic_test(cond, auth):
             trace_result_data['traffic_test_result'] = result
 
         trace_result_data['transaction_id'] = cond['transaction_id']
-        LOG.info(json.dumps(trace_result_data, sort_keys=True, indent=4))
+        try:
+            LOG.info(json.dumps(trace_result_data, sort_keys=True, indent=4))
+        except:
+            pass
+            #LOG.info(str(trace_result_data))
 
         header = {'Content-Type': 'application/json', 'Authorization': auth}
 

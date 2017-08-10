@@ -240,9 +240,30 @@ def select_menu():
                             else:
                                 SCREEN.display_event()
                         elif cmd == 'flow-trace':
-                            source_ip = raw_input('CLI(flow-trace)> enter source ip : ')
-                            dest_ip = raw_input('CLI(flow-trace)> enter destination ip : ')
+                            source_ip = raw_input('CLI(flow-trace)> source ip : ')
+                            dest_ip = raw_input('CLI(flow-trace)> destination ip : ')
                             TRACE.process_trace_rest(source_ip, dest_ip)
+                        elif cmd == 'traffic-test':
+                            yes_no = 'y'
+
+                            test_list = []
+                            while yes_no.upper() == 'Y':
+                                test_dict = dict()
+                                test_dict['node'] = raw_input('CLI(traffic-test)> node : ')
+                                test_dict['instance_id'] = raw_input('CLI(traffic-test)> instance id : ')
+                                test_dict['vm_user_id'] = raw_input('CLI(traffic-test)> vm user id : ')
+                                test_dict['vm_user_password'] = raw_input('CLI(traffic-test)> vm user pw : ')
+                                test_dict['traffic_test_command'] = raw_input('CLI(traffic-test)> traffic test command : ')
+                                try:
+                                    test_dict['next_command_interval'] = int(raw_input('CLI(traffic-test)> next command interval : '))
+                                except:
+                                    test_dict['next_command_interval']= 0
+
+                                yes_no = raw_input('CLI(traffic-test)> Do you want to add test conditions?(y/n) ')
+
+                                test_list.append(test_dict)
+
+                            TRACE.process_traffic_test(test_list)
                         else:
                             # send command
                             CLI.process_cmd(cmd)
