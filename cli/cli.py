@@ -919,6 +919,7 @@ class CLI():
             cls.cli_search_list.append('os-shell')
             cls.cli_search_list.append('monitoring-details')
             cls.cli_search_list.append('event-history')
+            cls.cli_search_list.append('flow-trace')
             cls.cli_search_list.append('help')
 
             onos_list = []

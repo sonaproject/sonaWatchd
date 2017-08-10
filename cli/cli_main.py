@@ -239,6 +239,10 @@ def select_menu():
                                     print 'log count param is wrong. ex) event-history 15'
                             else:
                                 SCREEN.display_event()
+                        elif cmd == 'flow-trace':
+                            source_ip = raw_input('CLI(flow-trace)> enter source ip : ')
+                            dest_ip = raw_input('CLI(flow-trace)> enter destination ip : ')
+                            TRACE.process_trace_rest(source_ip, dest_ip)
                         else:
                             # send command
                             CLI.process_cmd(cmd)
