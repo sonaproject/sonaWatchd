@@ -109,6 +109,10 @@ class CONFIG():
         return cls.cli_get_value(REST_SECTION_NAME, REST_PW_KEY_NAME)
 
     @classmethod
+    def get_server_addr(cls):
+        return cls.cli_get_value(REST_SECTION_NAME, REST_URI_KEY_NAME)
+
+    @classmethod
     def get_cmd_addr(cls):
         return cls.cli_get_value(REST_SECTION_NAME, REST_URI_KEY_NAME) + \
                cls.cli_get_value(REST_SECTION_NAME, REST_COMMAND_URI)

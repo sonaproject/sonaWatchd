@@ -1,6 +1,9 @@
+import time
+
 from config import CONFIG
 from log_lib import LOG
 from subprocess import Popen, PIPE
+
 
 class TRACE():
     TRACE_LOG = None
@@ -146,3 +149,41 @@ class TRACE():
         except:
             LOG.exception_err_write()
             return 'parsing error\n' + output
+
+
+    @classmethod
+    def process_trace_rest(cls, src_ip, dst_ip):
+        try:
+            import os
+            cmd = 'curl -X POST -u \'admin:admin\' -H \'Content-Type: application/json\' -d \'{"command": "flowtrace", "reverse": true, "transaction_id": "test1234", ' \
+                  '"app_rest_url": "http://' + CONFIG.get_rest_ip() + ':' + str(CONFIG.get_rest_port()) + '/test", "matchingfields":{"source_ip": "' + src_ip \
+                  + '","destination_ip": "' + dst_ip + '"}}\' ' + CONFIG.get_server_addr() + '/trace_request'
+            LOG.debug_log(cmd)
+            result = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
+            output, error = result.communicate()
+
+
+            if result.returncode != 0:
+                LOG.debug_log('Cmd Fail : ' + error)
+            else:
+                print output
+                timeout = 0
+                print '\nwaiting...'
+
+                if 'SUCCESS' in output:
+                    while True:
+                        time.sleep(1)
+                        timeout = timeout + 1
+                        if os.path.exists('log/flowtrace'):
+                            time.sleep(2)
+                            result_file = open('log/flowtrace', 'r')
+
+                            print(result_file.read())
+
+                            return
+
+                        if timeout > 10:
+                            print 'cli timeout'
+                            return
+        except:
+            LOG.exception_err_write()

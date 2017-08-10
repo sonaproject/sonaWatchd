@@ -25,6 +25,12 @@ class RestHandler(BaseHTTPRequestHandler):
             if self.headers.getheader('Authorization') is None:
                 LOG.debug_log('[REST-SERVER] no auth header received')
 
+            elif self.path.startswith('/test'):
+                if os.path.exists('log/flowtrace'):
+                    os.remove('log/flowtrace')
+                result_file = open('log/flowtrace', 'w')
+                result_file.write(json.dumps(request_obj, sort_keys=True, indent=4))
+                result_file.close()
             elif not self.path.startswith('/event'):
                 LOG.debug_log('[REST-SERVER] ' + self.path + ' not found')
 

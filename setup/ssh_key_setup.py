@@ -147,6 +147,7 @@ def key_copy_2onos(node, conf):
 
     set_ssh_key_cmd = 'ssh %s@%s %s/bin/onos-user-key %s %s' % \
                       (username, node, ONOS_INSTALL_DIR, os.getenv('USER'), ssh_key)
+    print set_ssh_key_cmd
     subprocess.call(set_ssh_key_cmd, shell=True)
 
 
