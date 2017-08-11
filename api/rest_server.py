@@ -139,6 +139,11 @@ class RestHandler(BaseHTTPRequestHandler):
                         self.do_HEAD(400)
                         self.wfile.write(str({"result": "FAIL", "fail_reason": "Not Exist Mandatory Attribute\n"}))
                         return
+                    elif (valid_IPv4(trace_condition_json['matchingfields']['source_ip']) == False) or \
+                            (valid_IPv4(trace_condition_json['matchingfields']['destination_ip']) == False):
+                        self.do_HEAD(400)
+                        self.wfile.write(str({"result": "FAIL", "fail_reason": "Type of IP Address is wrong\n"}))
+                        return
                     else:
                         # process trace, send noti
                         process_thread = threading.Thread(target=send_response_trace_test,
@@ -255,15 +260,14 @@ def send_response_trace_test(cond, auth):
         trace_result_data['transaction_id'] = cond['transaction_id']
         LOG.info(json.dumps(trace_result_data, sort_keys=True, indent=4))
 
-        header = {'Content-Type': 'application/json', 'Authorization': auth}
-
         req_body_json = json.dumps(trace_result_data)
 
         try:
             url = str(cond['app_rest_url'])
             #requests.post(str(url), headers=header, data=req_body_json, timeout=2)
 
-            cmd = 'curl -X POST -u \'admin:admin\' -H \'Content-Type: application/json\' -d \'' + str(req_body_json) + '\' ' + url
+            LOG.info('AUTH = ' + auth)
+            cmd = 'curl -X POST -u \'' + base64.b64decode(auth) + '\' -H \'Content-Type: application/json\' -d \'' + str(req_body_json) + '\' ' + url
             LOG.error('%s', 'curl = ' + cmd)
             result = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
             result.communicate()
@@ -300,16 +304,13 @@ def send_response_traffic_test(cond, auth):
         except:
             pass
 
-        header = {'Content-Type': 'application/json', 'Authorization': auth}
-
         req_body_json = json.dumps(trace_result_data)
 
         try:
             url = str(cond['app_rest_url'])
             #requests.post(str(url), headers=header, data=req_body_json, timeout=2)
 
-            cmd = 'curl -X POST -u \'admin:admin\' -H \'Content-Type: application/json\' -d \'' + str(
-                req_body_json) + '\' ' + url
+            cmd = 'curl -X POST -u \'' + base64.b64decode(auth) + '\' -H \'Content-Type: application/json\' -d \'' + str(req_body_json) + '\' ' + url
             LOG.error('%s', 'curl = ' + cmd)
             result = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
             result.communicate()
@@ -343,4 +344,19 @@ def rest_server_start():
     rest_server_daemon.daemon = True
     rest_server_daemon.start()
 
+def valid_IPv4(address):
+    try:
+        parts = address.split(".")
+
+        if len(parts) != 4:
+            return False
+        for item in parts:
+            if len(item) > 3:
+                return False
+            if not 0 <= int(item) <= 255:
+                return False
+        return True
+    except:
+        LOG.exception_err_write()
+        return False
 
