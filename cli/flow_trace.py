@@ -156,7 +156,7 @@ class TRACE():
     @classmethod
     def process_trace_rest(cls, src_ip, dst_ip):
         try:
-            cmd = 'curl -X POST -u \'admin:admin\' -H \'Content-Type: application/json\' -d \'{"command": "flowtrace", "reverse": true, "transaction_id": "test' + str(random.randrange(10000, 20000)) + '", ' \
+            cmd = 'curl -X POST -u \'' + CONFIG.get_rest_id() + ':' + CONFIG.get_rest_pw() + '\' -H \'Content-Type: application/json\' -d \'{"command": "flowtrace", "reverse": true, "transaction_id": "test' + str(random.randrange(10000, 20000)) + '", ' \
                   '"app_rest_url": "http://' + CONFIG.get_rest_ip() + ':' + str(CONFIG.get_rest_port()) + '/test", "matchingfields":{"source_ip": "' + src_ip \
                   + '","destination_ip": "' + dst_ip + '"}}\' ' + CONFIG.get_server_addr() + '/trace_request'
             LOG.debug_log(cmd)
@@ -178,7 +178,25 @@ class TRACE():
                             time.sleep(2)
                             result_file = open('log/flowtrace', 'r')
 
-                            print(result_file.read())
+                            output = result_file.read()
+
+                            ret = 'SUCCESS'
+                            for line in output.splitlines():
+                                if 'up_success' in line and 'false' in line:
+                                    ret = 'FAIL'
+
+                            print ' \n * UP RESULT : ' + ret
+
+                            ret = 'SUCCESS'
+                            for line in output.splitlines():
+                                if 'down_success' in line and 'false' in line:
+                                    ret = 'FAIL'
+
+                            print ' * DOWN RESULT : ' + ret
+
+                            print('\n' + output)
+
+                            os.remove('log/flowtrace')
 
                             return
 
@@ -192,7 +210,7 @@ class TRACE():
     def process_traffic_test(cls, test_list):
         try:
 
-            cmd = 'curl -X POST -u \'admin:admin\' -H \'Content-Type: application/json\' -d \'{"command": "traffictest", "timeout": 30, "traffic_test_list": ' + str(test_list).replace('\'', '\"') + ', "transaction_id": "test' + str(random.randrange(10000, 20000)) + '", ' \
+            cmd = 'curl -X POST -u \'' + CONFIG.get_rest_id() + ':' + CONFIG.get_rest_pw() + '\' -H \'Content-Type: application/json\' -d \'{"command": "traffictest", "timeout": 30, "traffic_test_list": ' + str(test_list).replace('\'', '\"') + ', "transaction_id": "test' + str(random.randrange(10000, 20000)) + '", ' \
                                 '"app_rest_url": "http://' + CONFIG.get_rest_ip() + ':' + str(CONFIG.get_rest_port()) + '/traffictest"}\' ' + CONFIG.get_server_addr() + '/traffictest_request'
             LOG.debug_log(cmd)
             result = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
@@ -215,6 +233,9 @@ class TRACE():
                             result_file = open('log/traffictest', 'r')
 
                             print(result_file.read())
+
+                            os.remove('log/traffictest'
+                                      '')
 
                             return
 

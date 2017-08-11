@@ -20,12 +20,10 @@ class RestHandler(BaseHTTPRequestHandler):
             request_obj = json.loads(request_str)
 
             LOG.debug_log('[REST-SERVER] CLIENT INFO = ' + str(self.client_address))
+            LOG.debug_log('[REST-SERVER] RECV HEADER = \n' + str(self.headers))
             LOG.debug_log('[REST-SERVER] RECV BODY = \n' + json.dumps(request_obj, sort_keys=True, indent=4))
 
-            if self.headers.getheader('Authorization') is None:
-                LOG.debug_log('[REST-SERVER] no auth header received')
-
-            elif self.path.startswith('/test'):
+            if self.path.startswith('/test'):
                 if os.path.exists('log/flowtrace'):
                     os.remove('log/flowtrace')
                 result_file = open('log/flowtrace', 'w')
@@ -37,6 +35,10 @@ class RestHandler(BaseHTTPRequestHandler):
                 result_file = open('log/traffictest', 'w')
                 result_file.write(json.dumps(request_obj, sort_keys=True, indent=4))
                 result_file.close()
+
+            elif self.headers.getheader('Authorization') is None:
+                LOG.debug_log('[REST-SERVER] no auth header received')
+
             elif not self.path.startswith('/event'):
                 LOG.debug_log('[REST-SERVER] ' + self.path + ' not found')
 
