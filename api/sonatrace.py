@@ -341,9 +341,7 @@ def process_trace(output, sona_topology, trace_conditions):
 
 def traffic_test(condition_json):
     seconds = 0
-
     trace_result = []
-
     sona_topology = Topology(True)
 
     LOG.info('COND_JSON = ' + str(condition_json['traffic_test_list']))
@@ -351,12 +349,17 @@ def traffic_test(condition_json):
     timeout_arr = []
 
     for test in condition_json['traffic_test_list']:
-        timeout_arr.append('timeout')
+        timeout_json = {'command_result': 'timeout', 'node': test['node'], 'instance-id': test['instance_id']}
+        timeout_arr.append(timeout_json)
+
+    timeout = 10
+    if dict(condition_json).has_key('timeout'):
+        timeout = condition_json['timeout']
 
     i = 0
     for test in condition_json['traffic_test_list']:
         LOG.info('test = ' + str(test))
-        run_thread = threading.Thread(target=run_test, args=(sona_topology, test, timeout_arr, i))
+        run_thread = threading.Thread(target=run_test, args=(sona_topology, test, timeout_arr, i, timeout))
         run_thread.daemon = False
         run_thread.start()
 
@@ -371,10 +374,6 @@ def traffic_test(condition_json):
 
         i = i + 1
 
-    timeout = 10
-    if dict(condition_json).has_key('timeout'):
-        timeout = condition_json['timeout']
-
     if timeout > seconds:
         wait_time = timeout - seconds
 
@@ -382,7 +381,7 @@ def traffic_test(condition_json):
             find_timeout = False
             i = 0
             while i < len(timeout_arr):
-                if timeout_arr[i] == 'timeout':
+                if timeout_arr[i]['command_result'] == 'timeout':
                     find_timeout = True
                 i = i + 1
 
@@ -400,9 +399,10 @@ def traffic_test(condition_json):
 
     return True, trace_result
 
+
 PROMPT = ['~# ', 'onos> ', '\$ ', '\# ', ':~$ ']
 
-def run_test(sona_topology, test_json, timeout_arr, index):
+def run_test(sona_topology, test_json, timeout_arr, index, total_timeout):
     try:
         node = test_json['node']
         ins_id = test_json['instance_id']
@@ -432,36 +432,40 @@ def run_test(sona_topology, test_json, timeout_arr, index):
                 if rt2 == 0:
                     ssh_conn.sendline('\n')
                     try:
-                        ssh_conn.expect(['login: ', pexpect.EOF], timeout=CONF.ssh_conn()['ssh_req_timeout'])
+                        rt3 = ssh_conn.expect(['login: ', pexpect.EOF, pexpect.TIMEOUT], timeout=CONF.ssh_conn()['ssh_req_timeout'])
 
-                        ssh_conn.sendline(user)
-                        ssh_conn.expect(['[P|p]assword:', pexpect.EOF], timeout=CONF.ssh_conn()['ssh_req_timeout'])
-
-                        ssh_conn.sendline(pw)
-                        rt3 = ssh_conn.expect(['Login incorrect', '~# ', 'onos> ', '\$ ', '\# ', ':~$ '],
-                                              timeout=CONF.ssh_conn()['ssh_req_timeout'])
-
-                        if rt3 == 0:
-                            str_output = 'auth fail'
+                        if rt3 == 2:
+                            str_output = 'Permission denied'
                         else:
-                            LOG.info('step1')
-                            ssh_conn.sendline(command)
-                            LOG.info('step2')
-                            ssh_conn.expect(PROMPT, timeout=CONF.ssh_conn()['ssh_req_timeout'])
-                            LOG.info('step3')
-                            str_output = ssh_conn.before
-                            LOG.info('step4')
-                            ssh_conn.sendline('exit')
-                            ssh_conn.close()
+                            ssh_conn.sendline(user)
+                            ssh_conn.expect(['[P|p]assword:', pexpect.EOF], timeout=CONF.ssh_conn()['ssh_req_timeout'])
+
+                            ssh_conn.sendline(pw)
+                            rt4 = ssh_conn.expect(['Login incorrect', '~# ', 'onos> ', '\$ ', '\# ', ':~$ '],
+                                                  timeout=CONF.ssh_conn()['ssh_req_timeout'])
+
+                            if rt4 == 1:
+                                str_output = 'auth fail'
+                            else:
+                                ssh_conn.sendline(command)
+                                rt5 = ssh_conn.expect([pexpect.TIMEOUT, '~# ', 'onos> ', '\$ ', '\# ', ':~$ '], timeout=total_timeout)
+                                if rt5 == 0:
+                                    str_output = 'timeout'
+                                    ssh_conn.sendline('exit')
+                                    ssh_conn.close()
+                                else:
+                                    str_output = ssh_conn.before
+                                    ssh_conn.sendline('exit')
+                                    ssh_conn.close()
                     except:
-                        str_output = 'Permission denied'
+                        str_output = 'exception'
                         ssh_conn.sendline('exit')
                         ssh_conn.close()
 
                 else:
                     str_output = 'connection fail'
 
-                result = {'command_result': str_output.replace('%', ' percent').replace('\r\n', '\n'), 'node': node, 'instance-id': ins_id}
+                result = {'command_result': str_output.replace('%', ' percent').replace('\r\n', '\n'), 'node': node, 'instance_id': ins_id}
                 timeout_arr[index] = result
                 return
         except:
