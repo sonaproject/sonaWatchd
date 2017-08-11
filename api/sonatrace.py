@@ -413,67 +413,82 @@ def run_test(sona_topology, test_json, timeout_arr, index, total_timeout):
         command = test_json['traffic_test_command']
 
         ip = sona_topology.get_openstack_info(node, 'ip')
-        node_id = CONF.openstack()['account'].split(':')[0]
 
-        ssh_options = '-o StrictHostKeyChecking=no ' \
-                      '-o ConnectTimeout=' + str(CONF.ssh_conn()['ssh_req_timeout'])
-        cmd = 'ssh %s %s@%s' % (ssh_options, node_id, ip)
+        if ip == '':
+            str_output = node + ' node does not exist'
+        else:
+            node_id = CONF.openstack()['account'].split(':')[0]
 
-        try:
-            LOG.info('ssh_pexpect cmd = ' + cmd)
-            ssh_conn = pexpect.spawn(cmd)
-            rt1 = ssh_conn.expect(PROMPT, timeout=CONF.ssh_conn()['ssh_req_timeout'])
+            ssh_options = '-o StrictHostKeyChecking=no ' \
+                          '-o ConnectTimeout=' + str(CONF.ssh_conn()['ssh_req_timeout'])
+            cmd = 'ssh %s %s@%s' % (ssh_options, node_id, ip)
 
-            if rt1 == 0:
-                cmd = 'virsh console ' + ins_id
-
+            try:
                 LOG.info('ssh_pexpect cmd = ' + cmd)
-                ssh_conn.sendline(cmd)
-                rt2 = ssh_conn.expect(['Escape character is', 'error: Failed', pexpect.EOF], timeout=CONF.ssh_conn()['ssh_req_timeout'])
+                ssh_conn = pexpect.spawn(cmd)
+                rt1 = ssh_conn.expect(PROMPT, timeout=CONF.ssh_conn()['ssh_req_timeout'])
 
-                if rt2 == 0:
-                    ssh_conn.sendline('\n')
-                    try:
-                        rt3 = ssh_conn.expect(['login: ', pexpect.EOF, pexpect.TIMEOUT], timeout=CONF.ssh_conn()['ssh_req_timeout'])
+                if rt1 == 0:
+                    cmd = 'virsh console ' + ins_id
 
-                        if rt3 == 2:
-                            str_output = 'Permission denied'
-                        else:
-                            ssh_conn.sendline(user)
-                            ssh_conn.expect(['[P|p]assword:', pexpect.EOF], timeout=CONF.ssh_conn()['ssh_req_timeout'])
+                    LOG.info('ssh_pexpect cmd = ' + cmd)
+                    ssh_conn.sendline(cmd)
+                    rt2 = ssh_conn.expect([pexpect.TIMEOUT, 'Escape character is', 'error:', pexpect.EOF], timeout=CONF.ssh_conn()['ssh_req_timeout'])
 
-                            ssh_conn.sendline(pw)
-                            rt4 = ssh_conn.expect(['Login incorrect', '~# ', 'onos> ', '\$ ', '\# ', ':~$ '],
-                                                  timeout=CONF.ssh_conn()['ssh_req_timeout'])
+                    if rt2 == 0:
+                        str_output = cmd + ' timeout'
+                    elif rt2 == 1:
+                        ssh_conn.sendline('\n')
+                        try:
+                            rt3 = ssh_conn.expect(['login: ', pexpect.EOF, pexpect.TIMEOUT], timeout=CONF.ssh_conn()['ssh_req_timeout'])
 
-                            if rt4 == 1:
-                                str_output = 'auth fail'
+                            LOG.info('rt3 = ' + str(rt3))
+
+                            if rt3 == 2:
+                                str_output = 'Permission denied'
                             else:
-                                ssh_conn.sendline(command)
-                                rt5 = ssh_conn.expect([pexpect.TIMEOUT, '~# ', 'onos> ', '\$ ', '\# ', ':~$ '], timeout=total_timeout)
-                                if rt5 == 0:
-                                    str_output = 'timeout'
-                                    ssh_conn.sendline('exit')
-                                    ssh_conn.close()
+                                ssh_conn.sendline(user)
+                                rt_pw = ssh_conn.expect([pexpect.TIMEOUT, '[P|p]assword:', pexpect.EOF], timeout=CONF.ssh_conn()['ssh_req_timeout'])
+
+                                if rt_pw == 1:
+                                    ssh_conn.sendline(pw)
+                                    rt4 = ssh_conn.expect([pexpect.TIMEOUT, 'Login incorrect', '~# ', 'onos> ', '\$ ', '\# ', ':~$ '],
+                                                          timeout=CONF.ssh_conn()['ssh_req_timeout'])
+
+                                    LOG.info('rt4 = ' + str(rt4))
+                                    if rt4 == 0 or rt4 == 1:
+                                        str_output = 'auth fail'
+                                    else:
+                                        ssh_conn.sendline(command)
+                                        rt5 = ssh_conn.expect([pexpect.TIMEOUT, '~# ', 'onos> ', '\$ ', '\# ', ':~$ '], timeout=total_timeout)
+                                        if rt5 == 0:
+                                            str_output = 'timeout'
+                                            ssh_conn.sendline('exit')
+                                            ssh_conn.close()
+                                        else:
+                                            str_output = ssh_conn.before
+                                            ssh_conn.sendline('exit')
+                                            ssh_conn.close()
                                 else:
-                                    str_output = ssh_conn.before
-                                    ssh_conn.sendline('exit')
-                                    ssh_conn.close()
-                    except:
-                        str_output = 'exception'
-                        ssh_conn.sendline('exit')
-                        ssh_conn.close()
+                                    str_output = 'auth fail'
+                        except:
+                            str_output = 'exception'
+                            ssh_conn.sendline('exit')
+                            ssh_conn.close()
+                    elif rt2 == 2:
+                        result = {'command_result': 'virsh console error'}
+                        timeout_arr[index] = result
+                        return
 
-                else:
-                    str_output = 'connection fail'
+                    else:
+                        str_output = 'connection fail'
 
-                result = {'command_result': str_output.replace('\r\n', '\n'), 'node': node, 'instance_id': ins_id}
-                timeout_arr[index] = result
-                return
-        except:
-            LOG.exception()
-
-        result = {'command_result': 'fail'}
-        timeout_arr[index] = result
+            except:
+                LOG.exception()
+                str_output = 'exception 1'
     except:
         LOG.exception()
+        str_output = 'exception 2'
+
+    result = {'command_result': str_output.replace('\r\n', '\n'), 'node': node, 'instance_id': ins_id}
+    timeout_arr[index] = result

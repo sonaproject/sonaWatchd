@@ -173,6 +173,13 @@ class RestHandler(BaseHTTPRequestHandler):
                                 self.wfile.write(str({"result": "FAIL", "fail_reason": "Not Exist Mandatory Attribute\n"}))
                                 return
 
+                            for x in test_mandatory_field:
+                                if len(test[x]) == 0:
+                                    self.do_HEAD(400)
+                                    self.wfile.write(
+                                        str({"result": "FAIL", "fail_reason": x + " condition empty\n"}))
+                                    return
+
                         # process traffic test, send noti
                         process_thread = threading.Thread(target=send_response_traffic_test,
                                                           args=(trace_condition_json,
