@@ -24,16 +24,20 @@ class RestHandler(BaseHTTPRequestHandler):
             LOG.debug_log('[REST-SERVER] RECV BODY = \n' + json.dumps(request_obj, sort_keys=True, indent=4))
 
             if self.path.startswith('/test'):
-                if os.path.exists('log/flowtrace'):
-                    os.remove('log/flowtrace')
-                result_file = open('log/flowtrace', 'w')
-                result_file.write(json.dumps(request_obj, sort_keys=True, indent=4))
+                t_id = request_obj['transaction_id']
+
+                if os.path.exists('log/flowtrace_' + t_id):
+                    os.remove('log/flowtrace_' + t_id)
+                result_file = open('log/flowtrace_' + t_id, 'w')
+                result_file.write(str(request_obj))
                 result_file.close()
             elif self.path.startswith('/traffictest'):
-                if os.path.exists('log/traffictest'):
-                    os.remove('log/traffictest')
-                result_file = open('log/traffictest', 'w')
-                result_file.write(json.dumps(request_obj, sort_keys=True, indent=4))
+                t_id = request_obj['transaction_id']
+
+                if os.path.exists('log/traffictest_' + t_id):
+                    os.remove('log/traffictest_' + t_id)
+                result_file = open('log/traffictest_' + t_id, 'w')
+                result_file.write(str(request_obj))
                 result_file.close()
 
             elif self.headers.getheader('Authorization') is None:

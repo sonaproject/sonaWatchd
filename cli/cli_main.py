@@ -245,7 +245,15 @@ def select_menu():
                             TRACE.process_trace_rest(source_ip, dest_ip)
                         elif cmd.startswith('traffic-test'):
                             if cmd.startswith('traffic-test -f '):
-                                filename = cmd.split(' ')[2]
+                                try:
+                                    filename = cmd.split(' ')[2]
+                                except:
+                                    filename = ''
+
+                                if not os.path.exists(filename):
+                                    print 'file does not exist [' + filename + ']'
+                                    continue
+
                                 result_file = open(filename, 'r')
 
                                 test_list = []
