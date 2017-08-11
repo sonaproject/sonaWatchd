@@ -315,6 +315,8 @@ def process_trace(output, sona_topology, trace_conditions):
                             trace_conditions.cur_target_hostname = sona_topology.get_openstack_info(
                                 ' ' + trace_conditions.cur_target_ip + ' ', 'hostname')
 
+                        if len(line.split('=')) == 3:
+                            action = action + '=' + line.split('=')[2]
                         action_dict['action'] = action
 
                 if len(setfield_dict) > 0:
@@ -465,7 +467,7 @@ def run_test(sona_topology, test_json, timeout_arr, index, total_timeout):
                 else:
                     str_output = 'connection fail'
 
-                result = {'command_result': str_output.replace('%', ' percent').replace('\r\n', '\n'), 'node': node, 'instance_id': ins_id}
+                result = {'command_result': str_output.replace('\r\n', '\n'), 'node': node, 'instance_id': ins_id}
                 timeout_arr[index] = result
                 return
         except:

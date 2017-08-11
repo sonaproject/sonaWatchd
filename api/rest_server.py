@@ -8,6 +8,7 @@ import threading
 import base64
 from datetime import datetime
 import multiprocessing as multiprocess
+from subprocess import Popen, PIPE
 
 import monitor.cmd_proc as command
 
@@ -196,7 +197,7 @@ class RestHandler(BaseHTTPRequestHandler):
         else:
             try:
                 receive_data = json.loads(self.rfile.read(int(self.headers.getheader("content-length"))))
-                LOG.info('[Trace Conditions] \n' + json.dumps(receive_data, sort_keys=True, indent=4))
+                LOG.info('%s', '[Trace Conditions] \n' + json.dumps(receive_data, sort_keys=True, indent=4))
                 return receive_data
             except:
                 LOG.exception()
@@ -260,9 +261,18 @@ def send_response_trace_test(cond, auth):
 
         try:
             url = str(cond['app_rest_url'])
-            requests.post(str(url), headers=header, data=req_body_json, timeout=2)
+            #requests.post(str(url), headers=header, data=req_body_json, timeout=2)
+
+            cmd = 'curl -X POST -u \'admin:admin\' -H \'Content-Type: application/json\' -d \'' + str(req_body_json) + '\' ' + url
+            LOG.error('%s', 'curl = ' + cmd)
+            result = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
+            result.communicate()
+
+            if result.returncode != 0:
+                # Push noti does not respond
+                pass
         except:
-            # Push noti does not respond
+            LOG.exception()
             pass
 
     except:
@@ -286,10 +296,9 @@ def send_response_traffic_test(cond, auth):
 
         trace_result_data['transaction_id'] = cond['transaction_id']
         try:
-            LOG.info(json.dumps(trace_result_data, sort_keys=True, indent=4))
+            LOG.info('%s', json.dumps(trace_result_data, sort_keys=True, indent=4))
         except:
             pass
-            #LOG.info(str(trace_result_data))
 
         header = {'Content-Type': 'application/json', 'Authorization': auth}
 
@@ -297,10 +306,21 @@ def send_response_traffic_test(cond, auth):
 
         try:
             url = str(cond['app_rest_url'])
-            requests.post(str(url), headers=header, data=req_body_json, timeout=2)
+            #requests.post(str(url), headers=header, data=req_body_json, timeout=2)
+
+            cmd = 'curl -X POST -u \'admin:admin\' -H \'Content-Type: application/json\' -d \'' + str(
+                req_body_json) + '\' ' + url
+            LOG.error('%s', 'curl = ' + cmd)
+            result = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
+            result.communicate()
+
+            if result.returncode != 0:
+                # Push noti does not respond
+                pass
         except:
-            # Push noti does not respond
+            LOG.exception()
             pass
+
 
     except:
         LOG.exception()
