@@ -184,18 +184,21 @@ class TRACE():
                             out_json = eval(output)
 
                             ret = 'SUCCESS'
-                            if out_json['up_success'] == False:
+                            if out_json['trace_success'] == False:
                                 ret = 'FAIL'
 
                             print ' \n * UP RESULT : ' + ret
 
                             ret = 'SUCCESS'
-                            if out_json['down_success'] == False:
+                            if out_json['reverse_trace_success'] == False:
                                 ret = 'FAIL'
 
                             print ' * DOWN RESULT : ' + ret
 
                             print('\n' + json.dumps(out_json, sort_keys=True, indent=4))
+
+                            if os.path.exists('log/flowtrace_' + t_id):
+                                os.remove('log/flowtrace_' + t_id)
 
                             return
 
@@ -235,6 +238,9 @@ class TRACE():
                             out_json = eval(output)
 
                             print(json.dumps(out_json, sort_keys=True, indent=4))
+
+                            if os.path.exists('log/traffictest_' + t_id):
+                                os.remove('log/traffictest_' + t_id)
 
                             return
 

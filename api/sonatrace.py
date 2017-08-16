@@ -109,7 +109,7 @@ def flow_trace(condition_json):
     if find_target(trace_condition, sona_topology) == False:
         return False, None
 
-    trace_result['up_result'], trace_result['up_success'] = onsway_trace(sona_topology, trace_condition)
+    trace_result['trace_result'], trace_result['trace_success'] = onsway_trace(sona_topology, trace_condition)
 
     if is_reverse:
         reverse_condition = Conditions()
@@ -125,7 +125,7 @@ def flow_trace(condition_json):
         if find_target(reverse_condition, sona_topology) == False:
             return False, trace_result
 
-        trace_result['down_result'], trace_result['down_success'] = onsway_trace(sona_topology, reverse_condition)
+        trace_result['reverse_trace_result'], trace_result['reverse_trace_success'] = onsway_trace(sona_topology, reverse_condition)
 
     return True, trace_result
 
@@ -279,18 +279,23 @@ def process_trace(output, sona_topology, trace_conditions):
                 rule_dict['table'] = int(tmp[1].split('=')[1])
                 rule_dict['cookie'] = tmp[2].split('=')[1]
 
+                selector_dict = {}
                 for col in tmp[3].split(','):
                     tmp = col.split('=')
 
                     if len(tmp) == 2:
-                        if tmp[0] in ['priority', 'in_port']:
+                        if tmp[0] in ['priority']:
                             rule_dict[tmp[0]] = int(tmp[1])
+                        elif tmp[0] in ['in_port']:
+                            selector_dict[tmp[0]] = int(tmp[1])
                         else:
-                            rule_dict[tmp[0]] = tmp[1]
+                            selector_dict[tmp[0]] = tmp[1]
+
+                if len(selector_dict.keys()) > 0:
+                    rule_dict['selector'] = selector_dict
 
             elif line.startswith('OpenFlow actions='):
                 action_dict = dict()
-                setfield_dict = dict()
 
                 action_list = line.split('=')[1].split(',')
                 for action in action_list:
@@ -298,7 +303,7 @@ def process_trace(output, sona_topology, trace_conditions):
                         type = action.split('->')[1]
                         value = action[action.find(':') + 1:action.find('-')]
 
-                        setfield_dict[type] = value
+                        action_dict[type] = value
 
                         if type == 'tun_dst':
                             # find next target
@@ -317,16 +322,20 @@ def process_trace(output, sona_topology, trace_conditions):
 
                         if len(line.split('=')) == 3:
                             action = action + '=' + line.split('=')[2]
-                        action_dict['action'] = action
 
-                if len(setfield_dict) > 0:
-                    action_dict['set_field'] = setfield_dict
+                        LOG.info('action = ' + action)
+                        tmp = action.split(':')
 
-                flow_dict = dict()
-                flow_dict['rule'] = rule_dict
-                flow_dict['action'] = action_dict
+                        if action.startswith('group:') or action.startswith('goto_table:'):
+                            action_dict[tmp[0]] = int(tmp[1])
+                        elif len(tmp) < 2:
+                            action_dict[tmp[0]] = tmp[0]
+                        else:
+                            action_dict[tmp[0]] = tmp[1]
 
-                result_flow.append(flow_dict)
+                rule_dict['actions'] = action_dict
+
+                result_flow.append(rule_dict)
 
                 if 'tun_dst' in line or 'group' in line:
                     retry_flag = True
