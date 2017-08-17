@@ -274,6 +274,8 @@ def send_response_trace_test(cond, auth):
             #requests.post(str(url), headers=header, data=req_body_json, timeout=2)
 
             LOG.info('AUTH = ' + auth)
+            if str(auth).startswith('Basic '):
+                auth = str(auth).split(' ')[1]
             cmd = 'curl -X POST -u \'' + base64.b64decode(auth) + '\' -H \'Content-Type: application/json\' -d \'' + str(req_body_json) + '\' ' + url
             LOG.error('%s', 'curl = ' + cmd)
             result = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
@@ -316,6 +318,9 @@ def send_response_traffic_test(cond, auth):
         try:
             url = str(cond['app_rest_url'])
             #requests.post(str(url), headers=header, data=req_body_json, timeout=2)
+
+            if str(auth).startswith('Basic '):
+                auth = str(auth).split(' ')[1]
 
             cmd = 'curl -X POST -u \'' + base64.b64decode(auth) + '\' -H \'Content-Type: application/json\' -d \'' + str(req_body_json) + '\' ' + url
             LOG.error('%s', 'curl = ' + cmd)

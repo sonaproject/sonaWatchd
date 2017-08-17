@@ -230,7 +230,7 @@ def make_command(trace_conditions):
         if value != '':
             cond_list = cond_list + key + '=' + str(value) + ','
 
-    command = 'ovs-appctl ofproto/trace br-int \'' + cond_list.rstrip(',') + '\''
+    command = 'sudo ovs-appctl ofproto/trace br-int \'' + cond_list.rstrip(',') + '\''
     LOG.info('trace command = ' + command)
 
     return command
