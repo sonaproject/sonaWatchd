@@ -61,6 +61,9 @@ def vrouter_check(conn, db_log, node_name, user_name, node_ip):
 
                 app_active_list = list()
                 for line in app_list.splitlines():
+                    if line.startswith('fail'):
+                        continue
+
                     app_active_list.append(line.split(".")[2].split()[0])
 
                 for app in CONF.openstack()['onos_vrouter_app_list']:
@@ -82,6 +85,10 @@ def vrouter_check(conn, db_log, node_name, user_name, node_ip):
                         continue
 
                     new_line = " ".join(line.split())
+
+                    if new_line.startswith('fail'):
+                        continue
+
                     tmp = new_line.split(' ')
                     route_json = {'network': tmp[0], 'next_hop': tmp[1]}
                     route_list.append(route_json)
