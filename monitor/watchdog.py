@@ -47,8 +47,9 @@ def periodic(conn, pre_stat, db_log):
             cur_info[nodename][item] = grade
 
         # check HA, once
-        ha_dic = chk_ha.onos_ha_check(conn, db_log)
-        global_ha_svc, global_ha_ratio, global_svc_reason, global_ha_ratio_reason = chk_ha.get_ha_stats(ha_dic)
+        if 'HA' in CONF.watchdog()['check_system']:
+            ha_dic = chk_ha.onos_ha_check(conn, db_log)
+            global_ha_svc, global_ha_ratio, global_svc_reason, global_ha_ratio_reason = chk_ha.get_ha_stats(ha_dic)
 
         # check GW ratio
         gw_total = 0

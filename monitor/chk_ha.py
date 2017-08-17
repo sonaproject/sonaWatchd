@@ -17,6 +17,7 @@ def onos_ha_check(conn, db_log):
 
         if result.returncode != 0:
             LOG.error("Cmd Fail, cause => %s", error)
+            return None
         else:
             report_data = csv.DictReader(output.lstrip('# ').splitlines())
 

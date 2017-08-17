@@ -82,7 +82,7 @@ class SshCommand:
                 else:
                     return "fail"
             elif rt1 == 1:
-                LOG.error(ssh_conn.before)
+                LOG.error('%s', ssh_conn.before)
             elif rt1 == 2:
                 LOG.error("[ssh_pexpect] connection timeout")
 
