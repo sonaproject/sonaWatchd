@@ -93,7 +93,7 @@ def key_copy(node, conf):
     ssh_conn = pexpect.spawn(cmd)
 
     while True:
-        rt = ssh_conn.expect(['password:', pexpect.EOF], timeout=SSH_TIMEOUT)
+        rt = ssh_conn.expect(['password:', pexpect.EOF, pexpect.TIMEOUT], timeout=SSH_TIMEOUT)
         if rt == 0:
             if str(CONF().get_auto_passwd_flag()).lower() == 'no':
                 password = str(raw_input("\n[Setup] Input %s password: " % node))
