@@ -149,6 +149,9 @@ def find_target(trace_condition, sona_topology):
 
         trace_condition.cur_target_ip = sona_topology.get_openstack_info(' ' + switch_id + ' ', 'ip')
         trace_condition.cur_target_hostname = sona_topology.get_openstack_info(' ' + switch_id + ' ', 'hostname')
+
+        if trace_condition.cur_target_ip == '' or trace_condition.cur_target_hostname == '':
+            return False
     # source ip = external
     else:
         for net in sona_topology.subnets:
