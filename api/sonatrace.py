@@ -255,10 +255,6 @@ def onsway_trace(sona_topology, trace_conditions):
         node_trace['flow_rules'] = process_result
 
         trace_conditions.cond_dict['in_port'] = ''
-        trace_conditions.cond_dict['dl_src'] = ''
-        trace_conditions.cond_dict['dl_dst'] = ''
-        trace_conditions.cond_dict['eth_dst'] = ''
-        trace_conditions.cond_dict['eth_src'] = ''
 
         up_down_result.append(node_trace)
 
