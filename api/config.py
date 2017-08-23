@@ -111,6 +111,8 @@ class ConfReader:
         try:
             value['list'] = self.__list_opt(self.conf_map['XOS']['list'])
             value['account'] = str(self.conf_map['XOS']['account'])
+            value['xos_rest_server'] = str(self.conf_map['XOS']['xos_rest_server'])
+            value['xos_rest_account'] = str(self.conf_map['XOS']['xos_rest_account'])
 
             if self.config.has_option('XOS', 'alarm_off_list'):
                 value['alarm_off_list'] = self.__list_opt(self.conf_map['XOS']['alarm_off_list'])

@@ -5,6 +5,7 @@
 import sys
 import alarm_event
 import chk_onos
+import chk_xos
 import chk_swarm
 import chk_openstack
 import chk_resource
@@ -89,6 +90,8 @@ def periodic(conn, pre_stat, db_log):
 
             v_router = 'fail'
 
+            xos_status = 'fail'
+
             swarm_node = 'fail'
             swarm_svc = 'fail'
 
@@ -112,7 +115,7 @@ def periodic(conn, pre_stat, db_log):
             # 1. ping check
             reason = []
             if network == 'nok':
-                reason.append('ping transmit faild')
+                reason.append('ping transmit failed')
 
             network = alarm_event.process_event(conn, db_log, node_name, type, 'NETWORK', cur_info[node_name]['NETWORK'], network, reason)
 
@@ -162,6 +165,13 @@ def periodic(conn, pre_stat, db_log):
                     ha_ratio = alarm_event.process_event(conn, db_log, node_name, type, 'HA_RATIO', cur_info[node_name]['HA_RATIO'],
                                                          ha_ratio, global_ha_ratio_reason)
                     LOG.info('[' + node_name + '][HA_SVC][' + ha_ratio + ']' + str(global_ha_ratio_reason))
+
+                # check xos (status/synchronizer)
+                elif type.upper() == 'XOS':
+                    xos_status, reason = chk_xos.xos_status_check(conn, db_log, node_name)
+
+                    xos_status = alarm_event.process_event(conn, db_log, node_name, type, 'XOS_STATUS',
+                                                      cur_info[node_name]['XOS_STATUS'], xos_status, reason)
 
                 # check swarm (app/node)
                 elif type.upper() == 'SWARM':
@@ -257,6 +267,7 @@ def periodic(conn, pre_stat, db_log):
                       ' ONOS_REST = \'' + onos_rest + '\',' + \
                       ' ONOS_OPENFLOW = \'' + onos_of + '\',' + \
                       ' ONOS_CLUSTER = \'' + onos_cluster + '\',' + \
+                      ' XOS_STATUS = \'' + xos_status + '\',' + \
                       ' SWARM_NODE = \'' + swarm_node + '\',' + \
                       ' OPENSTACK_NODE = \'' + openstack_node + '\',' + \
                       ' SWARM_SVC = \'' + swarm_svc + '\',' + \
