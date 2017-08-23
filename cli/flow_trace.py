@@ -195,7 +195,7 @@ class TRACE():
 
                             print ' * DOWN RESULT : ' + ret
 
-                            print('\n' + json.dumps(out_json, sort_keys=True, indent=4))
+                            print('\n' + json.dumps(out_json, sort_keys=False, indent=4))
 
                             if os.path.exists('log/flowtrace_' + t_id):
                                 os.remove('log/flowtrace_' + t_id)
@@ -237,7 +237,7 @@ class TRACE():
                             output = result_file.read()
                             out_json = eval(output)
 
-                            print(json.dumps(out_json, sort_keys=True, indent=4))
+                            print(json.dumps(out_json, sort_keys=False, indent=4))
 
                             if os.path.exists('log/traffictest_' + t_id):
                                 os.remove('log/traffictest_' + t_id)
