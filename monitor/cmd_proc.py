@@ -333,8 +333,24 @@ def proc_dis_swarm(node, param):
         return {'Result': 'FAIL'}
 
 
-def proc_dis_xos(system, param):
-    pass
+def proc_dis_xos(node, param):
+    try:
+        nodes_info = get_node_list(node, 'nodename, xos_status', DB.XOS_TBL)
+
+        if len(nodes_info) == 0:
+            return {'fail': 'This is not a command on the target system.'}
+
+        res_result = dict()
+        for nodename, xos_list in nodes_info:
+            if xos_list == 'fail' or xos_list == 'none':
+                res_result[nodename] = 'FAIL'
+            else:
+                res_result[nodename] = eval(xos_list)
+
+        return res_result
+    except:
+        LOG.exception()
+        return {'Result': 'FAIL'}
 
 
 def proc_dis_ha(dummy, param):

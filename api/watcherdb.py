@@ -19,13 +19,14 @@ class DB(object):
     SWARM_TBL = 't_swarm'
     OPENSTACK_TBL = 't_openstack'
     HA_TBL = 't_ha'
+    XOS_TBL = 't_xos'
 
     common_event_list = ['NETWORK', 'CPU', 'MEMORY', 'DISK']
     onos_event_list = ['ONOS_APP', 'ONOS_REST', 'ONOS_OPENFLOW', 'ONOS_CLUSTER', 'OPENSTACK_NODE', 'TRAFFIC_CONTROLLER']
     swarm_event_list = ['SWARM_SVC', 'SWARM_NODE']
     openstack_event_list = ['GATEWAY', 'TRAFFIC_GW', 'PORT_STAT_VXLAN', 'TRAFFIC_INTERNAL']
     ha_event_list = ['HA_SVC', 'HA_RATIO']
-    xos_event_list = []
+    xos_event_list = ['XOS_STATUS']
 
     item_list = ", ".join(common_event_list + onos_event_list + swarm_event_list + openstack_event_list + xos_event_list + ha_event_list)
 
@@ -82,6 +83,7 @@ class DB(object):
                         'CREATE TABLE ' + cls.REGI_SYS_TBL + '(url text primary key, auth)',
                         'CREATE TABLE ' + cls.ONOS_TBL + '(nodename text primary key, applist, weblist, nodelist, port, openflow, cluster, traffic_stat)',
                         'CREATE TABLE ' + cls.SWARM_TBL + '(nodename text primary key, node, service, ps)',
+                        'CREATE TABLE ' + cls.XOS_TBL + '(nodename text primary key, xos_status)',
                         'CREATE TABLE ' + cls.OPENSTACK_TBL + '(nodename text primary key, sub_type, data_ip, of_id, hostname, docker, onosApp, routingTable, gw_ratio, vxlan_traffic, internal_traffic)',
                         'CREATE TABLE ' + cls.HA_TBL + '(ha_key text primary key, stats)',
                         'CREATE TABLE ' + cls.EVENT_TBL + '(nodename, item, grade, pre_grade, reason, time, PRIMARY KEY (nodename, item))']
@@ -130,7 +132,7 @@ class DB(object):
 
                 # set status tbl
                 sql = 'INSERT INTO ' + cls.STATUS_TBL + \
-                      ' VALUES (\'' + name + '\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', ' \
+                      ' VALUES (\'' + name + '\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', ' \
                                              '\'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\', \'none\')'
                 sql_rt = cls.sql_execute(sql)
                 if sql_rt != 'SUCCESS':
@@ -162,6 +164,14 @@ class DB(object):
                     sql_rt = cls.sql_execute(sql)
                     if sql_rt != 'SUCCESS':
                         db_log.write_log(" [APP TABLE] Node data insert fail \n%s", sql_rt)
+                        sys.exit(1)
+
+                elif type.upper() == 'XOS':
+                    # set xos tbl
+                    sql = 'INSERT INTO ' + cls.XOS_TBL + ' VALUES (\'' + name + '\', \'none\')'
+                    sql_rt = cls.sql_execute(sql)
+                    if sql_rt != 'SUCCESS':
+                        db_log.write_log(" [XOS TABLE] Node data insert fail \n%s", sql_rt)
                         sys.exit(1)
 
                 elif type.upper() == 'SWARM':

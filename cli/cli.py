@@ -642,6 +642,49 @@ class CLI():
                         else:
                             print '   ratio = ' + sys_ret['ratio'] + '\n'
 
+                elif command == 'xos-svc':
+                    print('')
+                    for sys in sorted_list:
+                        print '[' + sys + ']'
+
+                        sys_ret = result[sys]
+                        if str(sys_ret).upper().endswith('FAIL'):
+                            sys_ret = 'fail'
+                            print sys_ret
+                        else:
+                            data = []
+
+                            for row in sys_ret:
+                                line = []
+
+                                line.append(row['name'])
+                                line.append(row['status'])
+                                line.append(row['description'])
+
+                                data.append(line)
+
+                            header = []
+
+                            col_name = dict()
+                            col_name['title'] = 'Name'
+                            col_name['size'] = '10'
+
+                            col_status = dict()
+                            col_status['title'] = 'Status'
+                            col_status['size'] = '8'
+
+                            col_desc = dict()
+                            col_desc['title'] = 'Description'
+                            col_desc['size'] = '30'
+
+                            header.append(col_name)
+                            header.append(col_status)
+                            header.append(col_desc)
+
+                            cls.draw_grid(header, data)
+
+                        print ''
+
                 else:
                     print('')
                     for sys in sorted_list:
