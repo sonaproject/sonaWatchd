@@ -253,13 +253,16 @@ def send_response_trace_test(cond, auth):
     trace_result_data = {}
 
     try:
-        is_success, result = trace.flow_trace(cond)
+        is_success, result, fail_reason = trace.flow_trace(cond)
 
         if is_success:
             trace_result_data['result'] = 'SUCCESS'
         else:
             trace_result_data['result'] = 'FAIL'
-            trace_result_data['fail_reason'] = 'The source ip does not exist.'
+            if fail_reason == '':
+                trace_result_data['fail_reason'] = 'The source ip does not exist.'
+            else:
+                trace_result_data['fail_reason'] = result
 
         if result != None:
             trace_result_data.update(result)
