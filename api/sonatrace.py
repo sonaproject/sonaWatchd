@@ -98,7 +98,10 @@ class Topology:
 def flow_trace(condition_json):
     trace_result = {}
 
-    sona_topology = Topology()
+    try:
+        sona_topology = Topology()
+    except:
+        return False, None, 'ONOS Command Error'
 
     trace_condition = set_condition(sona_topology, condition_json)
 
@@ -107,7 +110,7 @@ def flow_trace(condition_json):
         is_reverse = condition_json['reverse']
 
     if find_target(trace_condition, sona_topology) == False:
-        return False, None
+        return False, None, ''
 
     trace_result['trace_result'], trace_result['trace_success'] = onsway_trace(sona_topology, trace_condition)
 
@@ -123,11 +126,11 @@ def flow_trace(condition_json):
                                                            reverse_condition.cond_dict['nw_dst'])
 
         if find_target(reverse_condition, sona_topology) == False:
-            return False, trace_result
+            return False, trace_result, ''
 
         trace_result['reverse_trace_result'], trace_result['reverse_trace_success'] = onsway_trace(sona_topology, reverse_condition)
 
-    return True, trace_result
+    return True, trace_result, ''
 
 
 def find_target(trace_condition, sona_topology):
