@@ -64,7 +64,7 @@ def xos_status_check(conn, db_log, node_name):
 
 
 def xos_sync_check(conn, db_log, node_name):
-    xos_sync = 'ok'
+    swarm_sync = 'ok'
     sync_list = []
     fail_reason = []
 
@@ -79,6 +79,8 @@ def xos_sync_check(conn, db_log, node_name):
         if result.returncode != 0:
             LOG.error("Cmd Fail, cause => %s", error)
             return 'fail', None
+
+        LOG.info(output)
 
         sync_array = json.loads(output)
 
@@ -95,10 +97,11 @@ def xos_sync_check(conn, db_log, node_name):
                 status = 'nok'
 
             # check time
-            last_time = xos_info['backend_register']['last run']
+            last_time = json.loads(xos_info['backend_register'])['last_run']
             cur_time = time.time()
 
             interval = cur_time - last_time
+            interval = int(interval)
 
             if interval >= 30:
                 status = 'nok'
@@ -107,24 +110,24 @@ def xos_sync_check(conn, db_log, node_name):
             sync_list.append(xos_json)
 
             if status == 'nok':
-                xos_sync = 'nok'
+                swarm_sync = 'nok'
                 fail_reason.append(xos_json)
 
             try:
                 sql = 'UPDATE ' + DB.XOS_TBL + \
-                      ' SET xos_status = \"' + str(sync_list) + '\"' + \
+                      ' SET synchronizer = \"' + str(sync_list) + '\"' + \
                       ' WHERE nodename = \'' + node_name + '\''
-                db_log.write_log('----- UPDATE XOS STATUS INFO -----\n' + sql)
+                db_log.write_log('----- UPDATE SYNCHRONIZER INFO -----\n' + sql)
 
                 if DB.sql_execute(sql, conn) != 'SUCCESS':
-                    db_log.write_log('[FAIL] XOS STATUS DB Update Fail.')
+                    db_log.write_log('[FAIL] SYNCHRONIZER DB Update Fail.')
             except:
                 LOG.exception()
 
     except:
         LOG.exception()
-        xos_sync = 'fail'
+        swarm_sync = 'fail'
 
-    return xos_sync, fail_reason
+    return swarm_sync, fail_reason
 
 

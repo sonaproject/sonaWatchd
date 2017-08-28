@@ -83,6 +83,7 @@ class ConfReader:
             value['account'] = str(self.conf_map['ONOS']['account'])
             value['app_list'] = self.__list_opt(self.conf_map['ONOS']['app_list'])
             value['rest_list'] = self.__list_opt(self.conf_map['ONOS']['rest_list'])
+            value['rest_auth'] = str(self.conf_map['ONOS']['rest_auth'])
 
             if self.config.has_option('ONOS', 'alarm_off_list'):
                 value['alarm_off_list'] = self.__list_opt(self.conf_map['ONOS']['alarm_off_list'])

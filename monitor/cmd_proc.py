@@ -353,6 +353,26 @@ def proc_dis_xos(node, param):
         return {'Result': 'FAIL'}
 
 
+def proc_dis_swarm_sync(node, param):
+    try:
+        nodes_info = get_node_list(node, 'nodename, synchronizer', DB.XOS_TBL)
+
+        if len(nodes_info) == 0:
+            return {'fail': 'This is not a command on the target system.'}
+
+        res_result = dict()
+        for nodename, xos_list in nodes_info:
+            if xos_list == 'fail' or xos_list == 'none':
+                res_result[nodename] = 'FAIL'
+            else:
+                res_result[nodename] = eval(xos_list)
+
+        return res_result
+    except:
+        LOG.exception()
+        return {'Result': 'FAIL'}
+
+
 def proc_dis_ha(dummy, param):
     try:
         sql = 'SELECT stats FROM ' + DB.HA_TBL + ' WHERE ha_key = \'HA\''
@@ -499,6 +519,7 @@ COMMAND_MAP = {'resource': proc_dis_resource,
                'gateway': proc_dis_vrouter,
                'swarm-svc': proc_dis_swarm,
                'xos-svc': proc_dis_xos,
+               'synchronizer': proc_dis_swarm_sync,
                'ha-proxy': proc_dis_ha,
                'openstack-node': proc_dis_node,
                'onos-conn': proc_dis_connection,
