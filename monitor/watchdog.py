@@ -91,6 +91,7 @@ def periodic(conn, pre_stat, db_log):
             v_router = 'fail'
 
             xos_status = 'fail'
+            synchronizer_status = 'fail'
 
             swarm_node = 'fail'
             swarm_svc = 'fail'
@@ -170,9 +171,13 @@ def periodic(conn, pre_stat, db_log):
                 elif type.upper() == 'XOS':
                     xos_status, reason = chk_xos.xos_status_check(conn, db_log, node_name)
 
-                    xos_status = alarm_event.process_event(conn, db_log, node_name, type, 'XOS_STATUS',
-                                                      cur_info[node_name]['XOS_STATUS'], xos_status, reason)
+                    xos_status = alarm_event.process_event(conn, db_log, node_name, type, 'XOS_SVC',
+                                                      cur_info[node_name]['XOS_SVC'], xos_status, reason)
 
+                    synchronizer_status, reason = chk_xos.xos_sync_check(conn, db_log, node_name)
+
+                    synchronizer_status = alarm_event.process_event(conn, db_log, node_name, type, 'SYNCHRONIZER',
+                                                           cur_info[node_name]['SYNCHRONIZER'], synchronizer_status, reason)
                 # check swarm (app/node)
                 elif type.upper() == 'SWARM':
                     swarm_svc, swarm_node = chk_swarm.swarm_check(conn, db_log, node_name, user_name, node_ip)
@@ -267,7 +272,8 @@ def periodic(conn, pre_stat, db_log):
                       ' ONOS_REST = \'' + onos_rest + '\',' + \
                       ' ONOS_OPENFLOW = \'' + onos_of + '\',' + \
                       ' ONOS_CLUSTER = \'' + onos_cluster + '\',' + \
-                      ' XOS_STATUS = \'' + xos_status + '\',' + \
+                      ' XOS_SVC = \'' + xos_status + '\',' + \
+                      ' SYNCHRONIZER = \'' + synchronizer_status + '\',' + \
                       ' SWARM_NODE = \'' + swarm_node + '\',' + \
                       ' OPENSTACK_NODE = \'' + openstack_node + '\',' + \
                       ' SWARM_SVC = \'' + swarm_svc + '\',' + \

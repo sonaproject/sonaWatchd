@@ -279,7 +279,7 @@ def send_response_trace_test(cond, auth):
             LOG.info('AUTH = ' + auth)
             if str(auth).startswith('Basic '):
                 auth = str(auth).split(' ')[1]
-            cmd = 'curl -X POST -u \'' + base64.b64decode(auth) + '\' -H \'Content-Type: application/json\' -d \'' + str(req_body_json) + '\' ' + url
+            cmd = 'curl -X POST -u \'' + CONF.onos()['rest_auth'] + '\' -H \'Content-Type: application/json\' -d \'' + str(req_body_json) + '\' ' + url
             LOG.error('%s', 'curl = ' + cmd)
             result = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
             result.communicate()
@@ -325,7 +325,7 @@ def send_response_traffic_test(cond, auth):
             if str(auth).startswith('Basic '):
                 auth = str(auth).split(' ')[1]
 
-            cmd = 'curl -X POST -u \'' + base64.b64decode(auth) + '\' -H \'Content-Type: application/json\' -d \'' + str(req_body_json) + '\' ' + url
+            cmd = 'curl -X POST -u \'' + CONF.onos()['rest_auth'] + '\' -H \'Content-Type: application/json\' -d \'' + str(req_body_json) + '\' ' + url
             LOG.error('%s', 'curl = ' + cmd)
             result = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
             result.communicate()
