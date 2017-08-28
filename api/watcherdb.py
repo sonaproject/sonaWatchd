@@ -23,19 +23,16 @@ class DB(object):
 
     common_event_list = ['NETWORK', 'CPU', 'MEMORY', 'DISK']
     onos_event_list = ['ONOS_APP', 'ONOS_REST', 'ONOS_OPENFLOW', 'ONOS_CLUSTER', 'OPENSTACK_NODE', 'TRAFFIC_CONTROLLER']
-    swarm_event_list = ['SWARM_SVC', 'SWARM_NODE']
     openstack_event_list = ['GATEWAY', 'TRAFFIC_GW', 'PORT_STAT_VXLAN', 'TRAFFIC_INTERNAL']
     ha_event_list = ['HA_SVC', 'HA_RATIO']
-    xos_event_list = ['XOS_SVC', 'SYNCHRONIZER']
+    xos_event_list = ['XOS_SVC', 'SYNCHRONIZER', 'SWARM_SVC', 'SWARM_NODE']
 
-    item_list = ", ".join(common_event_list + onos_event_list + swarm_event_list + openstack_event_list + xos_event_list + ha_event_list)
+    item_list = ", ".join(common_event_list + onos_event_list + openstack_event_list + xos_event_list + ha_event_list)
 
     @staticmethod
     def get_event_list(sys_type):
         if sys_type == 'ONOS':
             event_list = DB.common_event_list + DB.onos_event_list
-        elif sys_type == 'SWARM':
-            event_list = DB.common_event_list + DB.swarm_event_list
         elif sys_type == 'OPENSTACK':
             event_list = DB.common_event_list + DB.openstack_event_list
         elif sys_type == 'XOS':
@@ -174,7 +171,6 @@ class DB(object):
                         db_log.write_log(" [XOS TABLE] Node data insert fail \n%s", sql_rt)
                         sys.exit(1)
 
-                elif type.upper() == 'SWARM':
                     # set swarm tbl
                     sql = 'INSERT INTO ' + cls.SWARM_TBL + ' VALUES (\'' + name + '\', \'none\', \'none\', \'none\')'
                     sql_rt = cls.sql_execute(sql)

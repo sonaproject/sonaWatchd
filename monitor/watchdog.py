@@ -165,7 +165,7 @@ def periodic(conn, pre_stat, db_log):
                     ha_ratio = global_ha_ratio
                     ha_ratio = alarm_event.process_event(conn, db_log, node_name, type, 'HA_RATIO', cur_info[node_name]['HA_RATIO'],
                                                          ha_ratio, global_ha_ratio_reason)
-                    LOG.info('[' + node_name + '][HA_SVC][' + ha_ratio + ']' + str(global_ha_ratio_reason))
+                    LOG.info('[' + node_name + '][HA_RATIO][' + ha_ratio + ']' + str(global_ha_ratio_reason))
 
                 # check xos (status/synchronizer)
                 elif type.upper() == 'XOS':
@@ -174,20 +174,27 @@ def periodic(conn, pre_stat, db_log):
                     xos_status = alarm_event.process_event(conn, db_log, node_name, type, 'XOS_SVC',
                                                       cur_info[node_name]['XOS_SVC'], xos_status, reason)
 
+                    LOG.info('[' + node_name + '][XOS_SVC][' + xos_status + ']' + str(reason))
+
                     synchronizer_status, reason = chk_xos.xos_sync_check(conn, db_log, node_name)
 
                     synchronizer_status = alarm_event.process_event(conn, db_log, node_name, type, 'SYNCHRONIZER',
                                                            cur_info[node_name]['SYNCHRONIZER'], synchronizer_status, reason)
-                # check swarm (app/node)
-                elif type.upper() == 'SWARM':
-                    swarm_svc, swarm_node = chk_swarm.swarm_check(conn, db_log, node_name, user_name, node_ip)
+
+                    LOG.info('[' + node_name + '][SYNCHRONIZER][' + synchronizer_status + ']' + str(reason))
+
+                    # check swarm (app/node)
+                    swarm_node, reason = chk_swarm.swarm_node_check(conn, db_log, node_name, user_name, node_ip)
+                    swarm_node = alarm_event.process_event(conn, db_log, node_name, type, 'SWARM_NODE',
+                    cur_info[node_name]['SWARM_NODE'], swarm_node, reason)
+
+                    LOG.info('[' + node_name + '][SWARM_NODE][' + swarm_node + ']' + str(reason))
 
                     # add reason
-                    reason = []
-                    swarm_svc = alarm_event.process_event(conn, db_log, node_name, type, 'SWARM_SVC',
-                                                          cur_info[node_name]['SWARM_SVC'], swarm_svc, reason)
-                    swarm_node = alarm_event.process_event(conn, db_log, node_name, type, 'SWARM_NODE',
-                                                           cur_info[node_name]['SWARM_NODE'], swarm_node, reason)
+                    #reason = []
+                    #swarm_svc = alarm_event.process_event(conn, db_log, node_name, type, 'SWARM_SVC',
+                                                          #cur_info[node_name]['SWARM_SVC'], swarm_svc, reason)
+
                 # check vrouter, gw_ratio
                 elif type.upper() == 'OPENSTACK':
                     port_stat_vxlan, pre_stat, reason = chk_openstack.get_node_traffic(conn, db_log, node_name, openstack_rx_dic,

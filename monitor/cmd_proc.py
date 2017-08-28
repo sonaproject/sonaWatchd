@@ -325,7 +325,7 @@ def proc_dis_swarm(node, param):
             if list == 'fail' or list == 'none':
                 res_result[nodename] = 'FAIL'
             else:
-                res_result[nodename] = list
+                res_result[nodename] = eval(list)
 
         return res_result
     except:
