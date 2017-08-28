@@ -29,7 +29,7 @@ def xos_status_check(conn, db_log, node_name):
         for xos_info in xos_array:
             backend_status = xos_info['backend_status']
 
-            LOG.info('backend_status = ' + backend_status)
+            LOG.info('xos_status_backend_status = ' + backend_status)
 
             tmp = str(backend_status).split('-')
 
@@ -80,14 +80,12 @@ def xos_sync_check(conn, db_log, node_name):
             LOG.error("Cmd Fail, cause => %s", error)
             return 'fail', None
 
-        LOG.info(output)
-
         sync_array = json.loads(output)
 
         for xos_info in sync_array:
             backend_status = xos_info['backend_status']
 
-            LOG.info('backend_status = ' + backend_status)
+            LOG.info('xos_sync_backend_status = ' + backend_status)
 
             tmp = str(backend_status).split('-')
 

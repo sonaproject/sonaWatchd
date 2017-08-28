@@ -222,17 +222,15 @@ class SCREEN():
     def display_status(cls):
         onos_list = ['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK', 'ONOS_APP', 'ONOS_REST', 'ONOS_OPENFLOW',
                      'ONOS_CLUSTER', 'OPENSTACK_NODE', 'TRAFFIC_CONTROLLER']
-        swarm_list = ['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK', 'SWARM_SVC', 'SWARM_NODE']
         openstack_list = ['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK', 'GATEWAY', 'TRAFFIC_GW', 'PORT_STAT_VXLAN',
                           'TRAFFIC_INTERNAL']
-        xos_list = ['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK', 'XOS_STATUS']
+        xos_list = ['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK', 'XOS_SVC', 'SYNCHRONIZER', 'SWARM_SVC', 'SWARM_NODE']
         ha_list = ['TYPE', 'IP', 'NETWORK', 'CPU', 'MEMORY', 'DISK', 'HA_SVC', 'HA_RATIO']
 
         try:
             print ''
             cls.draw_grid('ONOS', onos_list)
             cls.draw_grid('HA', ha_list)
-            cls.draw_grid('SWARM', swarm_list)
             cls.draw_grid('OPENSTACK', openstack_list)
             cls.draw_grid('XOS', xos_list)
         except:

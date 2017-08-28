@@ -685,6 +685,104 @@ class CLI():
 
                         print ''
 
+                elif command == 'synchronizer':
+                    print('')
+                    for sys in sorted_list:
+                        print '[' + sys + ']'
+
+                        sys_ret = result[sys]
+                        if str(sys_ret).upper().endswith('FAIL'):
+                            sys_ret = 'fail'
+                            print sys_ret
+                        else:
+                            data = []
+
+                            for row in sys_ret:
+                                line = []
+
+                                line.append(row['name'])
+                                line.append(row['status'])
+                                line.append(row['description'])
+                                line.append(row['last_run_interval'])
+
+                                data.append(line)
+
+                            header = []
+
+                            col_name = dict()
+                            col_name['title'] = 'Name'
+                            col_name['size'] = '20'
+
+                            col_status = dict()
+                            col_status['title'] = 'Status'
+                            col_status['size'] = '8'
+
+                            col_desc = dict()
+                            col_desc['title'] = 'Description'
+                            col_desc['size'] = '25'
+
+                            col_interval = dict()
+                            col_interval['title'] = 'Last Run'
+                            col_interval['size'] = '10'
+
+                            header.append(col_name)
+                            header.append(col_status)
+                            header.append(col_desc)
+                            header.append(col_interval)
+
+                            cls.draw_grid(header, data)
+
+                        print ''
+
+                elif command == 'swarm-svc':
+                    if param == 'node':
+                        print('')
+                        for sys in sorted_list:
+                            print '[' + sys + ']'
+
+                            sys_ret = result[sys]
+                            if str(sys_ret).upper().endswith('FAIL'):
+                                sys_ret = 'fail'
+                                print sys_ret
+                            else:
+                                data = []
+
+                                for row in sys_ret:
+                                    line = []
+                                    line.append(row['hostname'])
+                                    line.append(row['status'])
+                                    line.append(row['availability'])
+                                    line.append(row['manager'])
+
+                                    data.append(line)
+
+                                header = []
+
+                                col_name = dict()
+                                col_name['title'] = 'Hostname'
+                                col_name['size'] = '10'
+
+                                col_status = dict()
+                                col_status['title'] = 'Status'
+                                col_status['size'] = '8'
+
+                                col_avail = dict()
+                                col_avail['title'] = 'Availability'
+                                col_avail['size'] = '13'
+
+                                col_manager = dict()
+                                col_manager['title'] = 'Manager'
+                                col_manager['size'] = '8'
+
+                                header.append(col_name)
+                                header.append(col_status)
+                                header.append(col_avail)
+                                header.append(col_manager)
+
+                                cls.draw_grid(header, data)
+
+                            print ''
+
                 else:
                     print('')
                     for sys in sorted_list:
