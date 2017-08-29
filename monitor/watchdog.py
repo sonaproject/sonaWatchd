@@ -184,11 +184,20 @@ def periodic(conn, pre_stat, db_log):
                     LOG.info('[' + node_name + '][SYNCHRONIZER][' + synchronizer_status + ']' + str(reason))
 
                     # check swarm (app/node)
-                    swarm_node, reason = chk_swarm.swarm_node_check(conn, db_log, node_name, user_name, node_ip)
+                    swarm_manager = chk_swarm.find_swarm_manager()
+
+                    swarm_node, reason = chk_swarm.swarm_node_check(conn, db_log, node_name, user_name, node_ip, swarm_manager)
                     swarm_node = alarm_event.process_event(conn, db_log, node_name, type, 'SWARM_NODE',
                     cur_info[node_name]['SWARM_NODE'], swarm_node, reason)
 
                     LOG.info('[' + node_name + '][SWARM_NODE][' + swarm_node + ']' + str(reason))
+
+                    swarm_svc, reason = chk_swarm.swarm_service_check(conn, db_log, node_name, user_name, node_ip,
+                                                                    swarm_manager)
+                    swarm_svc = alarm_event.process_event(conn, db_log, node_name, type, 'SWARM_SVC',
+                                                           cur_info[node_name]['SWARM_SVC'], swarm_svc, reason)
+
+                    LOG.info('[' + node_name + '][SWARM_SVC][' + swarm_svc + ']' + str(reason))
 
                     # add reason
                     #reason = []
