@@ -118,10 +118,8 @@ def swarm_check(conn, db_log, node_name, user_name, node_ip):
     return ret_app, ret_node
 
 
-def swarm_node_check(conn, db_log, node_name, username, node_ip):
-    node_status = 'ok'
-    node_list = []
-    fail_reason = []
+def find_swarm_manager():
+    hostname = ''
 
     try:
         url = CONF.xos()['xos_rest_server']
@@ -133,7 +131,7 @@ def swarm_node_check(conn, db_log, node_name, username, node_ip):
 
         if result.returncode != 0:
             LOG.error("Cmd Fail, cause => %s", error)
-            return 'fail', None
+            return ''
 
         controller_array = json.loads(output)
 
@@ -145,66 +143,220 @@ def swarm_node_check(conn, db_log, node_name, username, node_ip):
             tmp = str(auth_url).split(':')
 
             hostname = tmp[0]
+            break
+    except:
+        LOG.exception()
 
-            cmd = 'ssh root@' + hostname + ' \"sudo docker node ls\"'
-            node_rt = SshCommand.ssh_exec(username, node_ip, cmd)
+    return hostname
 
-            if node_rt is not None:
-                try:
-                    leader_flag = False
-                    for line in node_rt.splitlines():
-                        line = line.decode('utf-8')
 
-                        line = " ".join(line.replace('*', '').split())
-                        tmp = line.split(' ')
+def get_service_list():
+    service_list = []
 
-                        if line.startswith('ID'):
-                            continue
+    try:
+        url = CONF.xos()['xos_rest_server']
+        account = CONF.xos()['xos_rest_account']
 
-                        if 'Leader' in line:
-                            node_json = {'hostname': tmp[1], 'status': tmp[2], 'availability': tmp[3],
-                                         'manager': tmp[4]}
-                            leader_flag = True
+        cmd = 'curl -H "Accept: application/json; indent=4" -u ' + account + ' -X GET ' + url + '/api/core/instances/'
+        result = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
+        output, error = result.communicate()
 
-                            if not ('Ready' in line and 'Active' in line):
-                                node_status = 'nok'
-                                fail_reason.append(tmp[1] + ' node is not ready.')
-                        else:
-                            node_json = {'hostname': tmp[1], 'status': tmp[2], 'availability': tmp[3],
-                                         'manager': ''}
+        if result.returncode != 0:
+            LOG.error("Cmd Fail, cause => %s", error)
+            return ''
 
-                        if 'Down' in line:
-                            node_status = 'nok'
-                            fail_reason.append(tmp[1] + ' node is down.')
+        instance_array = json.loads(output)
 
-                        node_list.append(node_json)
+        for instance_info in instance_array:
+            name = instance_info['instance_name']
 
-                    if not leader_flag:
-                        node_status = 'nok'
-                        fail_reason.append('swarm leader node does not exist.')
-                except:
-                    LOG.exception()
-                    node_status = 'nok'
+            LOG.info('swarm_instance_name = ' + name)
 
-            else:
-                LOG.error("\'%s\' Swarm Node Check Error", node_ip)
-                node_status = 'fail'
+            service_list.append(name)
 
+    except:
+        LOG.exception()
+
+    return service_list
+
+
+def swarm_node_check(conn, db_log, node_name, username, node_ip, swarm_manager):
+    node_status = 'ok'
+    node_list = []
+    fail_reason = []
+
+    try:
+        cmd = 'ssh root@' + swarm_manager + ' \"sudo docker node ls\"'
+        node_rt = SshCommand.ssh_exec(username, node_ip, cmd)
+
+        if node_rt is not None:
             try:
-                sql = 'UPDATE ' + DB.SWARM_TBL + \
-                      ' SET node = \"' + str(node_list) + '\"' + \
-                      ' WHERE nodename = \'' + node_name + '\''
-                db_log.write_log('----- UPDATE SWARM NODE INFO -----\n' + sql)
+                leader_flag = False
+                for line in node_rt.splitlines():
+                    line = line.decode('utf-8')
 
-                if DB.sql_execute(sql, conn) != 'SUCCESS':
-                    db_log.write_log('[FAIL] SWARM NODE DB Update Fail.')
+                    line = " ".join(line.replace('*', '').split())
+                    tmp = line.split(' ')
+
+                    if line.startswith('ID'):
+                        continue
+
+                    if 'Leader' in line:
+                        node_json = {'hostname': tmp[1], 'status': tmp[2], 'availability': tmp[3],
+                                     'manager': tmp[4]}
+                        leader_flag = True
+
+                        if not ('Ready' in line and 'Active' in line):
+                            node_status = 'nok'
+                            fail_reason.append(tmp[1] + ' node is not ready.')
+                    else:
+                        node_json = {'hostname': tmp[1], 'status': tmp[2], 'availability': tmp[3],
+                                     'manager': ''}
+
+                    if 'Down' in line:
+                        node_status = 'nok'
+                        fail_reason.append(tmp[1] + ' node is down.')
+
+                    node_list.append(node_json)
+
+                if not leader_flag:
+                    node_status = 'nok'
+                    fail_reason.append('swarm leader node does not exist.')
             except:
                 LOG.exception()
+                node_status = 'nok'
 
-            break
+        else:
+            LOG.error("\'%s\' Swarm Node Check Error", node_ip)
+            node_status = 'fail'
+
+        try:
+            sql = 'UPDATE ' + DB.SWARM_TBL + \
+                  ' SET node = \"' + str(node_list) + '\"' + \
+                  ' WHERE nodename = \'' + node_name + '\''
+            db_log.write_log('----- UPDATE SWARM NODE INFO -----\n' + sql)
+
+            if DB.sql_execute(sql, conn) != 'SUCCESS':
+                db_log.write_log('[FAIL] SWARM NODE DB Update Fail.')
+        except:
+            LOG.exception()
 
     except:
         LOG.exception()
         node_status = 'fail'
 
     return node_status, fail_reason
+
+
+def swarm_service_check(conn, db_log, node_name, username, node_ip, swarm_manager):
+    service_status = 'ok'
+    service_list = []
+    ps_list = []
+    fail_reason = []
+
+    try:
+        cmd = 'ssh root@' + swarm_manager + ' \"sudo docker service ls\"'
+        service_rt = SshCommand.ssh_exec(username, node_ip, cmd)
+
+        instance_list = get_service_list()
+
+        if service_rt is not None:
+            try:
+                for svc in instance_list:
+                    find_flag = False
+                    for line in service_rt.splitlines():
+                        line = line.decode('utf-8')
+
+                        if line.startswith('ID'):
+                            continue
+
+                        id, name, mode, rep, img = line.split()
+
+                        if svc == name:
+                            find_flag = True
+                            rep_tmp = rep.split('/')
+
+                            if not (rep_tmp[0] == rep_tmp[1]):
+                                service_status = 'nok'
+                                svc_json = {'name': name, 'mode': mode, 'replicas': rep, 'image': img,
+                                            'status': 'nok', 'monitor_item': True}
+                                fail_reason.append(svc_json)
+                            else:
+                                svc_json = {'name': name, 'mode': mode, 'replicas': rep, 'image': img,
+                                            'status': 'ok', 'monitor_item': True}
+
+                            service_list.append(svc_json)
+
+                    if not find_flag:
+                        service_status = 'nok'
+                        fail_reason.append('swarm ' + svc + ' service does not exist.')
+                        break
+
+                for line in service_rt.splitlines():
+                    line = line.decode('utf-8')
+
+                    if line.startswith('ID'):
+                        continue
+
+                    id, name, mode, rep, img = line.split()
+
+                    if name in instance_list:
+                        continue
+
+                    rep_tmp = rep.split('/')
+
+                    if not (rep_tmp[0] == rep_tmp[1]):
+                        svc_json = {'name': name, 'mode': mode, 'replicas': rep, 'image': img,
+                                    'status': 'nok', 'monitor_item': False}
+                    else:
+                        svc_json = {'name': name, 'mode': mode, 'replicas': rep, 'image': img,
+                                    'status': 'ok', 'monitor_item': False}
+
+                    service_list.append(svc_json)
+
+            except:
+                LOG.exception()
+                service_status = 'fail'
+
+        else:
+            LOG.error("\'%s\' Swarm Service Check Error", node_ip)
+            service_status = 'fail'
+
+        for app in instance_list:
+            cmd = 'ssh root@' + swarm_manager + ' \"sudo docker service ps ' + app + '\"'
+            ps_rt = SshCommand.ssh_exec(username, node_ip, cmd)
+
+            if ps_rt is not None:
+                for line in ps_rt.splitlines():
+                    line = line.decode('utf-8')
+
+                    if line.startswith('ID'):
+                        continue
+
+                    line = " ".join(line.split())
+                    tmp = line.split(' ')
+
+                    ps_json = {'name': tmp[1], 'image': tmp[2], 'node': tmp[3], 'desired_state': tmp[4],
+                                'current_state': tmp[5]}
+                    ps_list.append(ps_json)
+
+            else:
+                LOG.error("\'%s\' Swarm PS Check Error", node_ip)
+
+        try:
+            sql = 'UPDATE ' + DB.SWARM_TBL + \
+                  ' SET service = \"' + str(service_list) + '\",' + \
+                  ' ps = \"' + str(ps_list) + '\"' + \
+                  ' WHERE nodename = \'' + node_name + '\''
+            db_log.write_log('----- UPDATE SWARM SERVICE/PS INFO -----\n' + sql)
+
+            if DB.sql_execute(sql, conn) != 'SUCCESS':
+                db_log.write_log('[FAIL] SWARM SERVICE/PS DB Update Fail.')
+        except:
+            LOG.exception()
+
+    except:
+        LOG.exception()
+        service_status = 'fail'
+
+    return service_status, fail_reason
