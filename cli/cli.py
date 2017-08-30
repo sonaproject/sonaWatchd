@@ -783,6 +783,120 @@ class CLI():
 
                             print ''
 
+                    elif param == 'service':
+                        print('')
+                        for sys in sorted_list:
+                            print '[' + sys + ']'
+
+                            sys_ret = result[sys]
+                            if str(sys_ret).upper().endswith('FAIL'):
+                                sys_ret = 'fail'
+                                print sys_ret
+                            else:
+                                data = []
+
+                                for row in sys_ret:
+                                    line = []
+                                    line.append(row['name'])
+                                    line.append(row['status'])
+                                    line.append(row['mode'])
+                                    line.append(row['replicas'])
+                                    line.append(row['image'])
+                                    line.append(row['monitor_item'])
+
+                                    data.append(line)
+
+                                header = []
+
+                                col_name = dict()
+                                col_name['title'] = 'Name'
+                                col_name['size'] = '25'
+
+                                col_status = dict()
+                                col_status['title'] = 'Status'
+                                col_status['size'] = '8'
+
+                                col_mode = dict()
+                                col_mode['title'] = 'Mode'
+                                col_mode['size'] = '12'
+
+                                col_rep = dict()
+                                col_rep['title'] = 'Replicas'
+                                col_rep['size'] = '8'
+
+                                col_image = dict()
+                                col_image['title'] = 'Image'
+                                col_image['size'] = '30'
+
+                                col_monitor = dict()
+                                col_monitor['title'] = 'Monitor Item'
+                                col_monitor['size'] = '12'
+
+                                header.append(col_name)
+                                header.append(col_status)
+                                header.append(col_mode)
+                                header.append(col_rep)
+                                header.append(col_image)
+                                header.append(col_monitor)
+
+                                cls.draw_grid(header, data)
+
+                            print ''
+
+                    elif param == 'ps':
+                        print('')
+                        for sys in sorted_list:
+                            print '[' + sys + ']'
+
+                            sys_ret = result[sys]
+                            if str(sys_ret).upper().endswith('FAIL'):
+                                sys_ret = 'fail'
+                                print sys_ret
+                            else:
+                                data = []
+
+                                for row in sys_ret:
+                                    line = []
+                                    line.append(row['name'])
+                                    line.append(row['desired_state'])
+                                    line.append(row['current_state'])
+                                    line.append(row['node'])
+                                    line.append(row['image'])
+
+                                    data.append(line)
+
+                                header = []
+
+                                col_name = dict()
+                                col_name['title'] = 'Name'
+                                col_name['size'] = '25'
+
+                                col_status = dict()
+                                col_status['title'] = 'Desired State'
+                                col_status['size'] = '14'
+
+                                col_status2 = dict()
+                                col_status2['title'] = 'Current State'
+                                col_status2['size'] = '14'
+
+                                col_node = dict()
+                                col_node['title'] = 'Node'
+                                col_node['size'] = '10'
+
+                                col_image = dict()
+                                col_image['title'] = 'Image'
+                                col_image['size'] = '30'
+
+                                header.append(col_name)
+                                header.append(col_status)
+                                header.append(col_status2)
+                                header.append(col_node)
+                                header.append(col_image)
+
+                                cls.draw_grid(header, data)
+
+                            print ''
+
                 else:
                     print('')
                     for sys in sorted_list:
