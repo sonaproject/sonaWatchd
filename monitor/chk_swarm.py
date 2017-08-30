@@ -333,6 +333,8 @@ def swarm_service_check(conn, db_log, node_name, username, node_ip, swarm_manage
                     if line.startswith('ID'):
                         continue
 
+                    line = line.replace(' \_ ', '')
+
                     line = " ".join(line.split())
                     tmp = line.split(' ')
 
