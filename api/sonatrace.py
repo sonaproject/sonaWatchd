@@ -27,6 +27,7 @@ class Conditions:
         self.cond_dict['tp_src'] = ''
         self.cond_dict['tp_dst'] = ''
         self.cond_dict['tun_id'] = ''
+        self.cond_dict['to_gateway'] = False
 
         self.cur_target_ip = ''
         self.cur_target_hostname = ''
@@ -37,11 +38,15 @@ class Topology:
     ONOS_HOST = 'hosts'
     ONOS_FLOATINGIP = 'openstack-floatingips'
     ONOS_OPENSTACKNODES = 'openstack-nodes'
+    ONOS_OPENSTACKROUTERS = 'openstack-routers'
 
     def __init__(self, openstack_only = False):
         if not openstack_only:
             self.subnets = self.get_subnets(self.get_onos_ip())
             self.floatingips = self.get_floatingips(self.get_onos_ip())
+            self.routers = self.get_routers(self.get_onos_ip())
+
+            LOG.info('router = ' + str(self.routers))
 
         self.openstack = self.get_openstacknodes(self.get_onos_ip())
 
@@ -84,6 +89,11 @@ class Topology:
         subnets = re.findall(r'[0-9]+(?:\.[0-9]+){3}(?:/\d\d)', onos_ssh_result)
         return subnets
 
+    def get_routers(self, onos_ip):
+        onos_ssh_result = SshCommand.onos_ssh_exec(onos_ip, self.ONOS_OPENSTACKROUTERS)
+        routers = re.findall(r'[0-9]+(?:\.[0-9]+){3}', onos_ssh_result)
+        return routers
+
     def get_floatingips(self, onos_ip):
         onos_ssh_result = SshCommand.onos_ssh_exec(onos_ip, self.ONOS_FLOATINGIP)
         floatingips = re.findall(r'[0-9]+(?:\.[0-9]+){3}(?: +)(?:[0-9]+(?:\.[0-9]+){3})', onos_ssh_result)
@@ -123,7 +133,7 @@ def flow_trace(condition_json):
         reverse_condition.cond_dict['nw_proto'] = trace_condition.cond_dict['nw_proto']
 
         reverse_condition.cond_dict['dl_dst'] = get_dl_dst(sona_topology, reverse_condition.cond_dict['nw_src'],
-                                                           reverse_condition.cond_dict['nw_dst'])
+                                                           reverse_condition.cond_dict['nw_dst'], trace_condition.cond_dict['to_gateway'])
 
         if find_target(reverse_condition, sona_topology) == False:
             return False, trace_result, ''
@@ -157,9 +167,10 @@ def find_target(trace_condition, sona_topology):
             return False
     # source ip = external
     else:
-        for net in sona_topology.subnets:
-            if IPAddress(trace_condition.cond_dict['nw_src']) in IPNetwork(net):
-                return False
+        if not trace_condition.cond_dict['nw_src'] in sona_topology.routers:
+            for net in sona_topology.subnets:
+                if IPAddress(trace_condition.cond_dict['nw_src']) in IPNetwork(net):
+                    return False
 
         if trace_condition.cond_dict['nw_dst'] in sona_topology.floatingips.values():
             LOG.info('floating ip : ' + str(sona_topology.floatingips))
@@ -205,19 +216,38 @@ def set_condition(sona_topology, cond_json):
             condition_obj.cond_dict['tp_dst'] = match_json[key]
         elif key == 'tun_id':
             condition_obj.cond_dict['tun_id'] = match_json[key]
+        elif key == 'to_gateway':
+            condition_obj.cond_dict['to_gateway'] = match_json[key]
+
+    if condition_obj.cond_dict['to_gateway']:
+        for net in sona_topology.subnets:
+            if IPAddress(condition_obj.cond_dict['nw_src']) in IPNetwork(net):
+                for gw_ip in sona_topology.routers:
+                    if IPAddress(gw_ip) in IPNetwork(net):
+                        condition_obj.cond_dict['nw_dst'] = gw_ip
+                        break
+                break
 
     if condition_obj.cond_dict['dl_dst'] == '':
-        condition_obj.cond_dict['dl_dst'] = get_dl_dst(sona_topology, condition_obj.cond_dict['nw_src'], condition_obj.cond_dict['nw_dst'])
+        condition_obj.cond_dict['dl_dst'] = get_dl_dst(sona_topology, condition_obj.cond_dict['nw_src'], condition_obj.cond_dict['nw_dst'], condition_obj.cond_dict['to_gateway'])
 
     return condition_obj
 
 
-def get_dl_dst(sona_topology, src_ip, dst_ip):
+def get_dl_dst(sona_topology, src_ip, dst_ip, is_gateway):
+    if is_gateway:
+        return 'fe:00:00:00:00:02'
+
     is_same_net = False
+
     for net in sona_topology.subnets:
         if IPAddress(src_ip) in IPNetwork(net):
             if IPAddress(dst_ip) in IPNetwork(net):
                 is_same_net = True
+
+    if is_same_net:
+        if src_ip in sona_topology.routers or dst_ip in sona_topology.routers:
+            return 'fe:00:00:00:00:02'
 
     if not is_same_net:
         return 'fe:00:00:00:00:02'
@@ -228,6 +258,10 @@ def get_dl_dst(sona_topology, src_ip, dst_ip):
 def make_command(trace_conditions):
     cond_list = ''
     for key in dict(trace_conditions.cond_dict).keys():
+
+        if key == 'to_gateway':
+            continue
+
         value = trace_conditions.cond_dict[key]
 
         if value != '':
