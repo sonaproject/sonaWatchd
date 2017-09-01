@@ -331,6 +331,7 @@ def process_trace(output, sona_topology, trace_conditions):
                     rule_dict['selector'] = selector_dict
 
             elif line.startswith('OpenFlow actions='):
+                is_success = False
                 action_dict = dict()
 
                 action_list = line.split('=')[1].split(',')
@@ -376,9 +377,12 @@ def process_trace(output, sona_topology, trace_conditions):
                 if 'tun_dst' in line or 'group' in line:
                     retry_flag = True
 
-                if 'output' in line or 'CONTROLLER' in line:
+                if 'CONTROLLER' in line:
                     is_success = True
                     break
+
+                if 'output' in line:
+                    is_success = True
 
         return result_flow, retry_flag, is_success
     except:
