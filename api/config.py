@@ -148,6 +148,17 @@ class ConfReader:
             if self.config.has_option('OPENSTACK', 'alarm_off_list'):
                 value['alarm_off_list'] = self.__list_opt(self.conf_map['OPENSTACK']['alarm_off_list'])
 
+            value['version'] = str(self.conf_map['OPENSTACK']['version'])
+            value['username'] = str(self.conf_map['OPENSTACK']['username'])
+            value['api_key'] = str(self.conf_map['OPENSTACK']['api_key'])
+            value['project_id'] = str(self.conf_map['OPENSTACK']['project_id'])
+            value['auth_url'] = str(self.conf_map['OPENSTACK']['auth_url'])
+
+            value['image'] = str(self.conf_map['OPENSTACK']['image'])
+            value['flavor'] = str(self.conf_map['OPENSTACK']['flavor'])
+            value['zone'] = str(self.conf_map['OPENSTACK']['zone'])
+            value['security_groups'] = self.__list_opt(self.conf_map['OPENSTACK']['security_groups'])
+
             return value
         except KeyError as KE:
             return dict({'fail': KE})

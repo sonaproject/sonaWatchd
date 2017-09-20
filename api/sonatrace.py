@@ -6,7 +6,6 @@ import re
 import time
 import pexpect
 import threading
-import base64
 from netaddr import IPNetwork, IPAddress
 
 from sona_log import LOG
@@ -390,7 +389,7 @@ def process_trace(output, sona_topology, trace_conditions):
         return 'parsing error\n' + output
 
 
-def traffic_test(condition_json):
+def traffic_test_old(condition_json):
     seconds = 0
     trace_result = []
     sona_topology = Topology(True)
@@ -541,3 +540,7 @@ def run_test(sona_topology, test_json, timeout_arr, index, total_timeout):
 
     result = {'command_result': str_output.replace('\r\n', '\n'), 'node': node, 'instance_id': ins_id}
     timeout_arr[index] = result
+
+
+
+
