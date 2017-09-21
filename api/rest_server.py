@@ -17,6 +17,7 @@ from api.config import CONF
 from api.sona_log import LOG
 
 import sonatrace as trace
+import sona_traffic_test as traffic_test
 
 class RestHandler(BaseHTTPRequestHandler):
     # write buffer; 0: unbuffered, -1: buffering; rf) default rbufsize(rfile) is -1.
@@ -181,7 +182,7 @@ class RestHandler(BaseHTTPRequestHandler):
                                     return
 
                         # process traffic test, send noti
-                        process_thread = threading.Thread(target=send_response_traffic_test,
+                        process_thread = threading.Thread(target=send_response_traffic_test_old,
                                                           args=(trace_condition_json,
                                                                  str(self.headers.getheader("Authorization"))))
                         process_thread.daemon = False
@@ -189,6 +190,29 @@ class RestHandler(BaseHTTPRequestHandler):
 
                         self.do_HEAD(200)
                         self.wfile.write(str({"result": "SUCCESS"}))
+
+            elif self.path.startswith('/traffic_test_request'):
+                trace_mandatory_field = ['command', 'transaction_id', 'app_rest_url']
+
+                trace_condition_json = self.get_content()
+                if not trace_condition_json:
+                    return
+                else:
+                    if not all(x in dict(trace_condition_json).keys() for x in trace_mandatory_field):
+                        self.do_HEAD(400)
+                        self.wfile.write(str({"result": "FAIL", "fail_reason": "Not Exist Mandatory Attribute\n"}))
+                        return
+                    else:
+                        # process traffic test, send noti
+                        process_thread = threading.Thread(target=send_response_traffic_test_new,
+                                                          args=(trace_condition_json,
+                                                                str(self.headers.getheader("Authorization"))))
+                        process_thread.daemon = False
+                        process_thread.start()
+
+                        self.do_HEAD(200)
+                        self.wfile.write(str({"result": "SUCCESS"}))
+
 
             # noti test
             elif self.path.startswith('/test'):
@@ -295,11 +319,75 @@ def send_response_trace_test(cond, auth):
         LOG.exception()
 
 
-def send_response_traffic_test(cond, auth):
+def send_response_traffic_test_new(cond, auth):
     trace_result_data = {}
 
     try:
-        is_success, result = trace.traffic_test(cond)
+        server_options = None
+        if dict(cond).has_key('server_options'):
+            server_options = cond['server_options']
+
+        client_options = None
+        if dict(cond).has_key('client_options'):
+            client_options = cond['client_options']
+
+        # 1. creeate instance
+        server_info, client_info = traffic_test.create_instance(server_options, client_options)
+
+        if server_info == None or client_info == None:
+            trace_result_data['result'] = 'FAIL'
+            trace_result_data['fail_reason'] = 'Fail to create instance.'
+        else:
+            # 2. make command
+            command = cond['command']
+            traffic_test.make_command(server_options, client_options, command, server_info, client_info)
+
+            is_success, result = traffic_test.traffic_test_new(server_info, client_info, cond)
+
+            if is_success:
+                trace_result_data['result'] = 'SUCCESS'
+            else:
+                trace_result_data['result'] = 'FAIL'
+                # trace_result_data['fail_reason'] = 'The source ip does not exist.'
+
+            if result != None:
+                trace_result_data['traffic_test_result'] = result
+
+            trace_result_data['transaction_id'] = cond['transaction_id']
+            try:
+                LOG.info('%s', json.dumps(trace_result_data, sort_keys=True, indent=4))
+            except:
+                pass
+
+            req_body_json = json.dumps(trace_result_data)
+
+            try:
+                url = str(cond['app_rest_url'])
+                #requests.post(str(url), headers=header, data=req_body_json, timeout=2)
+
+                if str(auth).startswith('Basic '):
+                    auth = str(auth).split(' ')[1]
+
+                cmd = 'curl -X POST -u \'' + CONF.onos()['rest_auth'] + '\' -H \'Content-Type: application/json\' -d \'' + str(req_body_json) + '\' ' + url
+                LOG.error('%s', 'curl = ' + cmd)
+                result = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
+                result.communicate()
+
+                if result.returncode != 0:
+                    # Push noti does not respond
+                    pass
+            except:
+                LOG.exception()
+                pass
+    except:
+        LOG.exception()
+
+
+def send_response_traffic_test_old(cond, auth):
+    trace_result_data = {}
+
+    try:
+        is_success, result = trace.traffic_test_old(cond)
 
         if is_success:
             trace_result_data['result'] = 'SUCCESS'
