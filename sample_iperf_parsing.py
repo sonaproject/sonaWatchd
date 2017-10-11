@@ -4,7 +4,6 @@ import time
 import pexpect
 import threading
 
-from subprocess import Popen, PIPE
 from api.config import CONF
 from api.sona_log import LOG
 

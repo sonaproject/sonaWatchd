@@ -118,6 +118,8 @@ def swarm_check(conn, db_log, node_name, user_name, node_ip):
     return ret_app, ret_node
 
 
+# TODO
+# CHECK ACTIVE SWARM MANAGER
 def find_swarm_manager():
     hostname = ''
 
@@ -137,6 +139,16 @@ def find_swarm_manager():
 
         for controller_info in controller_array:
             auth_url = controller_info['auth_url']
+
+            '''
+            backend_status = controller_info['backend_status']
+
+            LOG.info('xos_sync_backend_status = ' + backend_status)
+
+            tmp = str(backend_status).split('-')
+
+            if tmp[0].strip() == '0':
+            '''
 
             LOG.info('swarm_manager_auth_url = ' + auth_url)
 
