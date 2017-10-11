@@ -1,3 +1,4 @@
+import re
 import time
 import random
 import pexpect
@@ -18,22 +19,24 @@ class VM:
         self.type = ''
         self.is_reverse = False
         self.floating_ip = ''
-        self.id = 'root'
-        self.passwd = 'root'
+        self.id = ''
+        self.local_ip = ''
+        self.vm_id = 'root'
+        self.vm_passwd = 'root'
 
     def set_reverse(self, cli_command):
         if '-r' in cli_command or '-d' in cli_command:
             self.is_reverse = True
 
 def create_instance(server_options, client_options):
-    server_id = make_vm(server_options)
-    client_id = make_vm(client_options)
+    client_id = make_vm(client_options, 'client')
+    server_id = make_vm(server_options, 'server')
 
     return server_id, client_id
 
 def make_command(server_options, client_options, command, server_info, client_info):
     svr_cmd = command + ' -s ' + convert_command(server_options)
-    cli_cmd = command + ' -c ' + convert_command(client_options)
+    cli_cmd = command + ' -c ' + server_info.local_ip + ' ' + convert_command(client_options)
 
     server_info.command = svr_cmd
     client_info.command = cli_cmd
@@ -90,7 +93,7 @@ def run_test(vm_info, result_arr, index, total_timeout):
     try:
         ssh_options = '-o StrictHostKeyChecking=no ' \
                       '-o ConnectTimeout=' + str(CONF.ssh_conn()['ssh_req_timeout'])
-        cmd = 'ssh %s %s@%s' % (ssh_options, vm_info.id, vm_info.ip)
+        cmd = 'ssh %s %s@%s' % (ssh_options, vm_info.vm_id, vm_info.floating_ip)
 
         try:
             LOG.info('ssh_pexpect cmd = ' + cmd)
@@ -100,7 +103,7 @@ def run_test(vm_info, result_arr, index, total_timeout):
                 rt_pw = ssh_conn.expect([pexpect.TIMEOUT, '[P|p]assword:', pexpect.EOF], timeout=CONF.ssh_conn()['ssh_req_timeout'])
 
                 if rt_pw == 1:
-                    ssh_conn.sendline(vm_info.passwd)
+                    ssh_conn.sendline(vm_info.vm_passwd)
                     login_rt = ssh_conn.expect([pexpect.TIMEOUT, 'Login incorrect', '~# ', 'onos> ', '\$ ', '\# ', ':~$ '],
                                           timeout=CONF.ssh_conn()['ssh_req_timeout'])
 
@@ -109,17 +112,23 @@ def run_test(vm_info, result_arr, index, total_timeout):
                     else:
                         ssh_conn.sendline(vm_info.command)
                         if vm_info.type == 'client':
-                            command_rt = ssh_conn.expect([pexpect.TIMEOUT, '~# ', 'onos> ', '\$ ', '\# ', ':~$ '], timeout=total_timeout)
+                            command_rt = ssh_conn.expect(['connect failed: Connection refused', pexpect.TIMEOUT, '~# ', 'onos> ', '\$ ', '\# ', ':~$ '], timeout=total_timeout)
                             if command_rt == 0:
+                                LOG.info('connection refused = [%s]', ssh_conn.before)
+                                ssh_conn.sendline('exit')
+                                ssh_conn.close()
+                                str_output = 'connection refused'
+                            elif command_rt == 1:
                                 str_output = 'timeout'
                                 ssh_conn.sendline('exit')
                                 ssh_conn.close()
-                                LOG.info(vm_info.ip + ' ' + str_output)
+                                LOG.info(vm_info.local_ip + ' ' + str_output)
                             else:
+                                LOG.info('go parser = [%s]', ssh_conn.before)
                                 str_output = iperfParser(ssh_conn.before)
                                 ssh_conn.sendline('exit')
                                 ssh_conn.close()
-                                LOG.info(vm_info.ip + ' ' + str_output)
+                                LOG.info(vm_info.local_ip + ' ' + str_output)
                         else:
                             command_rt = ssh_conn.expect([pexpect.TIMEOUT, '/sec'],
                                                   timeout=total_timeout)
@@ -144,6 +153,7 @@ def run_test(vm_info, result_arr, index, total_timeout):
                 else:
                     str_output = 'auth fail'
             except:
+                LOG.exception()
                 str_output = 'exception'
                 ssh_conn.sendline('exit')
                 ssh_conn.close()
@@ -191,6 +201,11 @@ def convert_command(options):
     if options is not None:
         if dict(options).has_key('port'):
             str_option = str_option + '-p ' + options['port'] + ' '
+        else:
+            if dict(options).has_key('udp'):
+                str_option = str_option + '-p 5230'
+            else:
+                str_option = str_option + '-p 5220'
 
         if dict(options).has_key('udp'):
             if options['udp'] == 'UDP':
@@ -217,7 +232,7 @@ def convert_command(options):
     return str_option
 
 
-def make_vm(options):
+def make_vm(options, vm_type = 'client'):
     vm_info = VM()
     target_networks = []
 
@@ -243,6 +258,7 @@ def make_vm(options):
     vm_name = 'test' + str(random.randrange(10000, 20000))
 
     vm_info.name = vm_name
+    vm_info.type = vm_type
 
     if not options is None:
         if dict(options).has_key('compute_node_dpid'):
@@ -256,7 +272,6 @@ def make_vm(options):
     for net in target_networks:
         network_list.append({'net-id': nova.networks.find(label=net).id})
 
-    image = nova.images.find(name=image)
     flavor = nova.flavors.find(name=flavor)
 
     # create instance
@@ -275,10 +290,26 @@ def make_vm(options):
                                        security_groups=securitygroups)
 
     if vm_name in str(instance_rst):
-        instance_id = nova.servers.find(name=vm_name).id
-        vm_info.id = instance_id
+        instance = nova.servers.find(name=vm_name)
+        vm_info.id = instance.id
+
+        status = ''
+        count = 0
+        while not status == 'ACTIVE':
+            instance_for_ip = nova.servers.list(search_opts={'name': vm_name})
+            instance_for_ip = instance_for_ip[0].__dict__
+            status = instance_for_ip['status']
+            time.sleep(1)
+            count = count + 1
+
+            # timeout
+            if count > 10:
+                return None
+
+        vm_info.local_ip = instance_for_ip['addresses'][target_networks[0]][0]['addr']
 
         if vm_info.type == 'client':
+            '''
             floatingip_list = nova.floating_ips.list()
 
             extra_floatingip = ''
@@ -288,12 +319,15 @@ def make_vm(options):
                     break
 
             if not extra_floatingip:
-                extra_floatingip = nova.floating_ips.create('ext-net').ip
+            '''
+            time.sleep(3)
+            extra_floatingip = nova.floating_ips.create('ext-net').ip
 
             LOG.info('floating ip = ' + extra_floatingip)
 
-            time.sleep(1)
-            instance_rst.add_floating_ip(extra_floatingip)
+            ret = instance_rst.add_floating_ip(extra_floatingip)
+            time.sleep(3)
+            LOG.info('ret = ' + str(ret))
 
             vm_info.floating_ip = extra_floatingip
 
