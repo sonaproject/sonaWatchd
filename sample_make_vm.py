@@ -10,7 +10,7 @@ if __name__ == "__main__":
     auth_url = 'http://192.168.0.213:5000/v2.0'
 
     instance_test = {'name': 'yhs_test',
-                 'image': 'yhs_test',
+                 'image': 'ubuntu_iperf',
                  'flavor': 'm1.large',
                  'zone': 'nova',
                  'networks': ['net1'],
