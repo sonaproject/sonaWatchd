@@ -12,44 +12,54 @@ from novaclient import client
 class VM:
     def __init__(self):
         self.name = ''
-        self.id = ''
         self.command = ''
         self.hostname = ''
+        self.type = ''
+        self.is_reverse = False
+        # for using virsh console
+        self.id = ''
         self.compute_ip = ''
+        # for using iperf/iperf3
+        self.local_ip = ''
+        self.floating_ip = ''
+        self.vm_id = 'root'
+        self.vm_passwd = 'root'
+
+    def set_reverse(self, cli_command):
+        if '-r' in cli_command or '-d' in cli_command:
+            self.is_reverse = True
 
 def create_instance(server_options, client_options):
-    server_id = make_vm(server_options)
-    client_id = make_vm(client_options)
+    server_id = make_vm(server_options, 'server')
+    client_id = make_vm(client_options, 'client')
+
+    time.sleep(10)
 
     return server_id, client_id
 
 def make_command(server_options, client_options, command, server_info, client_info):
-    svr_cmd = command + ' -s ' + convert_command(server_options)
-    cli_cmd = command + ' -c ' + convert_command(client_options)
+    svr_cmd = command + ' -s ' + convert_command(server_options, command)
+    cli_cmd = command + ' -c ' + server_info.local_ip + ' ' + convert_command(client_options, command)
 
     server_info.command = svr_cmd
     client_info.command = cli_cmd
 
-def traffic_test_new(server_info, client_info, condition_json):
-    trace_result = []
+    server_info.type = 'server'
+    client_info.type = 'client'
 
+    server_info.set_reverse(client_info.command)
+    client_info.set_reverse(client_info.command)
+
+def traffic_test_new(server_info, client_info, condition_json):
     result_arr = []
-    result_arr.append('timeout')
     result_arr.append('timeout')
 
     timeout = 30
     if dict(condition_json).has_key('timeout'):
         timeout = condition_json['timeout']
 
-    # start server
-    run_thread = threading.Thread(target=run_test, args=(server_info, result_arr, 0, timeout))
-    run_thread.daemon = False
-    run_thread.start()
-
-    time.sleep(1)
-
     # start client
-    run_thread = threading.Thread(target=run_test, args=(client_info, result_arr, 1, timeout))
+    run_thread = threading.Thread(target=run_test, args=(client_info, result_arr, 0, timeout))
     run_thread.daemon = False
     run_thread.start()
 
@@ -70,89 +80,59 @@ def traffic_test_new(server_info, client_info, condition_json):
 
         wait_time = wait_time - 1
 
-    i = 0
-    while i < len(result_arr):
-        trace_result.append(result_arr[i])
-        i = i + 1
-
-    return True, trace_result
+    return True, result_arr[0]
 
 
 PROMPT = ['~# ', 'onos> ', '\$ ', '\# ', ':~$ ']
 
 def run_test(vm_info, result_arr, index, total_timeout):
     try:
-        ins_id = vm_info.id
-        user = 'cirros'
-        pw = 'cubswin:)'
-        command = vm_info.command
-        ip = vm_info.compute_ip
-
-        node_id = CONF.openstack()['account'].split(':')[0]
-
         ssh_options = '-o StrictHostKeyChecking=no ' \
                       '-o ConnectTimeout=' + str(CONF.ssh_conn()['ssh_req_timeout'])
-        cmd = 'ssh %s %s@%s' % (ssh_options, node_id, ip)
+        cmd = 'ssh %s %s@%s' % (ssh_options, vm_info.vm_id, vm_info.floating_ip)
 
         try:
             LOG.info('ssh_pexpect cmd = ' + cmd)
             ssh_conn = pexpect.spawn(cmd)
-            rt1 = ssh_conn.expect(PROMPT, timeout=CONF.ssh_conn()['ssh_req_timeout'])
 
-            if rt1 == 0:
-                cmd = 'virsh console ' + ins_id
+            try:
+                rt_pw = ssh_conn.expect([pexpect.TIMEOUT, '[P|p]assword:', pexpect.EOF], timeout=CONF.ssh_conn()['ssh_req_timeout'])
 
-                LOG.info('ssh_pexpect cmd = ' + cmd)
-                ssh_conn.sendline(cmd)
-                rt2 = ssh_conn.expect([pexpect.TIMEOUT, 'Escape character is', 'error:', pexpect.EOF], timeout=CONF.ssh_conn()['ssh_req_timeout'])
+                if rt_pw == 0:
+                    str_output = 'ssh timeout'
+                elif rt_pw == 1:
+                    ssh_conn.sendline(vm_info.vm_passwd)
+                    login_rt = ssh_conn.expect([pexpect.TIMEOUT, 'Login incorrect', '~# ', 'onos> ', '\$ ', '\# ', ':~$ '],
+                                          timeout=CONF.ssh_conn()['ssh_req_timeout'])
 
-                if rt2 == 0:
-                    str_output = cmd + ' timeout'
-                elif rt2 == 1:
-                    ssh_conn.sendline('\n')
-                    try:
-                        rt3 = ssh_conn.expect(['login: ', pexpect.EOF, pexpect.TIMEOUT], timeout=CONF.ssh_conn()['ssh_req_timeout'])
+                    if login_rt in [0, 1]:
+                        str_output = 'auth fail'
+                    else:
+                        ssh_conn.sendline(vm_info.command)
 
-                        LOG.info('rt3 = ' + str(rt3))
-
-                        if rt3 == 2:
-                            str_output = 'Permission denied'
+                        command_rt = ssh_conn.expect(['connect failed: Connection refused', pexpect.TIMEOUT, '~# ', 'onos> ', '\$ ', '\# ', ':~$ '], timeout=total_timeout)
+                        if command_rt == 0:
+                            LOG.info('connection refused = [%s]', ssh_conn.before)
+                            ssh_conn.sendline('exit')
+                            ssh_conn.close()
+                            str_output = 'connection refused'
+                        elif command_rt == 1:
+                            str_output = 'timeout'
+                            ssh_conn.sendline('exit')
+                            ssh_conn.close()
+                            LOG.info(vm_info.local_ip + ' ' + str_output)
                         else:
-                            ssh_conn.sendline(user)
-                            rt_pw = ssh_conn.expect([pexpect.TIMEOUT, '[P|p]assword:', pexpect.EOF], timeout=CONF.ssh_conn()['ssh_req_timeout'])
+                            LOG.info('go parser = [%s]', ssh_conn.before)
+                            str_output = iperfParser(ssh_conn.before, vm_info.command)
+                            ssh_conn.sendline('exit')
+                            ssh_conn.close()
+                            LOG.info(vm_info.local_ip + ' ' + str(str_output))
 
-                            if rt_pw == 1:
-                                ssh_conn.sendline(pw)
-                                rt4 = ssh_conn.expect([pexpect.TIMEOUT, 'Login incorrect', '~# ', 'onos> ', '\$ ', '\# ', ':~$ '],
-                                                      timeout=CONF.ssh_conn()['ssh_req_timeout'])
-
-                                LOG.info('rt4 = ' + str(rt4))
-                                if rt4 == 0 or rt4 == 1:
-                                    str_output = 'auth fail'
-                                else:
-                                    ssh_conn.sendline(command)
-                                    rt5 = ssh_conn.expect([pexpect.TIMEOUT, '~# ', 'onos> ', '\$ ', '\# ', ':~$ '], timeout=total_timeout)
-                                    if rt5 == 0:
-                                        str_output = 'timeout'
-                                        ssh_conn.sendline('exit')
-                                        ssh_conn.close()
-                                    else:
-                                        str_output = ssh_conn.before
-                                        ssh_conn.sendline('exit')
-                                        ssh_conn.close()
-                            else:
-                                str_output = 'auth fail'
-                    except:
-                        str_output = 'exception'
-                        ssh_conn.sendline('exit')
-                        ssh_conn.close()
-                elif rt2 == 2:
-                    result = {'command_result': 'virsh console error'}
-                    result_arr[index] = result
-                    return
-
-                else:
-                    str_output = 'connection fail'
+            except:
+                LOG.exception()
+                str_output = 'exception'
+                ssh_conn.sendline('exit')
+                ssh_conn.close()
 
         except:
             LOG.exception()
@@ -161,14 +141,60 @@ def run_test(vm_info, result_arr, index, total_timeout):
         LOG.exception()
         str_output = 'exception 2'
 
-    result_arr[index] = str_output.replace('\r\n', '\n')
+    result_arr[index] = str(str_output).replace('\r\n', '\n')
 
-def convert_command(options):
+
+def iperfParser(str, command):
+    result = dict()
+
+    transfer = 'None'
+    bandwidth = 'None'
+    reverse_transfer = 'None'
+    reverse_bandwidth = 'None'
+
+    if 'iperf3' in command:
+        key = 'sender'
+    else:
+        key = ' 0.0-'
+
+
+    for line in str.splitlines():
+        if key in line:
+            LOG.info('line = %s', line)
+            t = line[line.find('sec') + len('sec'):line.find('GBytes')].strip()
+            b = line[line.find('GBytes') + len('GBytes'):line.find('Gbits')].strip()
+
+            if transfer == 'None':
+                transfer = t
+                bandwidth = b
+            else:
+                reverse_transfer = t
+                reverse_bandwidth = b
+
+    result['transfer'] = transfer
+    result['bandwidth'] = bandwidth
+
+    if reverse_transfer is not 'None':
+        result['reverse_transfer'] = reverse_transfer
+        result['reverse_bandwidth'] = reverse_bandwidth
+
+    return result
+
+
+def convert_command(options, command):
     str_option = ''
 
     if options is not None:
         if dict(options).has_key('port'):
             str_option = str_option + '-p ' + options['port'] + ' '
+        else:
+            if command == 'iperf':
+                if dict(options).has_key('udp'):
+                    str_option = str_option + '-p 5230'
+                else:
+                    str_option = str_option + '-p 5220'
+            elif command == 'iperf3':
+                str_option = str_option + '-p 5300'
 
         if dict(options).has_key('udp'):
             if options['udp'] == 'UDP':
@@ -194,8 +220,20 @@ def convert_command(options):
 
     return str_option
 
+def del_vm(name):
+    version = CONF.openstack()['version']
+    username = CONF.openstack()['username']
+    api_key = CONF.openstack()['api_key']
+    project_id = CONF.openstack()['project_id']
+    auth_url = CONF.openstack()['auth_url']
 
-def make_vm(options):
+    nova = client.Client(version, username, api_key, project_id, auth_url)
+    instance_ret = nova.servers.list(search_opts={'name': name})
+
+    for ins in instance_ret:
+        nova.servers.delete(ins)
+
+def make_vm(options, vm_type = 'client'):
     vm_info = VM()
     target_networks = []
 
@@ -211,15 +249,16 @@ def make_vm(options):
 
     nova = client.Client(version, username, api_key, project_id, auth_url)
 
+    image = nova.images.find(name=image)
     network_list = nova.networks.list()
     target_networks.append(str(network_list[-1]).split(':')[1][:-1].strip())
 
-    target_compute_node = get_hostname(vm_info)
-    zone = default_zone + ':' + target_compute_node
+    zone = default_zone
 
     vm_name = 'test' + str(random.randrange(10000, 20000))
 
     vm_info.name = vm_name
+    vm_info.type = vm_type
 
     if not options is None:
         if dict(options).has_key('compute_node_dpid'):
@@ -233,7 +272,6 @@ def make_vm(options):
     for net in target_networks:
         network_list.append({'net-id': nova.networks.find(label=net).id})
 
-    image = nova.images.find(name=image)
     flavor = nova.flavors.find(name=flavor)
 
     # create instance
@@ -251,14 +289,48 @@ def make_vm(options):
                                        nics=network_list,
                                        security_groups=securitygroups)
 
+    status = ''
+    count = 0
+    while not status == 'ACTIVE':
+        instance_for_ip = nova.servers.list(search_opts={'name': vm_name})
+        instance_for_ip = instance_for_ip[0].__dict__
+        status = instance_for_ip['status']
+        time.sleep(1)
+        count = count + 1
+
+        # timeout
+        if count > 10:
+            return None
+
     if vm_name in str(instance_rst):
-        instance_id = nova.servers.find(name=vm_name).id
-        vm_info.id = instance_id
+        instance = nova.servers.find(name=vm_name)
+        vm_info.id = instance.id
+
+        vm_info.local_ip = instance_for_ip['addresses'][target_networks[0]][0]['addr']
+
+        if vm_info.type == 'client':
+            '''
+            floatingip_list = nova.floating_ips.list()
+
+            extra_floatingip = ''
+            for a in floatingip_list:
+                if not a.fixed_ip:
+                    extra_floatingip = a.ip
+                    break
+
+            if not extra_floatingip:
+            '''
+            extra_floatingip = nova.floating_ips.create('ext-net').ip
+
+            LOG.info('floating ip = ' + extra_floatingip)
+
+            instance_rst.add_floating_ip(extra_floatingip)
+
+            vm_info.floating_ip = extra_floatingip
 
         return vm_info
 
     return None
-
 
 def get_compute_ip():
     return str(list(CONF.openstack()['compute_list']).pop()).split(':')[-1]

@@ -50,7 +50,7 @@ class SCREEN():
     main_instance = None
 
     @classmethod
-    def set_screen(cls):
+    def set_screben(cls):
         cls.main_scr = curses.initscr()
 
         curses.noecho()

@@ -3,10 +3,8 @@
 # SONA Monitoring Solutions.
 
 import json
-import requests
 import threading
 import base64
-from datetime import datetime
 import multiprocessing as multiprocess
 from subprocess import Popen, PIPE
 
@@ -351,7 +349,7 @@ def send_response_traffic_test_new(cond, auth):
                 # trace_result_data['fail_reason'] = 'The source ip does not exist.'
 
             if result != None:
-                trace_result_data['traffic_test_result'] = result
+                trace_result_data['traffic_test_result'] = eval(result)
 
             trace_result_data['transaction_id'] = cond['transaction_id']
             try:
@@ -363,10 +361,6 @@ def send_response_traffic_test_new(cond, auth):
 
             try:
                 url = str(cond['app_rest_url'])
-                #requests.post(str(url), headers=header, data=req_body_json, timeout=2)
-
-                if str(auth).startswith('Basic '):
-                    auth = str(auth).split(' ')[1]
 
                 cmd = 'curl -X POST -u \'' + CONF.onos()['rest_auth'] + '\' -H \'Content-Type: application/json\' -d \'' + str(req_body_json) + '\' ' + url
                 LOG.error('%s', 'curl = ' + cmd)
@@ -379,6 +373,12 @@ def send_response_traffic_test_new(cond, auth):
             except:
                 LOG.exception()
                 pass
+
+            # del instance
+            '''
+            traffic_test.del_vm(server_info.name)
+            traffic_test.del_vm(client_info.name)
+            '''
     except:
         LOG.exception()
 

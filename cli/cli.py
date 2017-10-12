@@ -881,7 +881,7 @@ class CLI():
 
                                 col_node = dict()
                                 col_node['title'] = 'Node'
-                                col_node['size'] = '10'
+                                col_node['size'] = '8'
 
                                 col_image = dict()
                                 col_image['title'] = 'Image'

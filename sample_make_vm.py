@@ -1,4 +1,5 @@
 #!/usr/bin/python
+import time
 from novaclient import client
 
 if __name__ == "__main__":
@@ -6,14 +7,14 @@ if __name__ == "__main__":
     username = 'admin'
     api_key = 'admin'
     project_id = 'admin'
-    auth_url = 'http://10.20.0.11:5000/v2.0'
+    auth_url = 'http://192.168.0.213:5000/v2.0'
 
     instance_test = {'name': 'yhs_test',
-                 'image': 'cirros-0.3.4-x86_64',
-                 'flavor': 'm1.tiny',
+                 'image': 'ubuntu_iperf',
+                 'flavor': 'm1.large',
                  'zone': 'nova',
-                 'networks': ['net_test'],
-                 'securitygroups': ['test-sg1', 'default']}
+                 'networks': ['net1'],
+                 'securitygroups': ['all_allow']}
 
     nova = client.Client(version, username, api_key, project_id, auth_url)
 
@@ -47,8 +48,23 @@ if __name__ == "__main__":
                                        security_groups=instance_test['securitygroups'])
 
 
-
     print instance_rst
+
+    floatingip_list = nova.floating_ips.list()
+
+    extra_floatingip = ''
+    for a in floatingip_list:
+        if not a.fixed_ip:
+            extra_floatingip = a.ip
+            break
+
+    if not extra_floatingip:
+        extra_floatingip = nova.floating_ips.create('ext-net').ip
+
+    print('floating ip = ' + extra_floatingip)
+
+    time.sleep(1)
+    instance_rst.add_floating_ip(extra_floatingip)
 
     # delete instance
     '''
