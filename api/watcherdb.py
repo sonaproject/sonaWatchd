@@ -9,6 +9,7 @@ import sqlite3
 from sona_log import LOG
 from config import CONF
 
+
 class DB(object):
     NODE_INFO_TBL = 't_nodes'
     REGI_SYS_TBL = 't_regi'
@@ -95,14 +96,21 @@ class DB(object):
             db_log.write_log('Insert nodes information ...')
             for node_type in CONF.watchdog()['check_system']:
                 if node_type == 'OPENSTACK':
-                    cls.sql_insert_nodes(db_log, (CONF_MAP[node_type.upper()]())['gateway_list'],
-                                         str((CONF_MAP[node_type.upper()]())['account']).split(':')[0], node_type, 'GATEWAY')
-                    cls.sql_insert_nodes(db_log, (CONF_MAP[node_type.upper()]())['compute_list'],
-                                         str((CONF_MAP[node_type.upper()]())['account']).split(':')[0], node_type,
+                    cls.sql_insert_nodes(db_log,
+                                         CONF_MAP[node_type.upper()]()['compute_list'],
+                                         str((CONF_MAP[node_type.upper()]())['account']).split(':')[0],
+                                         node_type,
                                          'COMPUTE')
+                    cls.sql_insert_nodes(db_log,
+                                         CONF_MAP[node_type.upper()]()['gateway_list'],
+                                         str((CONF_MAP[node_type.upper()]())['account']).split(':')[0],
+                                         node_type,
+                                         'GATEWAY')
                 else:
-                    cls.sql_insert_nodes(db_log, (CONF_MAP[node_type.upper()]())['list'],
-                                     str((CONF_MAP[node_type.upper()]())['account']).split(':')[0], node_type)
+                    cls.sql_insert_nodes(db_log,
+                                         CONF_MAP[node_type.upper()]()['list'],
+                                         str((CONF_MAP[node_type.upper()]())['account']).split(':')[0],
+                                         node_type)
 
             # set ha proxy tbl
             sql = 'INSERT INTO ' + cls.HA_TBL + ' VALUES (\'' + 'HA' + '\', \'none\')'
@@ -115,7 +123,7 @@ class DB(object):
 
 
     @classmethod
-    def sql_insert_nodes(cls, db_log, node_list, username, type, sub_type = 'none'):
+    def sql_insert_nodes(cls, db_log, node_list, username, type, sub_type='none'):
         try:
             for node in node_list:
                 name, ip = str(node).split(':')
@@ -216,6 +224,7 @@ class DB(object):
                 LOG.exception()
 
         return 'FAIL'
+
 
 DB_CONN = DB().connection()
 
