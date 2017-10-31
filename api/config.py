@@ -156,8 +156,10 @@ class ConfReader:
 
             value['image'] = str(self.conf_map['OPENSTACK']['image'])
             value['flavor'] = str(self.conf_map['OPENSTACK']['flavor'])
-            value['zone'] = str(self.conf_map['OPENSTACK']['zone'])
             value['security_groups'] = self.__list_opt(self.conf_map['OPENSTACK']['security_groups'])
+            value['keypair_name'] = str(self.conf_map['OPENSTACK']['keypair_name'])
+            value['key_file'] = str(self.conf_map['OPENSTACK']['key_file'])
+            value['tperf_vm_username'] = str(self.conf_map['OPENSTACK']['tperf_vm_username'])
 
             return value
         except KeyError as KE:

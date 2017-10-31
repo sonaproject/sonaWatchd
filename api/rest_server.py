@@ -5,17 +5,18 @@
 import json
 import threading
 import base64
+import requests
 import multiprocessing as multiprocess
-from subprocess import Popen, PIPE
-
 import monitor.cmd_proc as command
 
+from subprocess import Popen, PIPE
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 from api.config import CONF
 from api.sona_log import LOG
 
 import sonatrace as trace
 import sona_traffic_test as traffic_test
+
 
 class RestHandler(BaseHTTPRequestHandler):
     # write buffer; 0: unbuffered, -1: buffering; rf) default rbufsize(rfile) is -1.
@@ -153,6 +154,8 @@ class RestHandler(BaseHTTPRequestHandler):
 
                         self.do_HEAD(200)
                         self.wfile.write(str({"result": "SUCCESS"}))
+
+            # traffic test for exited VM
             elif self.path.startswith('/traffictest_request'):
                 trace_mandatory_field = ['command', 'transaction_id', 'app_rest_url', 'traffic_test_list']
                 test_mandatory_field = ['node', 'instance_id', 'vm_user_id', 'vm_user_password', 'traffic_test_command']
@@ -189,35 +192,34 @@ class RestHandler(BaseHTTPRequestHandler):
                         self.do_HEAD(200)
                         self.wfile.write(str({"result": "SUCCESS"}))
 
-            elif self.path.startswith('/traffic_test_request'):
-                trace_mandatory_field = ['command', 'transaction_id', 'app_rest_url']
+            # create VM and traffic test for exclusive performance VM
+            elif self.path.startswith('/tperf_request'):
+                perf_mandatory_field = ['transaction_id',
+                                        'app_rest_url',
+                                        'server',
+                                        'client',
+                                        'test_options']
 
-                trace_condition_json = self.get_content()
-                if not trace_condition_json:
+                perf_condition = dict(self.get_content())
+                if not perf_condition:
                     return
                 else:
-                    if not all(x in dict(trace_condition_json).keys() for x in trace_mandatory_field):
+                    if not all(x in perf_condition.keys() for x in perf_mandatory_field):
+                        LOG.error('[Data Check Fail] Mandatory Attribute is Wrong')
                         self.do_HEAD(400)
                         self.wfile.write(str({"result": "FAIL", "fail_reason": "Not Exist Mandatory Attribute\n"}))
                         return
                     else:
                         # process traffic test, send noti
-                        process_thread = threading.Thread(target=send_response_traffic_test_new,
-                                                          args=(trace_condition_json,
-                                                                str(self.headers.getheader("Authorization"))))
+                        process_thread = threading.Thread(target=tperf_test_run,
+                                                          args=(perf_condition, ))
                         process_thread.daemon = False
+                        LOG.info("[Run Traffic Test Start] ---- ")
                         process_thread.start()
 
                         self.do_HEAD(200)
                         self.wfile.write(str({"result": "SUCCESS"}))
 
-
-            # noti test
-            elif self.path.startswith('/test'):
-                self.do_HEAD(200)
-                trace_condition_json = self.get_content()
-                LOG.info('------------------------------result---------------------------------')
-                LOG.info(json.dumps(trace_condition_json, sort_keys=True, indent=4))
             else:
                 self.do_HEAD(404)
                 self.wfile.write(str({"result": "FAIL", "fail_reason": "Not Found path \"" + self.path + "\"\n"}))
@@ -226,21 +228,20 @@ class RestHandler(BaseHTTPRequestHandler):
         if not self.headers.getheader('content-length'):
             self.do_HEAD(400)
             self.wfile.write(str({"result": "FAIL", "fail_reason": "Bad Request, Content Length is 0\n"}))
-            LOG.info('[TRACE REST-S] Received No Data from %s', self.client_address)
+            LOG.info('[Data Check] Received No Data from %s', self.client_address)
             return False
         else:
             try:
                 receive_data = json.loads(self.rfile.read(int(self.headers.getheader("content-length"))))
-                LOG.info('%s', '[Trace Conditions] \n' + json.dumps(receive_data, sort_keys=True, indent=4))
+                LOG.info('%s', '[Received Data] \n' + json.dumps(receive_data, sort_keys=True, indent=4))
                 return receive_data
             except:
                 LOG.exception()
-                error_reason = 'Trace Request Json Data Parsing Error\n'
+                error_reason = 'Json Data Parsing Error\n'
                 self.do_HEAD(400)
                 self.wfile.write(str({"result": "FAIL", "fail_reason": error_reason}))
-                LOG.info('[TRACE] %s', error_reason)
+                LOG.info('[Check Content] %s', error_reason)
                 return False
-
 
     def authentication(self):
         try:
@@ -317,68 +318,37 @@ def send_response_trace_test(cond, auth):
         LOG.exception()
 
 
-def send_response_traffic_test_new(cond, auth):
-    trace_result_data = {}
+def tperf_test_run(perf_conditions):
+    tperf_result = dict()
+    request_headers = {'Authorization': CONF.onos()['rest_auth'], 'Accept': 'application/json', 'Content-Type': 'application/json'}
 
     try:
-        server_options = None
-        if dict(cond).has_key('server_options'):
-            server_options = cond['server_options']
-
-        client_options = None
-        if dict(cond).has_key('client_options'):
-            client_options = cond['client_options']
-
         # 1. creeate instance
-        server_info, client_info = traffic_test.create_instance(server_options, client_options)
+        LOG.info("[T-perf server/client VM create] --- ")
+        server_vm, client_vm, client_floatingip = traffic_test.create_instance(perf_conditions['server'],
+                                                                               perf_conditions['client'])
 
-        if server_info == None or client_info == None:
-            trace_result_data['result'] = 'FAIL'
-            trace_result_data['fail_reason'] = 'Fail to create instance.'
+        # 2. run performance test
+        if server_vm and client_vm:
+            tperf_result = traffic_test.tperf_command_exec(server_vm.__dict__['addresses'].values()[0][0]['addr'],
+                                                           client_floatingip.ip,
+                                                           perf_conditions['test_options'])
         else:
-            # 2. make command
-            command = cond['command']
-            traffic_test.make_command(server_options, client_options, command, server_info, client_info)
+            tperf_result.update({'result': 'FAIL', 'fail_reason': 'Fail to create instance.'})
 
-            is_success, result = traffic_test.traffic_test_new(server_info, client_info, cond)
+        tperf_result.update({'transaction_id': perf_conditions['transaction_id']})
 
-            if is_success:
-                trace_result_data['result'] = 'SUCCESS'
-            else:
-                trace_result_data['result'] = 'FAIL'
-                # trace_result_data['fail_reason'] = 'The source ip does not exist.'
+        LOG.info("[Traffic Performance Test] Return Result = %s", json.dumps(tperf_result))
 
-            if result != None:
-                trace_result_data['traffic_test_result'] = eval(result)
+        # send tperf test result to ONOS
+        response = requests.post(perf_conditions['app_rest_url'],
+                                 data=str(json.dumps(tperf_result)),
+                                 headers=request_headers)
+        LOG.info("[Tperf Result Send] Response = %s %s", response.status_code, response.reason)
 
-            trace_result_data['transaction_id'] = cond['transaction_id']
-            try:
-                LOG.info('%s', json.dumps(trace_result_data, sort_keys=True, indent=4))
-            except:
-                pass
+        # delete tperf test instance
+        traffic_test.delete_test_instance(server_vm, client_vm, client_floatingip)
 
-            req_body_json = json.dumps(trace_result_data)
-
-            try:
-                url = str(cond['app_rest_url'])
-
-                cmd = 'curl -X POST -u \'' + CONF.onos()['rest_auth'] + '\' -H \'Content-Type: application/json\' -d \'' + str(req_body_json) + '\' ' + url
-                LOG.error('%s', 'curl = ' + cmd)
-                result = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
-                result.communicate()
-
-                if result.returncode != 0:
-                    # Push noti does not respond
-                    pass
-            except:
-                LOG.exception()
-                pass
-
-            # del instance
-            '''
-            traffic_test.del_vm(server_info.name)
-            traffic_test.del_vm(client_info.name)
-            '''
     except:
         LOG.exception()
 
@@ -446,6 +416,7 @@ def rest_server_start():
     rest_server_daemon = multiprocess.Process(name='rest_server', target=run)
     rest_server_daemon.daemon = True
     rest_server_daemon.start()
+
 
 def valid_IPv4(address):
     try:

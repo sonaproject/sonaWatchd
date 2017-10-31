@@ -3,6 +3,7 @@
 # SONA Monitoring Solutions.
 
 import pexpect
+import os
 
 from subprocess import Popen, PIPE
 from config import CONF
@@ -13,15 +14,16 @@ class SshCommand:
               '-o ConnectTimeout=' + str(CONF.ssh_conn()['ssh_req_timeout'])
 
     @classmethod
-    def ssh_exec(cls, username, node, command):
-        cmd = 'ssh %s %s@%s %s' % (cls.ssh_options, username, node, command)
+    def ssh_exec(cls, username, node_ip, command):
+        cmd = 'ssh %s %s@%s %s' % (cls.ssh_options, username, node_ip, command)
+        LOG.info("SB SSH CMD] cmd = %s", cmd)
 
         try:
             result = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
             output, error = result.communicate()
 
             if result.returncode != 0:
-                LOG.error("\'%s\' SSH_Cmd Fail, cause => %s", node, error)
+                LOG.error("\'%s\' SSH_Cmd Fail, cause => %s", node_ip, error)
                 return
             else:
                 # LOG.info("ssh command execute successful \n%s", output)
@@ -30,10 +32,37 @@ class SshCommand:
             LOG.exception()
 
     @classmethod
+    def ssh_tperf_exec(cls, keypair, username, node_ip, command, timeout):
+        ssh_options = '-o StrictHostKeyChecking=no ' \
+                      '-o ConnectTimeout=' + str(timeout)
+
+        if not os.path.exists(keypair):
+            LOG.error('[SSH Fail] keypaire file not exist. ---')
+            return 'fail'
+        cmd = 'ssh %s -i %s %s@%s %s' % (ssh_options, keypair, username, node_ip, command)
+        LOG.info("[SB SSH CMD] cmd = %s", cmd)
+
+        try:
+            result = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
+            (output, error) = result.communicate()
+
+            if result.returncode != 0:
+                LOG.error("\'%s\' SSH_Cmd Fail, cause(%d) => %s", node_ip, result.returncode, str(error))
+                return 'fail'
+            else:
+                LOG.info("ssh command execute successful \n >> [%s]", output)
+                return output
+        except:
+            LOG.exception()
+
+        pass
+
+    @classmethod
     def onos_ssh_exec(cls, node_ip, command):
         local_ssh_options = cls.ssh_options + " -p 8101"
 
         cmd = 'ssh %s %s %s' % (local_ssh_options, node_ip, command)
+        LOG.info("SB SSH CMD] cmd = %s", cmd)
 
         try:
             result = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
@@ -49,8 +78,9 @@ class SshCommand:
             LOG.exception()
 
     @classmethod
-    def ssh_pexpect(cls, username, node, onos_ip, command):
-        cmd = 'ssh %s %s@%s' % (cls.ssh_options, username, node)
+    def ssh_pexpect(cls, username, node_ip, onos_ip, command):
+        cmd = 'ssh %s %s@%s' % (cls.ssh_options, username, node_ip)
+        LOG.info("SB SSH CMD] cmd = %s", cmd)
 
         try:
             LOG.info('ssh_pexpect cmd = ' + cmd)
